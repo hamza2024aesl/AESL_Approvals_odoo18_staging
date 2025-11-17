@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="hr_attendance_view_form_inherit" model="ir.ui.view">
+            <field name="name">Form view of Attendance</field>
+            <field name="model">hr.attendance</field>
+            <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form/sheet" position="before">
+                    <header>
+                        <field name="request_created" invisible="1"/>
+                        <button name="%(action_view_wizard_form)d" string="Change Request"
+                                type="action" icon="fa-pencil" class="oe_highlight"
+                                invisible="request_created"/>
+                        <button name="trigger_computes" string="Recompute"
+                                type="object" icon="fa-pencil" class="oe_highlight"
+                                invisible="state == 'draft'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                    </header>
+                </xpath>
+                <xpath expr="//field[@name='overtime_hours']" position="attributes">
+                    <attribute name="string">Over Time (Hrs)</attribute>
+                </xpath>
+                <xpath expr="//group[@col='1']" position="inside">
+                    <!-- <field name="employee_id" readonly="state == 'done'" string="Employee"/> -->
+                    <field name="department_id" readonly="state == 'done'"/>
+                    <field name="attendance_date" readonly="state == 'done'"/>
+                    <!-- <field name="check_in" readonly="state == 'done'" invisible="status2 == 'missed_check_in'"/> -->
+                    <!-- <field name="check_out" readonly="state == 'done'" invisible="status2 == 'missed_check_out'"/> -->
+                    <!-- <field name="worked_hours" widget="float_time"/> -->
+                    <field name="working_hours"/>
+                    <field name="current_shift" readonly="state == 'done'"/>
+                    <field name="machine_shift" readonly="state == 'done'"/>
+                    <field name="standard_hours"/>
+                    <field name="normal_working_hours" widget="float_time"/>
+                    <!-- <field name="over_time"/> -->
+                    <field name="machine_check_in" readonly="state == 'done'"/>
+                    <field name="machine_check_out" readonly="state == 'done'"/>
+                    <!-- <field name="over_time_hr" widget="float_time"/> -->
+                    <field name="penalty" readonly="state == 'done'"/>
+                    <field name="request_created" invisible="1"/>
+                    <field name="change_request" invisible="not request_created" readonly="1"/>
+                </xpath>
+                <xpath expr="//group[@col='2']" position="inside">
+                    <field name="over_time"/>
+                    <!-- <field name="machine_check_in" readonly="state == 'done'"/>
+                    <field name="machine_check_out" readonly="state == 'done'"/> -->
+                    <field name="status" invisible="1"/>
+                    <field name="status2"/>
+                    <field name="on_leave"/>
+                    <field name="previous_dates" invisible="not previous_dates"/>
+                    <field name="in_status"/>
+                    <field name="out_status"/>
+                    <field name="late_in_time" readonly="state == 'done'" widget="float_time"/>
+                    <field name="early_time_out" readonly="state == 'done'" widget="float_time"/>
+                    <field name="attendance_status" readonly="state == 'done'"/>
+                    <field name="extra_day" readonly="state == 'done'"/>
+                    <field name="compensatory" readonly="state == 'done'"/>
+                    <field name="compensatory_leave" readonly="state == 'done'"/>
+                </xpath>
+                <xpath expr="//sheet" position="inside">
+                    <notebook colspan="4">
+                        <page string="Info">
+                            <field name="warn_text" readonly="1"/>
+                        </page>
+                    </notebook>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_attendance_tree_inherit" model="ir.ui.view">
+            <field name="name">Form view of Attendance</field>
+            <field name="model">hr.attendance</field>
+            <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//list" position="replace">
+                    <list string="Employee attendances"
+                          decoration-muted="status == 'off_day' or isduplicate == True or on_leave == True"
+                          decoration-warning="status == 'absent' and state == 'done' and isduplicate != True and on_leave != True"
+                          decoration-primary="previous_dates != False"
+                          decoration-success="status == 'present' and state == 'done' and previous_dates == False and isduplicate != True"
+                          decoration-danger="status == 'missed_check' or 'state' == 'suspicious'">
+                        <field name="employee_id"/>
+                        <field name="department_id" optional="hide"/>
+                        <field name="attendance_date"/>
+                        <field name="check_in"/>
+                        <field name="check_out"/>
+                        <field name="machine_check_in" optional="hide"/>
+                        <field name="machine_check_out" optional="hide"/>
+                        <field name="status" invisible="1"/>
+                        <field name="status2"/>
+                        <field name="on_leave" optional="hide"/>
+                        <field name="in_status"/>
+                        <field name="out_status"/>
+                        <field name="current_shift"/>
+                        <field name="machine_shift" optional="hide"/>
+<!--                        <field name="previous_dates" invisible="1"/>-->
+                        <field name="state"/>
+<!--                        <field name="isduplicate" invisible="1"/>-->
+<!--                        <field name="warn_text" invisible="1"/>-->
+                    </list>
+                </xpath>
+            </field>
+        </record>
+        <record id="hr_attendance.hr_attendance_action" model="ir.actions.act_window">
+            <field name="context">{"search_default_today":1}</field>
+        </record>
+    </data>
+</odoo>

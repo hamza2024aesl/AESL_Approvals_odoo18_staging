@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <template id="portal_my_home_attendance" name="Show Attendances" inherit_id="portal.portal_my_home"
+              customize_show="True">
+        <xpath expr="//div[hasclass('o_portal_my_home')]" position="after">
+            <div id="loading-screen" class="hidden">
+                <div id="loading-icon"></div>
+            </div>
+        </xpath>
+        <xpath expr="//div[@id='portal_common_category']" position="after">
+
+            <div class="o_portal_category row g-2 mt-3" id="portal_custom_category">
+                <!-- <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-sign-in-64.png'"/>
+                    <t t-set="title">Check In/Out</t>
+                    <t t-set="text">Click here</t>
+                    <t t-set="url" t-value="'#'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t> -->
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-attendance-64.png'"/>
+                    <t t-set="title">Attendances</t>
+                    <t t-set="text">Manage your Attendances</t>
+                    <t t-set="url" t-value="'/my/attendance'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-leave-64.png'"/>
+                    <t t-set="title">Leaves</t>
+                    <t t-set="text">Manage your Leaves</t>
+                    <t t-set="url" t-value="'/my/leaves'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-payment-64.png'"/>
+                    <t t-set="title">Payslips</t>
+                    <t t-set="text">Manage your Payslips</t>
+                    <t t-set="url" t-value="'/my/payslips'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-assets-64.png'"/>
+                    <t t-set="title">Loans</t>
+                    <t t-set="text">Manage your Loans</t>
+                    <t t-set="url" t-value="'/my/loans'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                 <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-performance-64.png'"/>
+                    <t t-set="title">Appraisal</t>
+                    <t t-set="text">Manage your Appraisal</t>
+                    <t t-set="url" t-value="'/my/appraisal'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-employee-64.png'"/>
+                    <t t-set="title">My Profile</t>
+                    <t t-set="text">Manage your Profile</t>
+                    <t t-set="url" t-value="'/my/profile'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </div>
+        </xpath>
+    </template>
+    <template id="portal_breadcrumbs" inherit_id="portal.portal_breadcrumbs">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'attendance_list_view'" class="breadcrumb-item">Attendances</li>
+            <li t-elif="page_name == 'leave_list_view'" class="breadcrumb-item">Leaves &amp; Allocations</li>
+            <!--            <li t-elif="page_name == 'profile_form_view'" class="breadcrumb-item">Profile</li>-->
+            <!--            <t t-if="page_name == 'attendance_list_view'">-->
+            <!--                <button id="check_inout_portal" t-on-click="iAmClicked" class="fa fa-sign-out o_hr_attendance_sign_in_out_icon btn-secondary btn-fill-warning ml-1 check-in-out"-->
+            <!--                        title="Check In" style="margin-left: auto"/>-->
+            <!--            </t>-->
+            <!--            style="position: absolute;right: 260px;"-->
+        </xpath>
+    </template>
+
+    <template id="portal_searchbar" inherit_id="portal.portal_searchbar">
+        <xpath expr="//form[1]/div[1]/button[1]" position="replace">
+        </xpath>
+    </template>
+
+    <!-- <template id="btn_portal_layout_2" inherit_id="portal.portal_layout">
+        <xpath expr="//div[hasclass('wrapper')]/h3" position="after">
+            <button id="check_inout_portal"
+                    class="fa fa-sign-out o_hr_attendance_sign_in_out_icon btn-secondary btn-fill-info"
+                    title="Check In" style="margin-left:20px; margin-right:auto; padding: 10px; border-radius: 0.25rem">
+                Check In/Out
+            </button>
+        </xpath>
+    </template> -->
+
+    <!--    <template id="btn_portal_layout" inherit_id="portal.portal_layout">-->
+    <!--        <xpath expr="//div[hasclass('wrapper')]/h3" position="after">-->
+    <!--            <div>-->
+    <!--            <button id="check_inout_portal" class="target-checkio fa fa-sign-out o_hr_attendance_sign_in_out_icon btn-secondary btn-fill-info"-->
+    <!--                    title="Check In" style="margin-left:20px; margin-right:auto; padding: 10px; border-radius: 0.25rem"> Check in</button>-->
+    <!--            </div>-->
+    <!--        </xpath>-->
+    <!--    </template>-->
+
+
+    <!--    <template id="btn_side_content" inherit_id="portal.side_content">-->
+    <!--        <xpath expr="//a[1]" position="after">-->
+    <!--            <div style="display: flex; justify-content: center; align-item: center">-->
+    <!--            <button id="check_inout_portal" class="target-checkio fa fa-sign-out o_hr_attendance_sign_in_out_icon btn-secondary btn-fill-info"-->
+    <!--                    title="Check In" style="margin-top: 2rem; margin-right:auto; padding: 10px; border-radius: 0.25rem"> Check in</button>-->
+    <!--            </div>-->
+    <!--        </xpath>-->
+    <!--    </template>-->
+</odoo>

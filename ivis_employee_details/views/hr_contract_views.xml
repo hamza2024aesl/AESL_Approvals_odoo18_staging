@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="contract_employee_account" model="ir.ui.view">
+            <field name="name">hr.contract.account</field>
+            <field name="model">hr.contract</field>
+            <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//notebook/page[@name='other']" position="after">
+                    <page name="Salary_expenses" string="Salary Expenses" groups="hr.group_hr_manager">
+                        <group string="Salary Expenses">
+                            <field name="employee_account" nolabel="1">
+                                <list editable="bottom">
+                                    <field name="analytic_account" string="Analytic Account"/>
+                                    <field name="percentage" string="Percentage"/>
+                                </list>
+                            </field>
+                        </group>
+                    </page>
+                </xpath>
+                <xpath expr="//field[@name='date_end']" position="before">
+                    <field name="probation_period" invisible="1"/>
+                </xpath>
+                <xpath expr="//field[@name='job_id']" position="after">
+                    <field name="x_studio_grade"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

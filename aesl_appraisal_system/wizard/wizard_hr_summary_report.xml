@@ -1,0 +1,32 @@
+<odoo>
+    <record id="view_hr_summary_report_wizard" model="ir.ui.view">
+        <field name="name">view.hr.summary.wizard</field>
+        <field name="model">hr.summary.wizard</field>
+        <field name="arch" type="xml">
+            <form string="HR Summary">
+                <group>
+                    <field name="location_id" invisible="all_dept == True"/>
+                    <field name="all_dept" string="Check All Region"/>
+                    <field name="department_id" invisible="1"/>
+                    <field name="department_ids" widget="many2many_tags"/>
+                </group>
+                <footer>
+                    <button string="Print" name="print_hr_report" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_print_hr_summary_report_wizard" model="ir.actions.act_window">
+        <field name="name">HR Summary Report Wizard</field>
+        <field name="res_model">hr.summary.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem name="HR Summary" id="menu_appraisal_hr_summary_report" parent="menu_appraisal_summary_report"
+              action="aesl_appraisal_system.action_print_hr_summary_report_wizard"
+              groups="aesl_appraisal_system.group_hr_manager_appraisal_3" sequence="10"/>
+
+</odoo>

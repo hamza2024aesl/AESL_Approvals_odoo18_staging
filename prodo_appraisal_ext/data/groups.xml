@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="prodo_appraisal_ext_root" model="ir.module.category">
+        <field name="name">Appraisals Group</field>
+    </record>
+
+
+    <record id="group_user_appraisals_1" model="res.groups">
+        <field name="name">User Appraisals</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+    <record id="group_manageby_appraisals" model="res.groups">
+        <field name="name">ManagedBy Appraisal</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+
+
+    <record id="group_setting_appraisals_2" model="res.groups">
+        <field name="name">Setting Appraisals</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+    <!-- Define your user groups here -->
+    <record id="group_hr_manager_appraisal_3" model="res.groups">
+        <field name="name">HR Appraisal</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+    <record id="group_md_appraisal_4" model="res.groups">
+        <field name="name">MD Appraisal</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+    <record id="group_exec_appraisal_4" model="res.groups">
+        <field name="name">Executive Appraisal</field>
+        <field name="category_id" ref="prodo_appraisal_ext_root"/>
+    </record>
+
+
+    <data>
+
+        <!-- Full access for special appraisal users -->
+        <record id="hr_appraisal_all_rule" model="ir.rule">
+            <field name="name">All Appraisal</field>
+            <field name="model_id" ref="model_hr_appraisal"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('prodo_appraisal_ext.group_user_appraisals_1'))]"/>
+        </record>
+
+        <record id="appraisal_system_emp_rule" model="ir.rule">
+            <field name="name">Employee Appraisal</field>
+            <field name="model_id" ref="model_hr_appraisal"/>
+            <field name="domain_force">['|', ('employee_id.user_id', '=', user.id), '&amp;',
+                ('employee_id.parent_id', '!=', False), ('employee_id.parent_id', '=', user.employee_id.id)]
+            </field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="appraisal_system_manager_rule" model="ir.rule">
+            <field name="name">Manager Appraisal</field>
+            <field name="model_id" ref="model_hr_appraisal"/>
+            <field name="domain_force">[('appraisal_approver_id','=',user.id)]
+            </field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+
+        </record>
+
+        <record model="ir.rule" id="appraisal_system_comp_rule">
+            <field name="name">Appraisal multi-company</field>
+            <field name="model_id" ref="model_hr_appraisal"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+
+        <!--        &lt;!&ndash; Increment lines hierarchy (optional) &ndash;&gt;-->
+        <!--        <record id="rule_increment_raise_lines_hierarchy" model="ir.rule">-->
+        <!--            <field name="name">Increment Raise Lines - Hierarchical Access</field>-->
+        <!--            <field name="model_id" ref="model_increment_raise_lines"/>-->
+        <!--            <field name="groups" eval="[(4, ref('base.group_user'))]"/>-->
+        <!--            <field name="domain_force">-->
+        <!--                ['|',-->
+        <!--                ('increment_raise_id.employee_id.user_id', '=', user.id),-->
+        <!--                ('increment_raise_id.employee_id', 'child_of', [user.employee_id.id])-->
+        <!--                ]-->
+        <!--            </field>-->
+        <!--        </record>-->
+
+    </data>
+</odoo>

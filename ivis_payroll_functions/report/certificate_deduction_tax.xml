@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <template id="report_certificate_deduction_report">
+            <t t-call="web.html_container">
+                <t t-set="data_report_margin_top" t-value="18"/>
+                <t t-foreach="docs" t-as="o">
+                    <t t-foreach="o.generate_tax_deduction_report()" t-as="line">
+                        <div class="page">
+                            <h4 class="text-center"
+                                style="text-transform:uppercase;page-break-inside:avoid !important;">Certification of
+                                Deduction of Tax From Income Chargeable Under The Head Salary, Under Section 164(1) of
+                                The Income Tax Ordinance, 2001
+                            </h4>
+                            <h5 class="text-center">
+                                <span style="text-transform:uppercase;">For the Period</span>
+                                <span t-esc="line['start_year'].strftime('%d-%b-%Y')"
+                                      style="text-transform:uppercase;"/>
+                                <span style="text-transform:uppercase;">To</span>
+                                <span t-esc="line['end_year'].strftime('%d-%b-%Y')" style="text-transform:uppercase;"/>
+                            </h5>
+
+                            <style>
+                                h4,h5,h3 {
+                                text-align: center;
+                                }
+                                td{
+                                padding:1px !important;
+                                }
+                            </style>
+
+                            <table class="table table-condensed table-bordered" style="font-size:15px;width:100%;">
+                                <tr>
+                                    <td colspan="3">
+                                        <strong>Name Of The Employee</strong>
+                                    </td>
+                                    <td colspan="3">
+                                        <span t-esc="line['name']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">
+                                        <strong>National ID Card Number</strong>
+                                    </td>
+                                    <td colspan="3">
+                                        <span t-esc="line['cnic_no']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">
+                                        <strong>National Tax Number</strong>
+                                    </td>
+
+                                    <td colspan="3">
+                                        <span t-esc="line['ntn_no']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">
+                                        <strong>Designation</strong>
+                                    </td>
+                                    <td colspan="3">
+                                        <span t-esc="line['designation']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">
+                                        <strong>Address</strong>
+                                    </td>
+                                    <td colspan="3">
+                                        <span t-esc="line['location']"/>
+                                    </td>
+                                </tr>
+                            </table>
+                            <h3 class="text-center" style="text-transform:uppercase;">Part I</h3>
+                            <t t-set="total_sum" t-value="0"/>
+                            <table style="max-width:100%; width:100%;">
+                                <style>
+                                    .bb td{
+                                    padding-left:10px;
+                                    }
+
+                                </style>
+
+                                <tr class="bb" style="font-size:10px; font-color: black;">
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Salary / Wages</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['basic'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Special Pay</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['special_day']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Bonus</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['bonus'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Fess / Commission</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['fees_commsion']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Leave Encashment</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['leave_encashment']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Gratuity / Annuity</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['gratuity_annuity']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>House rent allowance</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['hra'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Conveyance Allowance</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['coalw'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Leave Fare Assistance</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['leave_fare_assistance']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Special Allowance</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['special_allowance']"/>
+                                            <t t-set="total_sum" t-value="total_sum + line['special_allowance']
+                                             + line['leave_fare_assistance'] + line['coalw'] + line['hra'] +
+                                             line['gratuity_annuity'] + line['leave_encashment']
+                                              + line['fees_commsion'] + line['bonus']+ line['special_day']
+                                               + line['basic']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <strong>
+                                                <p>Total</p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(total_sum)"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                </tr>
+                            </table>
+                            <h3 class="text-center" style="text-transform:uppercase;">Part II</h3>
+                            <t t-set="total_sum2" t-value="0"/>
+                            <table style="max-width:100%; width:100%;">
+                                <tr class="bb" style="font-size:10px; font-color: black;">
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Utilities such as gas, electricity Rent free furnished accomodation which
+                                                is taxable under relevent rules
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['uoa'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Conveyance used partly for personal and partly for business purpose which
+                                                is taxable under rule 13
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="line['conveynce_used']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <p>Provident Fund contributed in excess of RS.150,000/= is Taxable under
+                                                rule 3
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['taxpf'])"/>
+                                            <t t-set="total_sum2"
+                                               t-value="total_sum2 + line['taxpf'] + line['conveynce_used'] + line['uoa']"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <strong>
+                                                <p>Total</p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(total_sum2)"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:15px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <strong>
+                                                <p>Total of part I and II</p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(total_sum + total_sum2)"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <strong>
+                                                <p>Taxable income</p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(total_sum + total_sum2)"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:16px; font-color: black;">
+                                        <td align="left" t-attf-style="width:80%;" colspan="2">
+                                            <strong>
+                                                <p>Tax deducted and deposited</p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%;" colspan="2">
+                                            <span t-esc="'{:,.2f}'.format(line['tax_deducted'])"/>
+                                            <span t-esc="line['currency_ids']"/>
+                                        </td>
+                                    </tr>
+                                </tr>
+                            </table>
+                            <p class="text-center">Certified that an amount of Rs.
+                                <span t-esc="'{:,.2f}'.format(line['tax_deducted'])"/>
+                                has been deducted under sub-section (1) of section 115 of the
+                                Income Tax Ordinance, 2001 from the income chargeable under the head ,Salary, paid to
+                                the above named employee during the financial year ending
+                                <span t-esc="line['end_year']" t-options='{"widget": "date"}'/>
+                                and per details given above.
+                            </p>
+                            <br></br>
+                            <br></br>
+                            <br></br>
+                            <table style="max-width:100%; width:100%;" class="table table-condensed">
+                                <tbody>
+                                    <tr style="border: 0 !important">
+                                        <td class="col-xs-6 text-left" style="font-size:14px;">
+                                            <strong>
+                                                <p>Date:
+                                                    <span t-esc="line['print_date']"/>
+                                                </p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:40%;" colspan="6" style="font-size:14px;">
+                                            <strong>
+                                                <p>Signature:
+                                                    <u>_________________</u>
+                                                </p>
+                                            </strong>
+                                        </td>
+                                    </tr>
+
+                                    <tr style="border: 0 !important">
+                                        <td align="left" t-attf-style="width:50%;" colspan="2" style="font-size:15px;">
+                                            <strong>
+                                                <p>Address of the employer:
+                                                    <span t-esc="line['company_address']"/>
+                                                </p>
+                                            </strong>
+                                        </td>
+                                        <td align="right" t-attf-style="width:50%;" colspan="2" style="font-size:15px;">
+                                            <strong>
+                                                <p>Name of the person responsible for paying salary(if not emp.)
+                                                    <span t-esc="line['finance_manager']"/>
+                                                    (FINANCE MANAGER)
+                                                </p>
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-xs-6 text-left" style="font-size:15px;">
+                                            <strong>
+                                                <p>National Tax Number:
+                                                    <span t-esc="line['company_ntn']"/>
+                                                </p>
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

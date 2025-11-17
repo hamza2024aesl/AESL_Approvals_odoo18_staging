@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="view_loan_form" model="ir.ui.view">
+        <field name="name">loan.form</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <form string="Loan" version="7.0">
+                <header>
+                    <button string="Apply" type="object" name="apply" groups="base.group_user"
+                            class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="compute_installments" class="oe_highlight" groups="account.group_account_invoice"
+                            colspan="2" invisible="state != 'applied'" string="Compute" type="object"
+                            help="Compute Installments or change the state according to the disbursement type for loan request or repayment type in case of installments"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,applied"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="employee_id" class="oe_edit_only"/>
+                        <h1>
+                            <field name="employee_id" on_change="onchange_employee_id(employee_id)"/>
+                        </h1>
+                        <label for="name" class="oe_edit_only"/>
+                        <h2>
+                            <field name="name"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date_applied" readonly="state != 'draft'"/>
+                            <field name="loan_type" widget="selection"
+                                   readonly="state != 'draft'"
+                                   on_change="onchange_loan_type(loan_type, employee_id)"/>
+                            <field name="cheque_no"/>
+                            <field name="ref"/>
+                        </group>
+                        <group>
+                            <field name="date_approved"/>
+                            <field name="date_disb"
+                                   readonly="state != 'draft'"
+                                   groups="account.group_account_invoice"/>
+                            <field name="department_id" readonly="state != 'draft'"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   widget="selection"/>
+                            <field name="user_id" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="General">
+                            <group>
+                                <group>
+                                    <field name="currency_id" groups="base.group_multi_currency"/>
+                                    <field name="principal_amount" widget="monetary"
+                                           readonly="state != 'draft'"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="actual_principal_amount" widget="monetary"
+                                           readonly="state != 'draft'"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="int_payable"/>
+                                    <field name="interest_mode"/>
+                                    <field name="installment_type" readonly="state != 'draft'" invisible="interest_mode"
+                                           required="not interest_mode"/>
+                                    <field name="duration"
+                                           invisible="interest_mode == 'reducing' or installment_type == 'month_wise'"
+                                           required="interest_mode == 'flat'"/>
+                                    <field name="no_of_months"
+                                           readonly="state != 'draft'"
+                                           invisible="interest_mode == 'flat' or installment_type == 'amount_wise'"
+                                           required="interest_mode == 'reducing'"/>
+                                    <field name="employee_gross" groups="hr.group_hr_user,hr.group_hr_manager"
+                                           required="False" invisible="1"/>
+                                    <field name="int_rate"/>
+                                    <field name="max_loan_amt"
+                                           invisible="state in ['draft','cancel']"/>
+                                </group>
+                                <group>
+                                    <field name="final_total" colspan="2" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="total_interest_amount" colspan="2" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="total_amount_paid" colspan="2" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="total_amount_due_principal" colspan="2" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                    <field name="total_amount_due" colspan="2" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}"/>
+                                </group>
+                                <newline/>
+                            </group>
+                            <newline/>
+                            <field name="installment_lines" nolabel="1">
+                                <list editable="bottom" string="Installments">
+                                    <field name="install_no" readonly="state != 'unpaid'"/>
+                                    <field name="date_from" readonly="state != 'unpaid'"/>
+                                    <field name="date_to" readonly="state != 'unpaid'"/>
+                                    <field name="principal_amt" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}" sum="Principal" force_save="1"
+                                           readonly="state != 'unpaid'"/>
+                                    <field name="balloon_amount" force_save="1" sum="Balloon Amount"
+                                           readonly="state != 'unpaid'"/>
+                                    <field name="interest_rate"/>
+                                    <field name="interest_amt" widget="monetary"
+                                           options="{'currency_field': 'currency_id'}" sum="Interest" force_save="1"
+                                           readonly="state != 'unpaid'"/>
+                                    <field name="total" widget="monetary" force_save="1"
+                                           options="{'currency_field': 'currency_id'}" sum="Total"
+                                           readonly="state != 'unpaid'"/>
+                                    <field name="state"/>
+                                    <field name="currency_id" groups="base.group_multi_currency"/>
+                                    <field name="int_move_id" invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Proofs">
+                            <field name="loan_proof_ids" colspan="2" nolabel="1"/>
+                        </page>
+                        <page string="Accounting"
+                              groups="account.group_account_invoice">
+                            <group>
+                                <field name="journal_id" colspan="2"
+                                       domain="['|', ('type', '=', 'cash'), ('type', '=', 'bank')]"/>
+                                <field name="voucher_ref"/>
+                                <field name="journal_id1"/>
+                                <field name="journal_id2"/>
+                                <field name="employee_loan_account" colspan="2"/>
+                            </group>
+                        </page>
+                        <page string="Policies"
+                              groups="hr.group_hr_user,account.group_account_invoice">
+                            <separator string="Policies" colspan="4"/>
+                            <field name="loan_policy_ids" nolabel="1" colspan="4"/>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes" colspan="2" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter reload_on_follower="True"/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_loan_filter" model="ir.ui.view">
+        <field name="name">loan.list.select</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <search string="Search Loan">
+                <filter icon="terp-document-new" string="Draft" name="draft"
+                        domain="[('state','=','draft')]" help="Loan that haven't yet been approved"/>
+                <filter name="approved" icon="terp-camera_test" string="Approved"
+                        domain="[('state','=','approved')]"/>
+                <filter name="toapprove" icon="terp-gtk-media-pause" string=" To Approve"
+                        domain="[('state','=','applied')]"/>
+                <separator orientation="vertical"/>
+                <filter icon="terp-dolar" string="Disbursed" name="loan_disbursed"
+                        domain="[('state','=','disburse')]"/>
+                <filter icon="gtk-cancel" string="Rejected" name="rejected" domain="[('state','=','cancel')]"/>
+                <filter icon="terp-dolar" string="Paid" name="paid" domain="[('state','=','done')]"/>
+                <separator orientation="vertical"/>
+                <field name="name" filter_domain="[('name','ilike',self)]"/>
+                <field name="employee_id"/>
+                <separator orientation="vertical"/>
+                <field name="int_payable"/>
+                <field name="company_id" widget="selection" groups="base.group_multi_company"/>
+                <newline/>
+                <group expand="0" string="Search on Dates">
+                    <field name="date_applied"/>
+                    <field name="date_approved"/>
+                </group>
+                <newline/>
+                <group expand="0" string="Group By...">
+                    <filter string="Employee" name="employee_id" icon="terp-personal" domain="[]"
+                            context="{'group_by':'employee_id'}"/>
+                    <filter string="Interest Mode" name="interest_mode" icon="terp-stock_effects-object-colorize"
+                            domain="[]" context="{'group_by':'interest_mode'}"/>
+                    <filter string="Interest Payable" name="interest_payable" icon="terp-check" domain="[]"
+                            context="{'group_by':'int_payable'}"/>
+                    <filter string="Loan Type" name="loan_type" icon="terp-check" domain="[]"
+                            context="{'group_by':'loan_type'}"/>
+                    <separator orientation="vertical"/>
+                    <filter string="Applied Date" name="date_applied" icon="terp-go-month" domain="[]"
+                            context="{'group_by':'date_applied'}"/>
+                    <filter string="Approved Date" name="date_approved" icon="terp-go-month" domain="[]"
+                            context="{'group_by':'date_approved'}"/>
+                    <separator orientation="vertical"/>
+                    <filter string="State" name="state" icon="terp-stock_effects-object-colorize"
+                            domain="[]" context="{'group_by':'state'}"/>
+                    <filter string="Company" name="company_id" icon="terp-go-home" domain="[]"
+                            context="{'group_by':'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_loan_list" model="ir.ui.view">
+        <field name="name">loan.policy.list</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <list string="Loans">
+                <field name="name"/>
+                <field name="date_applied"/>
+                <field name="loan_type"/>
+                <field name="employee_id"/>
+                <field name="date_approved"/>
+                <field name="actual_principal_amount"/>
+                <field name="int_rate"/>
+                <field name="final_total"/>
+                <field name="total_amount_paid"/>
+                <field name="total_amount_due"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_loan_pivot" model="ir.ui.view">
+        <field name="name">loan.policy.list</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <pivot string="Loans">
+                <field name="name"/>
+                <field name="date_applied"/>
+                <field name="loan_type"/>
+                <field name="employee_id"/>
+                <field name="actual_principal_amount"/>
+                <field name="int_rate"/>
+                <field name="final_total"/>
+                <field name="total_amount_paid"/>
+                <field name="total_amount_due"/>
+                <field name="state"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_loan_graph" model="ir.ui.view">
+        <field name="name">loan.graph</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <graph string="Loans" type="bar">
+                <field name="employee_id"/>
+                <field name="final_total" operator="+"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_loan_calendar" model="ir.ui.view">
+        <field name="name">loan.calendar</field>
+        <field name="model">employee.loan.details</field>
+        <field name="arch" type="xml">
+            <calendar string="Loans" color="state" date_start="date_applied">
+                <field name="employee_id"/>
+                <field name="principal_amount"/>
+                <field name="int_rate"/>
+                <field name="duration"/>
+                <field name="final_total"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="action_loan" model="ir.actions.act_window">
+        <field name="name">Loan Requests</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">employee.loan.details</field>
+        <field name="view_mode">list,form,calendar,graph,pivot</field>
+        <field name="search_view_id" ref="view_loan_filter"/>
+        <field name="help">This is the view where the loan request will be encoded</field>
+    </record>
+
+    <record id="action_loan_toapprove" model="ir.actions.act_window">
+        <field name="name">Loan Requests To Approve</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">employee.loan.details</field>
+        <field name="view_mode">list,form,calendar,graph</field>
+        <field name="context">{'search_default_toapprove': 1}</field>
+        <field name="search_view_id" ref="view_loan_filter"/>
+        <field name="help">This is the view where you can approve the loan pending for approval</field>
+    </record>
+
+    <record id="action_loan_todisburse" model="ir.actions.act_window">
+        <field name="name">Loan Requests To Disburse</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">employee.loan.details</field>
+        <field name="view_mode">list,form,calendar,graph</field>
+        <field name="context">{'search_default_approved': 1}</field>
+        <field name="search_view_id" ref="view_loan_filter"/>
+        <field name="help">This is the view where you can Disburse the loan that are approved</field>
+    </record>
+
+    <menuitem name="Loans"
+              id="loan_root"
+              sequence="9"
+              groups="hr.group_hr_manager"
+              web_icon="ivis_hr_employee_loan,static/description/icon.png"/>
+
+    <menuitem name="Accounting"
+              id="loan_root_account"
+              parent="loan_root"
+              sequence="9"
+              groups="account.group_account_invoice"/>
+
+    <menuitem name="Configuration"
+              id="policy_configure"
+              parent="loan_root"
+              groups="account.group_account_invoice,hr.group_hr_user"/>
+
+    <menuitem name="Loans"
+              id="loan_loans"
+              parent="loan_root"
+              sequence="1"
+              action="action_loan"/>
+
+    <menuitem name="Loan Requests"
+              id="loan_loan"
+              parent="loan_loans"
+              action="action_loan"/>
+
+    <menuitem name="Loan Requests to Approve"
+              id="loan_loan_toapprove"
+              parent="loan_loans"
+              sequence="11"
+              groups="hr.group_hr_user,hr.group_hr_manager"
+              action="action_loan_toapprove"/>
+
+    <menuitem name="Loans to Disburse"
+              id="loan_loan_todisburse"
+              parent="loan_root_account"
+              sequence="10"
+              action="action_loan_todisburse"/>
+</odoo>

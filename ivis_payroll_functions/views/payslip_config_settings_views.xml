@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <!--    <record id="view_payslip_config_settings" model="ir.ui.view">-->
+    <!--        <field name="name">payslip settings</field>-->
+    <!--        <field name="model">payslip.config.settings</field>-->
+    <!--        <field name="arch" type="xml">-->
+    <!--            <form class="oe_form_configuration">-->
+    <!--                <header>-->
+    <!--                    <button string="Apply" type="object" name="execute" class="oe_highlight"/>-->
+    <!--                    <button string="Cancel" type="object" name="cancel" class="oe_link"/>-->
+    <!--                </header>-->
+    <!--                <div id="main">-->
+    <!--                    <group string="Payslip Settings">-->
+    <!--                        <field name="name" widget="radio"/>-->
+    <!--                    </group>-->
+    <!--                </div>-->
+    <!--            </form>-->
+    <!--        </field>-->
+    <!--    </record>-->
+
+    <!--    <record id="action_id" model="ir.actions.act_window">-->
+    <!--        <field name="name">Tax Income</field>-->
+    <!--        <field name="res_model">payslip.config.settings</field>-->
+    <!--        <field name="view_id" ref="view_payslip_config_settings"/>-->
+    <!--        <field name="view_mode">form</field>-->
+    <!--        <field name="target">inline</field>-->
+    <!--    </record>-->
+
+    <!--    <menuitem id="tax_summary" name="Payslip"-->
+    <!--              parent="hr_payroll.menu_hr_payroll_configuration"-->
+    <!--              action="action_id"-->
+    <!--              groups="hr_payroll.group_hr_payroll_manager"/>-->
+</odoo>

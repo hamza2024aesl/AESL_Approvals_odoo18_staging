@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="action_report_payslip" model="ir.actions.report">
+            <field name="name">Payslip PDF</field>
+            <field name="model">hr.payslip</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.payslip_pdf</field>
+            <field name="report_file">ivis_payroll_functions.payslip_pdf</field>
+            <field name="binding_model_id" ref="hr_payroll.model_hr_payslip"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="salarysheet_registration" model="ir.actions.report">
+            <field name="name">Salary Sheet</field>
+            <field name="model">employee.salary.sheet</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_salarysheet</field>
+            <field name="report_file">ivis_payroll_functions.report_salarysheet</field>
+            <field name="binding_model_id" ref="model_employee_salary_sheet"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="certificate_deduction_report" model="ir.actions.report">
+            <field name="name">Certificate Of Deduction Of Tax</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_certificate_deduction_report</field>
+            <field name="report_file">ivis_payroll_functions.report_certificate_deduction_report</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="reconciliation_report" model="ir.actions.report">
+            <field name="name">Payroll Reconciliation Report</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_reconciliation_report</field>
+            <field name="report_file">ivis_payroll_functions.report_reconciliation_report</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="performance_appraisal_form_report" model="ir.actions.report">
+            <field name="name">Performance Appraisal Form</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_performance_appraisal_form</field>
+            <field name="report_file">ivis_payroll_functions.report_performance_appraisal_form</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="provident_fund_deduction_certificate" model="ir.actions.report">
+            <field name="name">Provident Fund Detuction Certificate</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_provident_fund_deduction_certificate</field>
+            <field name="report_file">ivis_payroll_functions.report_provident_fund_deduction_certificate</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="salary_through_cheque_report" model="ir.actions.report">
+            <field name="name">Salaries Through Cheque</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_payroll_functions.report_salary_through_cheque</field>
+            <field name="report_file">ivis_payroll_functions.report_salary_through_cheque</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <record id="provident_funds_xlsx_report" model="ir.actions.report">
+            <field name="name">Provident Funds XLSX</field>
+            <field name="model">payroll.wizard</field>
+            <field name="report_type">xlsx</field>
+            <field name="report_name">ivis_payroll_functions.provident_funds_xl_report</field>
+            <field name="report_file">ivis_payroll_functions.provident_funds_xl_report</field>
+            <field name="binding_model_id" ref="model_payroll_wizard"/>
+            <field name="binding_type">report</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="action_hr_payroll_report" model="ir.actions.act_window">
+        <field name="name">Payroll Report</field>
+        <field name="res_model">hr.payslip.line</field>
+        <field name="view_mode">pivot</field>
+    </record>
+
+    <record id="wizard_action" model="ir.actions.act_window">
+        <field name="name">Reports Generator</field>
+        <field name="res_model">payroll.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+    <record id="payroll_reports_view_action" model="ir.actions.act_window">
+        <field name="name">Payroll Report</field>
+        <field name="res_model">payroll.reports</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+    </record>
+
+    <record id="action_open_salary_sheet" model="ir.actions.act_window">
+        <field name="name">Employee Salary Sheet</field>
+        <field name="res_model">employee.salary.sheet</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="payroll_reports"
+              name="Reports"
+              parent="hr_work_entry_contract_enterprise.menu_hr_payroll_root"
+              sequence="100"/>
+
+    <menuitem id="menu_hr_payslip_view_report"
+              name="Payslip BI"
+              action="action_hr_payroll_report"
+              parent="payroll_reports"
+              sequence="10"
+              groups="hr.group_hr_manager"/>
+
+    <menuitem id="menu_wizard"
+              name="Payroll Reports"
+              action="wizard_action"
+              parent="payroll_reports"
+              sequence="10"/>
+
+    <!--    <menuitem id="menu_payroll_reports_view_action"-->
+    <!--              name="Reports Generator"-->
+    <!--              action="payroll_reports_view_action"-->
+    <!--              parent="payroll_reports"-->
+    <!--              sequence="5"/>-->
+
+    <!--    <menuitem id="menu_salary_sheet"-->
+    <!--              name="Salary Sheet"-->
+    <!--              action="action_open_salary_sheet"-->
+    <!--              parent="payroll_reports"/>-->
+</odoo>

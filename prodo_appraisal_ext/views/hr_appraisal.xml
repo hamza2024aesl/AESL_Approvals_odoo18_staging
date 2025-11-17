@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <data>
+        <record id="hr_appriasal_form_customization" model="ir.ui.view">
+            <field name="name">hr.appraisal.form.customization</field>
+            <field name="model">hr.appraisal</field>
+            <field name="inherit_id" ref="hr_appraisal.view_hr_appraisal_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//header" position="replace">
+                    <header>
+                        <button name="action_hr_confirm" string="HR Confirm" type="object"
+                                groups="prodo_appraisal_ext.group_hr_manager_appraisal_3" class="oe_highlight"
+                                invisible="state != 'draft'"/>
+                        <button name="action_confirm2" string="Submit" type="object" class="oe_highlight"
+                                invisible="state != 'pending'"/>
+                        <button name="action_confirm3" string="Submit" type="object" class="oe_highlight"
+                                invisible="state != 'pending2'"/>
+                        <button name="action_confirm4" string="Submit" type="object"
+                                groups="prodo_appraisal_ext.group_exec_appraisal_4" class="oe_highlight"
+                                invisible="state != 'pending4'"/>
+
+                        <!--<button name="action_reset_back" string="Reset Back" type="object" class="oe_highlight" attrs="{'invisible': [('state','not in',('new','done','cancel'))]}"/>-->
+                        <button name="action_confirm" string="Submit" type="object" class="oe_highlight"
+                                invisible="state != 'new'"/>
+                        <button name="action_done" string="Done" type="object"
+                                groups="prodo_appraisal_ext.group_md_appraisal_4"
+                                invisible="state != 'pending3'"/>
+                        <button name="action_cancel" string="Cancel" type="object"
+                                invisible="1"/>
+                        <button name="action_reset_back" string="Revert Back" type="object" class="oe_highlight"
+                                invisible="state in ('draft','new' ,'done', 'cancel')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,new,done" readonly="1"/>
+                    </header>
+
+                </xpath>
+
+                <xpath expr="//field[@name='manager_ids']" position="before">
+                    <field name="appraisal_type"/>
+                    <field name="appraisal_batch_id"/>
+                </xpath>
+
+                <xpath expr="//page[@name='private_note']" position="after">
+                    <page name='appraisal_approvals' string="Appraisal Approvals">
+                        <group>
+                            <field name="recomm_increment_lines_id" widget="one2many_list" nolabel="1"
+                                   readonly="state in 'draft'">
+                                <list string="Recommend Raise Lines" editable="top"
+                                      delete="0">
+                                    <field name="increment_raise_id" invisible="1"/>
+                                    <field name="check_access_team_id" invisible="1"/>
+                                    <field name="increment_raise_amount" style="width: 30vw; text-align: right;"
+                                           readonly="not check_access_team_id"/>
+                                    <field name="recomm_desigantion_id"
+                                           readonly="not check_access_team_id"
+                                           style="width: 30vw; text-align: left;"/>
+                                    <field name="recomm_grades"
+                                           readonly="not check_access_team_id"
+                                           style="width: 10vw; text-align: center;"/>
+                                    <field name="increment_raise_by" style="width: 15wv; text-align: left;"
+                                           readonly="1"/>
+                                    <field name="incremented_date" style="width: 15vw; text-align: left;" readonly="1"/>
+                                    <field name="state" invisible="1"/>
+                                    <field name="is_manager2" invisible="1"/>
+                                    <field name="is_manager3" invisible="1"/>
+                                    <field name="is_manager4" invisible="1"/>
+                                    <field name="is_manager5" invisible="1"/>
+                                </list>
+                            </field>
+                        </group>
+                    </page>
+                </xpath>
+                <xpath expr="//page[@name='appraisal_approvals']" position="after">
+                    <page name="appraisal_remarks" string="Appraisal Remarks">
+                        <h5><b>Remarks:</b>(Work Independently, Analytic, Troubleshooting, Motivation, Technical)
+                        </h5>
+                        <field name="remarks" nolabel="1"
+                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
+                               readonly="state not in ['new']"/>
+                        <field name="remarks_2"
+                               readonly="state not in ['pending']"
+                               nolabel="1" style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"/>
+                        <field name="remarks_3" nolabel="1"
+                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
+                               readonly="state not in ['pending2']"/>
+                        <field name="remarks_4" nolabel="1"
+                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
+                               readonly="state not in ['pending4']"/>
+                        <field name="remarks_5" nolabel="1" style="border-bottom: 1px solid #000 !important;"
+                               readonly="state not in ['pending3']"/>
+                        <group>
+                        </group>
+                    </page>
+                </xpath>
+
+                <xpath expr="//field[@name='assessment_note']" position="before">
+<!--                    <field name="education"/>-->
+                    <field name="registration_number"/>
+                    <field name="appointment_date"/>
+                    <field name="sl_count"/>
+                    <field name="cl_count"/>
+                    <field name="earned_leaves_balance"/>
+                    <field name="gross_salary"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
+

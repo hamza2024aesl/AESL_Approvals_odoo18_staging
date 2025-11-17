@@ -1,0 +1,65 @@
+<odoo>
+    <data>
+        <record model="ir.ui.view" id="view_appraisal_employee_history_list">
+            <field name="name">view.appraisal.employee.history.list</field>
+            <field name="model">employee.appraisal.history</field>
+            <field name="arch" type="xml">
+                <list string="Last Appraisal" sample="1" import="0" export_xlsx="0" edit="0" create="0" delete="0">
+                    <field name="appraisal_history_id" readonly="1" invisible="1"/>
+                    <field name="employee_id" string="Name" widget="many2one_avatar_employee"/>
+                    <field name="increment_amount" readonly="1"/>
+                    <field name="recommended_grade" readonly="1"/>
+                    <field name="recommended_designation" readonly="1"/>
+                    <field name="year" readonly="1"/>
+                    <field name="company_id" invisible="1"/>
+                    <field name="personal_file_no" invisible="1"/>
+                    <field name="gross_salary" invisible="1"/>
+                    <field name="department" invisible="1"/>
+                    <field name="designation" invisible="1"/>
+                    <field name="location" invisible="1"/>
+                    <field name="appraisal_date" invisible="1"/>
+                    <button string="Print Report" type="object" name="action_print_report" class="btn-primary"/>
+                </list>
+            </field>
+        </record>
+
+        <record model="ir.actions.act_window" id="action_appraisal_employee_history">
+            <field name="name">Appraisal History</field>
+            <field name="res_model">employee.appraisal.history</field>
+            <field name="view_mode">list</field>
+            <field name="view_id" ref="view_appraisal_employee_history_list"/>
+            <field name="target">current</field>
+        </record>
+
+        <menuitem id="menu_employee_appraisal_history_system"
+          name="Appraisal Letter"
+          parent="aesl_appraisal_system.menu_appraisal_system_root"
+          action="action_appraisal_employee_history"
+          groups="aesl_appraisal_system.group_hr_manager_appraisal_3"
+          sequence="10" />
+
+        <record id="hr_employee_appraisal_view_form_inherited9" model="ir.ui.view">
+            <field name="name">hr.employee.appraisal.view.form.inherited9</field>
+            <field name="model">hr.employee</field>
+            <field name="inherit_id" ref="hr.view_employee_form"/>
+            <field name="arch" type="xml">
+                <div name="button_box" position="inside">
+                    <button name="action_view_increment_history"
+                            class="oe_stat_button"
+                            icon="fa-star-half-o"
+                            type="object">
+                        <div class="o_field_widget o_stat_info">
+                            <span class="o_stat_text">
+                                Appraisal
+                            </span>
+                        </div>
+                    </button>
+                </div>
+                <xpath expr="//form" position="inside">
+                    <field name="appraisal_history_line_ids" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_my_change_request,my_change_request,model_my_change_request,base.group_user,1,1,1,0
+access_working_schedule_in,working_schedule_in,model_working_schedule_in,base.group_user,1,0,0,0
+access_working_schedule_out,working_schedule_out,model_working_schedule_out,base.group_user,1,0,0,0
+access_my_change_request_manager,my_change_request,model_my_change_request,hr_attendance.group_hr_attendance_manager,1,1,1,1
+access_my_change_request_user,my_change_request,model_my_change_request,base.group_user,1,1,1,0
+access_working_schedule_in_mng,working_schedule_in,model_working_schedule_in,hr_attendance.group_hr_attendance_manager,1,1,1,1
+access_working_schedule_out_mng,working_schedule_out,model_working_schedule_out,hr_attendance.group_hr_attendance_manager,1,1,1,1
+access_ivis_attendance_log_user,ivis_attendance_log_user,model_ivis_attendance_log,base.group_user,1,0,0,0

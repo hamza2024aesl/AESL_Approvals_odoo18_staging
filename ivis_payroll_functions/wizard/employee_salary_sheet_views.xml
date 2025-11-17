@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="view_salary_sheet_form" model="ir.ui.view">
+        <field name="name">view.salary.sheet.form</field>
+        <field name="model">employee.salary.sheet</field>
+        <field name="arch" type="xml">
+            <form>
+                <group col="2">
+                    <field name="salary_rule_id" style="width:40%%"/>
+                </group>
+                <footer>
+                    <button name="generate_report" string="Print" type="object" class="oe_highlight"/>
+                    OR
+                    <button string="Cancel" special="cancel" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

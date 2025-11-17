@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="group_user_appraisals_1" model="res.groups">
+            <field name="name">User Appraisals</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+
+        <record id="group_manageby_appraisals" model="res.groups">
+            <field name="name">ManagedBy Appraisal</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+
+        <record id="group_setting_appraisals_2" model="res.groups">
+            <field name="name">Setting Appraisals</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+
+        <record id="group_hr_manager_appraisal_3" model="res.groups">
+            <field name="name">HR Appraisal</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+
+        <record id="group_md_appraisal_4" model="res.groups">
+            <field name="name">MD Appraisal</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+
+        <record id="group_exec_appraisal_4" model="res.groups">
+            <field name="name">Executive Appraisal</field>
+            <field name="category_id" ref="aesl_appraisal_system_root"/>
+        </record>
+    </data>
+</odoo>

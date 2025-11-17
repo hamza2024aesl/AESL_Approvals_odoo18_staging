@@ -1,0 +1,30 @@
+<odoo>
+    <data>
+        <record id="view_appraisal_wizard_form" model="ir.ui.view">
+            <field name="name">appraisal.wizard.form</field>
+            <field name="model">appraisal.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Appraisal Remarks">
+                    <sheet>
+                        <group>
+                            <field name="remarks"/>
+                        </group>
+                        <footer>
+                            <button string="Submit" type="object" name="action_confirm" class="btn-primary"/>
+                            <button string="Cancel" class="btn-secondary" special="cancel"/>
+                        </footer>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_appraisal_wizard" model="ir.actions.act_window">
+            <field name="name">Appraisal Wizard</field>
+            <field name="res_model">appraisal.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_appraisal_wizard_form"/>
+            <field name="target">new</field>
+        </record>
+
+    </data>
+</odoo>

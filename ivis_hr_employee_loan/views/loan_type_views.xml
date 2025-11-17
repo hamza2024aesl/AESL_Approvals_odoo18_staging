@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="view_loan_type_filter" model="ir.ui.view">
+        <field name="name">loan.type.search</field>
+        <field name="model">loan.type</field>
+        <field name="arch" type="xml">
+            <search string="Search Loan Type">
+                <filter string="Flat Interest" name="flat_interest" domain="[('interest_mode','=','flat')]"
+                        help="Loan Type with Flat Interest mode"/>
+                <filter string="Reducing Interest" name="reducing_interest"
+                        domain="[('interest_mode','=','reducing')]"
+                        help="Loan Type with Reducing Interest mode"/>
+                <separator orientation="vertical"/>
+                <field name="name"/>
+                <field name="int_rate" filter_domain="[('name','ilike',self)]" string="Int.Rate"/>
+                <separator orientation="vertical"/>
+                <field name="int_payable"/>
+                <field name="company_id" widget="selection" groups="base.group_multi_company"/>
+                <group expand="0" string="Group By...">
+                    <filter string="Interest Mode" name="interest_mode" icon="terp-stock_effects-object-colorize"
+                            domain="[]" context="{'group_by':'interest_mode'}"/>
+                    <filter string="Interest Payable" name="interest_payable" icon="terp-check" domain="[]"
+                            context="{'group_by':'int_payable'}"/>
+                    <filter string="Company" name="company_id" groups="base.group_multi_company" icon="terp-go-home"
+                            context="{'group_by':'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_loan_type_list" model="ir.ui.view">
+        <field name="name">loan.type.list</field>
+        <field name="model">loan.type</field>
+        <field name="arch" type="xml">
+            <list string="Loan Type">
+                <field name="name"/>
+                <field name="int_payable"/>
+                <field name="interest_mode"/>
+                <field name="int_rate"/>
+                <field name="payment_method"/>
+                <field name="disburse_method"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_loan_type_form" model="ir.ui.view">
+        <field name="name">loan.type.form</field>
+        <field name="model">loan.type</field>
+        <field name="arch" type="xml">
+            <form string="Loan Type" version="7.0">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                        <label for="code" class="oe_edit_only"/>
+                        <h2>
+                            <field name="code" colspan="2"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <separator string="General" colspan="4"/>
+                        <group>
+                            <field name="int_payable" on_change="onchange_interest_payable(int_payable)"/>
+                            <field name="interest_mode"
+                                   invisible="not int_payable"
+                                   required="int_payable"/>
+                            <field name="int_rate" invisible="not int_payable"/>
+                            <field name="loan_interest_account"
+                                   invisible="not int_payable"
+                                   required="int_payable"/>
+                        </group>
+                        <group>
+                            <field name="payment_method"/>
+                            <field name="disburse_method"/>
+                            <field name="noOfSalary" string="Number of Salaries"/>
+                            <field name="servicePeriod" string="Service Period"/>
+                            <field name="company_id" widget="selection" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group>
+                        <separator string="Loan Proofs" colspan="4"/>
+                        <field name="loan_proof_ids" nolabel="1" colspan="4" height="400"/>
+                        <separator string="Employee Categories" colspan="4"/>
+                        <field name="employee_categ_ids" nolabel="1" colspan="4" height="400"/>
+                        <separator string="Employee's" colspan="4"/>
+                        <field name="employee_ids" nolabel="1" colspan="4"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_loan_type" model="ir.actions.act_window">
+        <field name="name">Loan Types</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">loan.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_loan_type_filter"/>
+        <field name="help">Configure different loan types</field>
+    </record>
+
+    <menuitem name="Loan Types"
+              id="loan_type"
+              parent="policy_configure"
+              action="action_loan_type"/>
+</odoo>
