@@ -90,6 +90,12 @@ class HrAppraisal(models.Model):
         string="To be Confirmed?", default="yes")
     increase_percentage = fields.Float(string='Increment (%)', group_operator=False)
 
+    visible_user_ids = fields.Many2many(
+        'res.users',
+        string="Allowed Users",
+        default=lambda self: self.env.user
+    )
+
 
 
     @api.depends('employee_id')

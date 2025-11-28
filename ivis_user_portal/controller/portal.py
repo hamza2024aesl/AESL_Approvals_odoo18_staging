@@ -964,6 +964,7 @@ class EmployeePortal(CustomerPortal):
         else:
             # domain = [('employee_id.parent_id.user_id', '=', user.id)]
             domain = [
+                ('visible_user_ids', 'in', request.env.user.id),
                 '|',
                 ('employee_id.parent_id.user_id', '=', user.id),
                 ('appraisal_approver_id', '=', user.id)
@@ -1129,6 +1130,10 @@ class EmployeePortal(CustomerPortal):
                     'increment_raise_id': appraisal_obj.id
                 })
                 request.env["increment.raise.lines"].create(vals_lines)
+
+            appraisal_obj.write({
+                'visible_user_ids': [(3, request.env.user.id)]
+            })
         else:
             raise ValidationError(_('Please let Mr. %s fill the form.') % appraisal_obj.employee_id.parent_id.user_id.name)
 
@@ -1188,6 +1193,10 @@ class EmployeePortal(CustomerPortal):
             raise ValidationError(
                 _('Please let Mr. %s proceed the form.') % appraisal_obj.employee_id.parent_id.parent_id.user_id.name)
 
+        appraisal_obj.write({
+            'visible_user_ids': [(3, request.env.user.id)]
+        })
+
     def _update_action_confirm3(self, appraisal_obj, vals, vals_lines):
         login_user = request.env.user.id
         manager_user = request.env['res.users'].search([('id', '=', 414)])
@@ -1223,6 +1232,9 @@ class EmployeePortal(CustomerPortal):
         else:
             raise ValidationError(_('Please let Mr. %s proceed the form.') % appraisal_obj.appraisal_approver_id.name)
 
+        appraisal_obj.write({
+            'visible_user_ids': [(3, request.env.user.id)]
+        })
     def _update_action_done(self, appraisal_obj, vals, vals_lines):
         login_user = request.env.user.id
         #
@@ -1249,6 +1261,9 @@ class EmployeePortal(CustomerPortal):
             })
             request.env["increment.raise.lines"].create(vals_lines)
 
+        appraisal_obj.write({
+            'visible_user_ids': [(3, request.env.user.id)]
+        })
     def _update_action_confirm4(self, appraisal_obj, vals, vals_lines):
         login_user = request.env.user.id
         manager_user = request.env['res.users'].search([('id', '=', 414)])
@@ -1276,6 +1291,10 @@ class EmployeePortal(CustomerPortal):
                 request.env["increment.raise.lines"].create(vals_lines)
         else:
             raise ValidationError(_('Please let Mr. Ahad proceed the form.'))
+
+        appraisal_obj.write({
+            'visible_user_ids': [(3, request.env.user.id)]
+        })
 
     @http.route(['/my/leaves/apply'], type='http', auth="user", website=True, methods=['POST'])
     def leave_apply_submit(self, **post):
