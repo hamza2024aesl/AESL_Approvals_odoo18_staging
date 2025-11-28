@@ -92,6 +92,9 @@ class HrAppraisal(models.Model):
 
     visible_user_ids = fields.Many2many(
         'res.users',
+        'hr_appraisal_visible_user_rel',      # <--- ADD THIS
+        'appraisal_id',
+        'user_id',
         string="Allowed Users",
         default=lambda self: self.env.user
     )
