@@ -10,7 +10,7 @@ class HrAppraisal(models.Model):
     _inherit = 'hr.appraisal'
     _description = 'Appraisal System Batch'
 
-    appraisal_batch_id = fields.Many2one('appraisal.batch', string='Appraisal Batch')
+    appraisal_batch_id = fields.Many2one('appraisal.batches', string='Appraisal Batch')
     recomm_increment_lines_id = fields.One2many('increment.raise.lines', 'increment_raise_id',
                                                 string='Increase Recommended Lines',
                                                 required=True, index=True, ondelete='cascade')
