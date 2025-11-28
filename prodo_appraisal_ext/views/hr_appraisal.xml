@@ -144,13 +144,6 @@
                 </xpath>
             </field>
         </record>
-
-        <record id="appraisal_share_wizard_action" model="ir.actions.act_window">
-            <field name="name">Share Appraisal</field>
-            <field name="res_model">apprisal.share.wizard</field>
-            <field name="view_mode">form</field>
-            <field name="target">new</field>
-        </record>
     </data>
 </odoo>
 
