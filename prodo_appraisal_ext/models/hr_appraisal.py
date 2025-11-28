@@ -6,7 +6,6 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from odoo.exceptions import RedirectWarning, UserError, ValidationError, AccessError
 
-
 class HrAppraisal(models.Model):
     _inherit = 'hr.appraisal'
     _description = 'Appraisal System Batch'
@@ -80,7 +79,17 @@ class HrAppraisal(models.Model):
     registration_number = fields.Char(related='employee_id.registration_number',string='Registration Number')
     cl_count = fields.Float('Casual leave availed')
     sl_count = fields.Float('Sick leave availed')
+    pl_count = fields.Float('Paid leave availed')
     earned_leaves_balance = fields.Float('Earned leave Balance')
+
+    future_project = fields.Text('Future Prospect')
+    accomplishment = fields.Text('Accomplishment')
+    to_confirmation = fields.Selection([
+        ('yes', 'YES'),
+        ('no', 'NO')],
+        string="To be Confirmed?", default="yes")
+    increase_percentage = fields.Float(string='Increment (%)', group_operator=False)
+
 
 
     @api.depends('employee_id')
@@ -873,10 +882,8 @@ class HrAppraisal(models.Model):
             # else:
             rec.sudo().countersignedby_name = login_user
             rec.sudo().countersignature_date = fields.Datetime.now()
-            # self.activity_feedback(['mail.mail_activity_data_meeting', 'mail.mail_activity_data_todo'])
             rec.sudo().last_state = rec.state
             rec.sudo().state = 'done'
-            # self.sudo().send_appraisal()
             filtered_lines = rec.sudo().recomm_increment_lines_id.filtered(
                 lambda line: line.increment_raise_by.id == login_user.id)
             if not filtered_lines:
@@ -891,6 +898,7 @@ class HrAppraisal(models.Model):
                 })]
                 rec.recomm_increment = rec.recomm_increment_lines_id[-1].increment_raise_amount
             rec.recomm_increment = rec.recomm_increment_lines_id[-1].increment_raise_amount
+            rec.gross_salary += rec.recomm_increment
         return {
             'effect': {
                 'fadeout': 'slow',
@@ -997,39 +1005,6 @@ class HrAppraisal(models.Model):
                 })
 
 
-    # @api.model
-    # def create(self, vals):
-    #     seq_date = vals.get('create_date', fields.Datetime.now())
-    #     # vals['name'] = self.env['ir.sequence'].next_by_code(
-    #     #     'hr.appraisal', sequence_date=seq_date) or _('New')
-    #
-    #     """Override the create method to allow only 'Hasan Saeed' from the 'Appraisal/Administrator' group to create records."""
-    #     login_user = self.env['res.users'].browse(self.env.context.get('uid'))
-    #     if 'remarks' in vals and vals['remarks']:
-    #         vals['remarks'] += f"\nBy: {login_user.name} {fields.Datetime.now().strftime('%a, %d-%b-%Y')}"
-    #     elif 'remarks_2' in vals and vals['remarks_2']:
-    #         vals['remarks_2'] += f"\nBy: {login_user.name} {fields.Datetime.now().strftime('%a, %d-%b-%Y')}"
-    #     elif 'remarks_3' in vals and vals['remarks_3']:
-    #         vals['remarks_3'] += f"\nBy: {login_user.name} {fields.Datetime.now().strftime('%a, %d-%b-%Y')}"
-    #     elif 'remarks_4' in vals and vals['remarks_4']:
-    #         vals['remarks_4'] += f"\nBy: {login_user.name} {fields.Datetime.now().strftime('%a, %d-%b-%Y')}"
-    #     elif 'remarks_5' in vals and vals['remarks_5']:
-    #         vals['remarks_5'] += f"\nBy: {login_user.name} {fields.Datetime.now().strftime('%a, %d-%b-%Y')}"
-    #     else:
-    #         pass
-    #
-    #     # Set a context flag to avoid recursive appraisal creation
-    #     if not self.env.context.get('skip_appraisal_creation', False):
-    #         # vals['appraisal_triggered'] = True  # Add this just as a safeguard or indicator
-    #         record = super(HrAppraisal, self).with_context(skip_appraisal_creation=True).create(vals)
-    #         record.create_appraisal_requests()
-    #         return record
-    #     else:
-    #         return super(HrAppraisal, self).create(vals)
-    #
-    #     self.check_anomynous_records_appraisal()
-
-
     def write(self, vals):
         login_user = self.env.user
         remark_fields = ['remarks', 'remarks_2', 'remarks_3', 'remarks_4', 'remarks_5']
@@ -1080,6 +1055,15 @@ class HrAppraisal(models.Model):
             if self.state == 'draft' and login_user.has_group('prodo_appraisal_ext.group_hr_manager_appraisal_3'):
                 pass
             elif self.state == 'new' and self.employee_id.parent_id.user_id != login_user:
+            #     subordinate_appraisals = self.env['hr.appraisal'].search([
+            #         ('employee_id.parent_id.user_id', '=', login_user.id)
+            #     ])
+            #     if not subordinate_appraisals:
+            #         raise ValidationError(_('You are not allowed to edit this appraisal.'))
+            #     # If there are appraisals under this manager, allow access only for those
+            #     elif self.employee_id.parent_id.user_id != login_user:
+            #         raise ValidationError(_('You are only allowed to edit appraisals of your subordinates.'))
+
                 if not self.env.context.get('appraisal_remarks'):
                     raise ValidationError(_('You are not allowed to edit this appraisal.'))
 
@@ -1089,35 +1073,63 @@ class HrAppraisal(models.Model):
     #
     @api.depends('employee_id')
     def _leaves_count(self):
-        first = date(2020, 1, 1)
-        last = date(2050, 12, 31)
-        for emp in self.employee_id:
-            casual_work_entry  = self.env['hr.work.entry.type'].search([('name','=','Casual Time Off')])
-            sick_work_entry  = self.env['hr.work.entry.type'].search([('name','=','Sick Time Off')])
-            pl_work_entry  = self.env['hr.work.entry.type'].search([('name','=','PL Leaves')])
-            sl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', emp.company_id.id), ('work_entry_type_id', '=', sick_work_entry.id)]).id
-            cl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', emp.company_id.id), ('work_entry_type_id', '=', casual_work_entry.id)]).id
-            pl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', emp.company_id.id),('work_entry_type_id', '=', pl_work_entry.id) ]).id
+        first = date(2025, 1, 1)
+        last = date(2025, 12, 31)
 
-            employee_leaves = self.env['hr.leave'].search([
-                ('employee_id', '=', emp.id), ('date_from', '>=', first), ('date_to', '<=', last),
-                ('state', '=', 'validate')
-            ])
-            employee_allocations = self.env['hr.leave.allocation'].search([
-                ('employee_id', '=', emp.id), ('write_date', '>=', first), ('write_date', '<=', last),
-                ('state', '=', 'validate')
-            ])
-            sick_leaves_count = sum(
-                employee_leaves.filtered(lambda x: x.holiday_status_id.id == sl_type_id).mapped('number_of_days'))
-            casual_leaves_count = sum(
-                employee_leaves.filtered(lambda x: x.holiday_status_id.id == cl_type_id).mapped('number_of_days'))
-            annual_leaves_count = sum(
-                employee_leaves.filtered(lambda x: x.holiday_status_id.id == pl_type_id).mapped('number_of_days'))
-            annual_allocation_count = sum(
-                employee_allocations.filtered(lambda x: x.holiday_status_id.id == pl_type_id).mapped('number_of_days'))
-            self.sl_count = sick_leaves_count
-            self.cl_count = casual_leaves_count
-            self.earned_leaves_balance = annual_allocation_count - annual_leaves_count
+        current_year = datetime.now().year
+
+        for emp in self.employee_id:
+
+            casual_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Casual Time Off')])
+            sick_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Sick Time Off')])
+            pl_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'PL Leaves')])
+
+
+            casual_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', casual_work_entry_type.id)])
+            sick_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', sick_work_entry_type.id)])
+            pl_work_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)])
+
+            cl_leave_allocate = self.env['hr.leave.allocation'].search(
+                [('holiday_status_id', 'in', casual_leave_type.ids), ('state', '=', 'validate'),
+                 ('employee_id', '=',emp.id)])
+            sick_leave_allocate = self.env['hr.leave.allocation'].search(
+                [('holiday_status_id', 'in', sick_leave_type.ids), ('state', '=', 'validate'),
+                 ('employee_id', '=', emp.id)])
+            pl_leave_allocate = self.env['hr.leave.allocation'].search(
+                [('holiday_status_id', 'in', pl_work_type.ids), ('state', '=', 'validate'),
+                 ('employee_id', '=', emp.id)])
+
+            cl_leave_allocate = cl_leave_allocate.filtered(
+                lambda a: a.date_from and a.date_to and
+                  a.date_from.year <= current_year <= a.date_to.year
+            )
+
+            sick_leave_allocate = sick_leave_allocate.filtered(
+                lambda a: a.date_from and a.date_to and
+                          a.date_from.year <= current_year <= a.date_to.year
+            )
+
+            pl_leave_allocate = pl_leave_allocate.filtered(
+                lambda a: a.date_from and a.date_to and
+                          a.date_from.year <= current_year <= a.date_to.year
+            )
+
+            self.cl_count = cl_leave_allocate.number_of_days
+            self.sl_count = sick_leave_allocate.number_of_days
+            self.pl_count = pl_leave_allocate.number_of_days
+
+
+    def action_open_share_appraisal_wizard(self):
+        template = self.env.ref('project.mail_template_project_sharing', raise_if_not_found=False)
+
+        local_context = self.env.context | {
+            'default_template_id': template.id if template else False,
+            'default_email_layout_xmlid': 'mail.mail_notification_light',
+            'active_id': self.id,
+            'active_model': 'hr.appraisal',
+        }
+        action = self.env["ir.actions.actions"]._for_xml_id("prodo_appraisal_ext.appraisal_share_wizard_action")
+        if self.env.context.get('default_access_mode'):
+            action['name'] = _("Share Appraisal")
+        action['context'] = local_context
+        return action

@@ -951,7 +951,7 @@ class EmployeePortal(CustomerPortal):
         user = request.env.user
         default_order_by = sorted_list[sortby]['order']
 
-        appraisal_obj = request.env['appraisal.system']
+        appraisal_obj = request.env['hr.appraisal']
 
         is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
         employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
@@ -962,7 +962,14 @@ class EmployeePortal(CustomerPortal):
             all_subordinates = self._get_all_subordinate_employees(employee)
             domain = [('employee_id', 'in', all_subordinates.ids), ('state', 'not in', ['draft', 'cancel'])]
         else:
-            domain = [('employee_id', '=', employee.id), ('state', 'not in', ['draft', 'cancel'])]
+            # domain = [('employee_id.parent_id.user_id', '=', user.id)]
+            domain = [
+                '|',
+                ('employee_id.parent_id.user_id', '=', user.id),
+                ('appraisal_approver_id', '=', user.id)
+            ]
+
+            # domain = [('employee_id', '=', employee.id), ('state', 'not in', ['draft', 'cancel'])]
 
         search_list = {
             'All': {
@@ -977,6 +984,7 @@ class EmployeePortal(CustomerPortal):
                             url_args={'sortby': sortby, 'search_in': search_in, 'search': search,
                                       'subordinate': '1' if subordinate else '0', }, step=35)
         appraisals = appraisal_obj.sudo().search(domain, limit=35, order=default_order_by, offset=page_detail['offset'])
+        # appraisals = appraisal_obj.sudo().search([], limit=35, order=default_order_by, offset=page_detail['offset'])
         date_today = (datetime.date.today()).strftime("%Y/%m/%d")
 
         vals = {
@@ -1009,7 +1017,7 @@ class EmployeePortal(CustomerPortal):
 
     @http.route(["/my/appraisal/view/<int:appraisal_id>"], type="http", methods=["POST", "GET"], website=True)
     def _appraisal_view(self, appraisal_id, **kw):
-        appraisal_obj = request.env["appraisal.system"]
+        appraisal_obj = request.env["hr.appraisal"]
         appraisal_data = appraisal_obj.sudo().search([("id", '=', appraisal_id)])
         user = request.env.user
 
@@ -1022,7 +1030,7 @@ class EmployeePortal(CustomerPortal):
     @http.route(['/my/appraisal/view/save'], type='http', auth="user", website=True, methods=['POST'])
     def portal_appraisal_save(self, **post):
         appraisal_id = int(post.get("appraisal_id"))
-        appraisal_obj = request.env["appraisal.system"].sudo().browse(appraisal_id)
+        appraisal_obj = request.env["hr.appraisal"].sudo().browse(appraisal_id)
         if not appraisal_obj.exists():
             return request.redirect('/my/appraisal')
 
@@ -1217,29 +1225,29 @@ class EmployeePortal(CustomerPortal):
 
     def _update_action_done(self, appraisal_obj, vals, vals_lines):
         login_user = request.env.user.id
+        #
+        # if login_user != 408:
+        #     raise ValidationError(_('Mr.Syed Feisal Ali will complete/done the Appraisal.'))
+        # else:
+        vals.update({
+            'doc_state': 'done',
+            'last_state': appraisal_obj.state,
+            'state': 'done',
+            'appraisal_last_approver_id': login_user,
+            'countersignedby_name': login_user,
+            'countersignature_date': fields.Datetime.now(),
+            'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
+        })
+        appraisal_obj.write(vals)
 
-        if login_user != 408:
-            raise ValidationError(_('Mr.Syed Feisal Ali will complete/done the Appraisal.'))
-        else:
-            vals.update({
-                'doc_state': 'done',
-                'last_state': appraisal_obj.state,
-                'state': 'done',
-                'appraisal_last_approver_id': login_user,
-                'countersignedby_name': login_user,
-                'countersignature_date': fields.Datetime.now(),
-                'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
+        if vals_lines['increment_raise_amount'] != 0:
+            vals_lines.update({
+                'increment_raise_by': login_user,
+                'incremented_date': fields.Datetime.now(),
+                'state': appraisal_obj.state,
+                'increment_raise_id': appraisal_obj.id
             })
-            appraisal_obj.write(vals)
-
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
+            request.env["increment.raise.lines"].create(vals_lines)
 
     def _update_action_confirm4(self, appraisal_obj, vals, vals_lines):
         login_user = request.env.user.id
