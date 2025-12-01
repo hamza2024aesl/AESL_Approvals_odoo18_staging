@@ -72,13 +72,15 @@
                             <b>Increase Recommended?</b>
                         </span>
                         <field name="recomm_increment" readonly="1" invisible="state != 'done'"/>
+                        <group>
+                            <h5>
+                                <b>Future Prospects:</b>
+                            </h5>
+                            <field name="future_project"
+                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
+                                   readonly="is_first_manager == False"/>
+                        </group>
 
-                        <h5>
-                            <b>Future Prospects:</b>
-                        </h5>
-                        <field name="future_project"
-                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                               readonly="is_first_manager == False"/>
 
                         <!--                        <field name="to_confirmation"-->
                         <!--                               invisible="emp_type != 'probation'"-->

@@ -259,6 +259,8 @@ class HrAppraisal(models.Model):
                 new_wage = rec.employee_id.contract_id.wage + final_inc
                 rec.employee_id.contract_id.write({'wage': new_wage})
 
+            rec._append_manager_remark(self.remarks)
+
 
 
         return {
