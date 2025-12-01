@@ -56,48 +56,52 @@
                 </xpath>
 
                 <xpath expr="//page[@name='private_note']" position="after">
-                    <page name='appraisal_approvals' string="Appraisal Approvals">
+                    <page name="appraisal_approvals" string="Appraisal Approvals">
 
-                        <group>
-                            <h5>
-                                <b>Remarks:</b>
-                            </h5>
+                        <!-- REMARKS -->
+                        <group string="Remarks">
                             <field name="remarks"
                                    readonly="current_approver_id != uid"
-                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                            />
+                                   nolabel="1"
+                                   style="border-bottom: 1px solid #000; width:100%;"/>
                         </group>
 
-                        <span>
-                            <b>Increase Recommended?</b>
-                        </span>
-                        <field name="recomm_increment" readonly="1" invisible="state != 'done'"/>
-                        <group>
-                            <h5>
-                                <b>Future Prospects:</b>
-                            </h5>
+                        <!-- INCREMENT -->
+                        <group string="Increase Recommendation">
+                            <group>
+                                <field name="recomm_increment"
+                                       readonly="1"
+                                       invisible="state != 'done'"
+                                       string="Increase Recommended"/>
+                            </group>
+                        </group>
+
+                        <!-- FUTURE PROSPECT -->
+                        <group string="Future Prospects">
                             <field name="future_project"
-                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                                   readonly="is_first_manager == False"/>
+                                   readonly="is_first_manager == False"
+                                   nolabel="1"
+                                   style="border-bottom: 1px solid #000; width:100%;"/>
                         </group>
 
-
-                        <!--                        <field name="to_confirmation"-->
-                        <!--                               invisible="emp_type != 'probation'"-->
-                        <!--                               attrs="{'readonly':[('state','!=','draft')]}"/>-->
+                        <separator string="Increment Details"/>
 
                         <!-- Increment Lines Table -->
-                        <field name="recomm_increment_lines_id" widget="one2many_list" nolabel="1"
+                        <field name="recomm_increment_lines_id"
+                               widget="one2many_list"
+                               nolabel="1"
                                readonly="state == 'draft' or state == 'done'">
+
                             <list string="Recommend Raise Lines" editable="top" delete="0">
                                 <field name="increment_raise_id" invisible="1"/>
-                                <field name="increment_raise_amount"/>
-                                <field name="recomm_desigantion_id"/>
-                                <field name="recomm_grades"/>
-                                <field name="increment_raise_by" readonly="1"/>
-                                <field name="incremented_date" readonly="1"/>
+                                <field name="increment_raise_amount" string="Raise Amount"/>
+                                <field name="recomm_desigantion_id" string="Designation"/>
+                                <field name="recomm_grades" string="Grade"/>
+                                <field name="increment_raise_by" readonly="1" string="Approved By"/>
+                                <field name="incremented_date" readonly="1" string="Date"/>
                                 <field name="state" invisible="1"/>
                             </list>
+
                         </field>
 
                     </page>
