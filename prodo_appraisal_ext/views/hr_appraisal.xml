@@ -43,7 +43,7 @@
 
                         <!-- STATUS BAR -->
                         <field name="state" widget="statusbar"
-                               statusbar_visible="draft,new,pending,md,done"
+                               statusbar_visible="draft,new,pending,executive,md,done"
                                readonly="1"/>
                     </header>
                 </xpath>

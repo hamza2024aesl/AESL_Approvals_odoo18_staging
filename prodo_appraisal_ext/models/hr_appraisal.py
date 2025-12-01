@@ -161,6 +161,27 @@ class HrAppraisal(models.Model):
         emp = self.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
         return emp and not emp.parent_id
 
+    def _is_executive(self, user):
+        """Return True if employee is Executive.
+        Executive = employee has a parent but parent has no parent.
+        """
+
+        employee = self.env['hr.employee'].sudo().search([
+            ('user_id', '=', user.id)
+        ], limit=1)
+
+        if not employee:
+            return False
+
+        if not employee.parent_id:
+            return False
+
+        if employee.parent_id.parent_id:
+            return False
+
+        return True
+
+
     # --------------------------------------------------------------------
     # BUTTON: MANAGER SUBMIT
     # --------------------------------------------------------------------
@@ -187,6 +208,12 @@ class HrAppraisal(models.Model):
                         'state': 'md',  # MD stage
                         'current_approver_id': next_manager.id,
                     })
+                elif rec._is_executive(next_manager):
+                    rec.write({
+                        'state': 'executive',  # MD stage
+                        'current_approver_id': next_manager.id,
+                    })
+
                 else:
                     # rec._compute_dynamic_state()
                     rec.write({
@@ -232,7 +259,6 @@ class HrAppraisal(models.Model):
                 new_wage = rec.employee_id.contract_id.wage + final_inc
                 rec.employee_id.contract_id.write({'wage': new_wage})
 
-            # rec._compute_dynamic_state()
 
 
         return {
