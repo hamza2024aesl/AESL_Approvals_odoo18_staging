@@ -37,9 +37,9 @@ class HrAppraisal(models.Model):
 
     appointment_date = fields.Date(related='employee_id.appointment_date', string='Appointment Date')
     registration_number = fields.Char(related='employee_id.registration_number', string='Registration Number')
-    cl_count = fields.Float('Casual leave availed')
-    sl_count = fields.Float('Sick leave availed')
-    pl_count = fields.Float('Paid leave availed')
+    cl_count = fields.Float('Casual leave availed',compute='_leaves_count')
+    sl_count = fields.Float('Sick leave availed', compute='_leaves_count')
+    pl_count = fields.Float('Paid leave availed', compute='_leaves_count')
     earned_leaves_balance = fields.Float('Earned leave Balance')
     increase_percentage = fields.Float(string='Increment (%)', group_operator=False)
 
