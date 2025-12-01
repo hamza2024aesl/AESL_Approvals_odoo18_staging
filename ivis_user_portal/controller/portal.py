@@ -1032,7 +1032,7 @@ class EmployeePortal(CustomerPortal):
         # ------------------------------------------------------------------
         # CALL BACKEND ACTION BASED ON STATE
         # ------------------------------------------------------------------
-        if appraisal.state == "new" or appraisal.state == "pending":
+        if appraisal.state == "new" or appraisal.state == "pending" or appraisal.state == "executive":
             remark_text = post.get("remarks") or ""
             if remark_text:
                 appraisal._append_manager_remark(remark_text)
