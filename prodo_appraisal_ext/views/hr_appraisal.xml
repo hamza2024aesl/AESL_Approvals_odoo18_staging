@@ -6,33 +6,49 @@
             <field name="model">hr.appraisal</field>
             <field name="inherit_id" ref="hr_appraisal.view_hr_appraisal_form"/>
             <field name="arch" type="xml">
+
+                <!-- REPLACE HEADER -->
                 <xpath expr="//header" position="replace">
                     <header>
-                        <button name="action_hr_confirm" string="HR Confirm" type="object"
-                                groups="prodo_appraisal_ext.group_hr_manager_appraisal_3" class="oe_highlight"
+
+                        <!-- HR STARTS WORKFLOW -->
+                        <button name="action_hr_confirm"
+                                string="HR Confirm"
+                                type="object"
+                                class="oe_highlight"
+                                groups="prodo_appraisal_ext.group_hr_manager_appraisal_3"
                                 invisible="state != 'draft'"/>
-                        <button name="action_confirm2" string="Submit" type="object" class="oe_highlight"
-                                invisible="state != 'pending'"/>
-                        <button name="action_confirm3" string="Submit" type="object" class="oe_highlight"
-                                invisible="state != 'pending2'"/>
-                        <button name="action_confirm4" string="Submit" type="object"
-                                groups="prodo_appraisal_ext.group_exec_appraisal_4" class="oe_highlight"
-                                invisible="state != 'pending4'"/>
 
-                        <!--<button name="action_reset_back" string="Reset Back" type="object" class="oe_highlight" attrs="{'invisible': [('state','not in',('new','done','cancel'))]}"/>-->
-                        <button name="action_confirm" string="Submit" type="object" class="oe_highlight"
-                                invisible="state != 'new'"/>
-                        <button name="action_done" string="Done" type="object"
-                                groups="prodo_appraisal_ext.group_md_appraisal_4"
-                                invisible="state != 'pending3'"/>
-                        <button name="action_cancel" string="Cancel" type="object"
-                                invisible="1"/>
-                        <button name="action_reset_back" string="Revert Back" type="object" class="oe_highlight"
-                                invisible="state in ('draft','new' ,'done', 'cancel')"/>
-                        <field name="state" widget="statusbar" statusbar_visible="draft,new,done" readonly="1"/>
+                        <!-- MANAGER SUBMIT (Dynamic manager flow) -->
+                        <button name="action_manager_submit"
+                                string="Submit"
+                                type="object"
+                                class="oe_highlight"
+                                invisible="
+                                state != 'new' or state != 'pending'"/>
+
+                        <!-- MD APPROVAL -->
+                        <button name="action_md_submit"
+                                string="MD Approve"
+                                type="object"
+                                class="oe_highlight"
+                                invisible="
+                                state != 'md'"/>
+
+                        <!-- CANCEL BUTTON (Optional) -->
+                        <button name="action_cancel"
+                                string="Cancel"
+                                type="object"
+                                invisible="state == 'done'"/>
+
+                        <!-- STATUS BAR -->
+                        <field name="state" widget="statusbar"
+                               statusbar_visible="draft,new,pending,executive,md,done,cancel"
+                               readonly="1"/>
                     </header>
-
                 </xpath>
+
+                <!-- Rest of your XML remains same -->
 
                 <xpath expr="//field[@name='manager_ids']" position="before">
                     <field name="appraisal_type"/>
@@ -41,96 +57,49 @@
 
                 <xpath expr="//page[@name='private_note']" position="after">
                     <page name='appraisal_approvals' string="Appraisal Approvals">
+
                         <group>
-                            <!--                            <div>-->
-
-                            <h5><b>Remarks:</b>(Work Independently, Analytic, Troubleshooting, Motivation,
-                                Technical)
+                            <h5>
+                                <b>Remarks:</b>
                             </h5>
-                            <field name="remarks" nolabel="1"
+                            <field name="remarks"
+                                   readonly="current_approver_id != uid"
                                    style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                                   readonly="state not in ['new']"/>
-                            <field name="remarks_2"
-                                   readonly="state not in ['pending']"
-                                   nolabel="1"
-                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"/>
-                            <field name="remarks_3" nolabel="1"
-                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                                   readonly="state not in ['pending2']"/>
-                            <field name="remarks_4" nolabel="1"
-                                   style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                                   readonly="state not in ['pending4']"/>
-                            <field name="remarks_5" nolabel="1" style="border-bottom: 1px solid #000 !important;"
-                                   readonly="state not in ['pending3']"/>
-
-                            <group></group>
-
+                            />
                         </group>
+
                         <span>
                             <b>Increase Recommended?</b>
                         </span>
+                        <field name="recomm_increment" readonly="1" invisible="state != 'done'"/>
 
-                        <field name="recomm_increment" readonly="1"
-                               invisible="state != 'done'"/>
                         <h5>
                             <b>Future Prospects:</b>
                         </h5>
                         <field name="future_project"
                                style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"
-                               readonly="state not in ['new','pending3']"/>
+                               readonly="is_first_manager == False"/>
 
-                        <field name="to_confirmation"
-                               invisible="emp_type != 'probation'" readonly="state != 'draft'"/>
+                        <!--                        <field name="to_confirmation"-->
+                        <!--                               invisible="emp_type != 'probation'"-->
+                        <!--                               attrs="{'readonly':[('state','!=','draft')]}"/>-->
 
+                        <!-- Increment Lines Table -->
                         <field name="recomm_increment_lines_id" widget="one2many_list" nolabel="1"
-                               readonly="state in 'draft'">
-                            <list string="Recommend Raise Lines" editable="top"
-                                  delete="0">
+                               readonly="state == 'draft' or state == 'done'">
+                            <list string="Recommend Raise Lines" editable="top" delete="0">
                                 <field name="increment_raise_id" invisible="1"/>
-                                <field name="check_access_team_id" invisible="1"/>
-                                <field name="increment_raise_amount" style="width: 30vw; text-align: right;"
-                                       readonly="not check_access_team_id"/>
-                                <field name="recomm_desigantion_id"
-                                       readonly="not check_access_team_id"
-                                       style="width: 30vw; text-align: left;"/>
-                                <field name="recomm_grades"
-                                       readonly="not check_access_team_id"
-                                       style="width: 10vw; text-align: center;"/>
-                                <field name="increment_raise_by" style="width: 15wv; text-align: left;"
-                                       readonly="1"/>
-                                <field name="incremented_date" style="width: 15vw; text-align: left;" readonly="1"/>
+                                <field name="increment_raise_amount"/>
+                                <field name="recomm_desigantion_id"/>
+                                <field name="recomm_grades"/>
+                                <field name="increment_raise_by" readonly="1"/>
+                                <field name="incremented_date" readonly="1"/>
                                 <field name="state" invisible="1"/>
-                                <field name="is_manager2" invisible="1"/>
-                                <field name="is_manager3" invisible="1"/>
-                                <field name="is_manager4" invisible="1"/>
-                                <field name="is_manager5" invisible="1"/>
                             </list>
                         </field>
 
                     </page>
                 </xpath>
-                <!--                <xpath expr="//page[@name='appraisal_approvals']" position="after">-->
-                <!--                    <page name="appraisal_remarks" string="Appraisal Remarks">-->
-                <!--                        <h5><b>Remarks:</b>(Work Independently, Analytic, Troubleshooting, Motivation, Technical)-->
-                <!--                        </h5>-->
-                <!--                        <field name="remarks" nolabel="1"-->
-                <!--                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"-->
-                <!--                               readonly="state not in ['new']"/>-->
-                <!--                        <field name="remarks_2"-->
-                <!--                               readonly="state not in ['pending']"-->
-                <!--                               nolabel="1" style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"/>-->
-                <!--                        <field name="remarks_3" nolabel="1"-->
-                <!--                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"-->
-                <!--                               readonly="state not in ['pending2']"/>-->
-                <!--                        <field name="remarks_4" nolabel="1"-->
-                <!--                               style="border-bottom: 1px solid #000 !important; margin-bottom:15px;"-->
-                <!--                               readonly="state not in ['pending4']"/>-->
-                <!--                        <field name="remarks_5" nolabel="1" style="border-bottom: 1px solid #000 !important;"-->
-                <!--                               readonly="state not in ['pending3']"/>-->
-                <!--                        <group>-->
-                <!--                        </group>-->
-                <!--                    </page>-->
-                <!--                </xpath>-->
 
                 <xpath expr="//field[@name='assessment_note']" position="before">
                     <field name="registration_number"/>
@@ -142,6 +111,7 @@
                     <field name="gross_salary"/>
                     <field name="increase_percentage" readonly="1"/>
                 </xpath>
+
             </field>
         </record>
     </data>

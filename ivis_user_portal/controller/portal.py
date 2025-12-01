@@ -940,361 +940,114 @@ class EmployeePortal(CustomerPortal):
             return True
         return False
 
-    @http.route(["/my/appraisal", '/my/appraisal/page/<int:page>'], type="http", methods=["POST", "GET"], website=True)
-    def _appraisal_list_view(self, page=1, sortby="create_date", search="", search_in="All", **kw):
-        sorted_list = {
-            'create_date': {'label': 'Created On', 'order': 'create_date'},
-            'date_close': {'label': 'Appraisal Deadline', 'order': 'date_close desc'},
-            'status': {'label': 'Status', 'order': 'state'}
-        }
+
+    # -------------------------------------------------------------
+    # LIST VIEW – ONLY SHOW RECORDS FOR CURRENT APPROVER
+    # -------------------------------------------------------------
+    @http.route(["/my/appraisal", "/my/appraisal/page/<int:page>"],
+                type="http", auth="user", website=True)
+    def portal_appraisal_list(self, page=1, **kw):
 
         user = request.env.user
-        default_order_by = sorted_list[sortby]['order']
+        appraisal_obj = request.env["hr.appraisal"]
 
-        appraisal_obj = request.env['hr.appraisal']
+        # Only records waiting for the logged-in user
+        domain = [("current_approver_id", "=", user.id)]
 
-        is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
-        employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-
-        subordinate = kw.get('subordinate') == '1'
-
-        if subordinate and employee:
-            all_subordinates = self._get_all_subordinate_employees(employee)
-            domain = [('employee_id', 'in', all_subordinates.ids), ('state', 'not in', ['draft', 'cancel'])]
-        else:
-            # domain = [('employee_id.parent_id.user_id', '=', user.id)]
-            domain = [
-                ('visible_user_ids', 'in', request.env.user.id),
-                '|',
-                ('employee_id.parent_id.user_id', '=', user.id),
-                ('appraisal_approver_id', '=', user.id)
-            ]
-
-            # domain = [('employee_id', '=', employee.id), ('state', 'not in', ['draft', 'cancel'])]
-
-        search_list = {
-            'All': {
-                'label': 'Search...',
-                'input': 'All',
-                'domain': domain,
-            },
-        }
-
-        total_appraisals = appraisal_obj.sudo().search_count(domain)
-        page_detail = pager(url='/my/appraisal', total=total_appraisals, page=page,
-                            url_args={'sortby': sortby, 'search_in': search_in, 'search': search,
-                                      'subordinate': '1' if subordinate else '0', }, step=35)
-        appraisals = appraisal_obj.sudo().search(domain, limit=35, order=default_order_by, offset=page_detail['offset'])
-        # appraisals = appraisal_obj.sudo().search([], limit=35, order=default_order_by, offset=page_detail['offset'])
-        date_today = (datetime.date.today()).strftime("%Y/%m/%d")
+        total = appraisal_obj.sudo().search_count(domain)
+        appraisals = appraisal_obj.sudo().search(domain)
 
         vals = {
-            'appraisals': appraisals,
-            'date_today': date_today,
-            'is_manager': is_manager,
-            'subordinate': subordinate,
-            'pager': page_detail,
-            'sortby': sortby,
-            'searchbar_sortings': sorted_list,
-            'search_in': search_in,
-            'searchbar_inputs': search_list,
-            'search': search,
-            'page_name': 'view_appraisal_page'
+            "page_name": "view_appraisal_page",
+            "appraisals": appraisals,
         }
-
         return request.render("ivis_user_portal.appraisal_list_view_portal", vals)
 
-    def _get_all_subordinate_employees(self, employee):
-        Employee = request.env['hr.employee'].sudo()
-        subordinates = Employee.browse()
-        stack = Employee.browse([employee.id])
-        while stack:
-            current_employee = stack[-1]
-            stack = stack[:-1]
-            direct_subs = Employee.search([('parent_id', '=', current_employee.id)])
-            subordinates += direct_subs
-            stack += direct_subs
-        return subordinates
+    # -------------------------------------------------------------
+    # DETAIL PAGE
+    # -------------------------------------------------------------
+    @http.route("/my/appraisal/view/<int:appraisal_id>",
+                type="http", auth="user", website=True)
+    def portal_appraisal_detail(self, appraisal_id):
 
-    @http.route(["/my/appraisal/view/<int:appraisal_id>"], type="http", methods=["POST", "GET"], website=True)
-    def _appraisal_view(self, appraisal_id, **kw):
-        appraisal_obj = request.env["hr.appraisal"]
-        appraisal_data = appraisal_obj.sudo().search([("id", '=', appraisal_id)])
+        appraisal = request.env["hr.appraisal"].sudo().browse(appraisal_id)
+        if not appraisal.exists():
+            return request.redirect("/my/appraisal")
+
         user = request.env.user
+        desigantions = request.env["hr.job"].sudo().search([])
 
-        desigantions = request.env['hr.job'].sudo().search([])
-        vals = {'appraisal': appraisal_data, 'page_name': 'view_appraisal_detail_page', 'user': user,
-                'desigantions': desigantions}
-
+        vals = {
+            "page_name": "view_appraisal_detail_page",
+            "appraisal": appraisal,
+            "user": user,
+            "desigantions": desigantions,
+        }
         return request.render("ivis_user_portal.appraisal_detail_page_portal", vals)
 
-    @http.route(['/my/appraisal/view/save'], type='http', auth="user", website=True, methods=['POST'])
+    # -------------------------------------------------------------
+    # PORTAL SUBMIT – SINGLE ENTRY POINT
+    # -------------------------------------------------------------
+    @http.route("/my/appraisal/view/save",
+                type="http", auth="user", website=True, methods=["POST"])
     def portal_appraisal_save(self, **post):
+
         appraisal_id = int(post.get("appraisal_id"))
-        appraisal_obj = request.env["hr.appraisal"].sudo().browse(appraisal_id)
-        if not appraisal_obj.exists():
-            return request.redirect('/my/appraisal')
+        appraisal = request.env["hr.appraisal"].sudo().browse(appraisal_id)
+        if not appraisal.exists():
+            return request.redirect("/my/appraisal")
 
-        vals = {}
-        keys = [
-            "remarks", "remarks_2", "remarks_3", "remarks_4", "remarks_5",
-            "future_project", "total_points", "given_points", "leave_points",
-            "availed_points", "bonus_amount", "date_effective"
-        ]
-        vals.update({
-            key: post.get(key) for key in keys if post.get(key)
-        })
+        user = request.env.user
 
-        vals_lines = {
-            "increment_raise_amount": post.get("increment_raise_amount") or 0,
-            "recomm_desigantion_id": post.get("recomm_desigantion_id") or False,
-            "recomm_grades": post.get("recomm_grades") or "",
-        }
-
-        if appraisal_obj.state == 'new':
-            self._update_action_confirm(appraisal_obj, vals, vals_lines)
-        elif appraisal_obj.state == 'pending':
-            self._update_action_confirm2(appraisal_obj, vals, vals_lines)
-        elif appraisal_obj.state == 'pending2':
-            self._update_action_confirm3(appraisal_obj, vals, vals_lines)
-        elif appraisal_obj.state == 'pending3':
-            self._update_action_done(appraisal_obj, vals, vals_lines)
-        elif appraisal_obj.state == 'pending4':
-            self._update_action_confirm4(appraisal_obj, vals, vals_lines)
-
-        return request.redirect('/my/appraisal/view/%s' % appraisal_id)
-
-    def _update_action_confirm(self, appraisal_obj, vals, vals_lines):
-        login_user = request.env.user.id
-        manager_user = request.env['res.users'].search([('id', '=', 414)])
-        manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
-        if len(appraisal_obj.manager_ids) <= 2:
-            vals.update({'is_md_state': True})
-        elif len(appraisal_obj.manager_ids) <= 3:
-            vals.update({'is_exec_state': True})
-
-        if appraisal_obj.employee_id.parent_id.user_id.id == login_user:
-            vals.update({
-                'doc_state': 'draft',
-                'state': appraisal_obj.state,
-                'appraisal_last_approver_id': login_user,
-                'name_of_reporting_officer': login_user,
-                'ro_submit_date': datetime.date.today(),
-            })
-            if login_user == 663 or login_user == 626:
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending4',
-                    'is_manager': True,
-                    'is_exec_state': True,
-                    'appraisal_approver_id': manager_user.id
-                })
-            elif len(appraisal_obj.manager_ids) == 2 or (
-            (not (manager.get('manager3')) and (not manager.get('manager4')) and (not manager.get('manager5')))):
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending3',
-                    'is_md_state': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
-                })
-            elif len(appraisal_obj.manager_ids) == 3:
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending4',
-                    'is_exec_state': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
-                })
-            elif len(appraisal_obj.manager_ids) == 4:
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending2',
-                    'is_manager2': True,
-                    'is_manager3': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
-                })
-            else:
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending',
-                    'is_manager': True,
-                    'is_manager2': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
-                })
-            appraisal_obj.write(vals)
-
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
-
-            appraisal_obj.write({
-                'visible_user_ids': [(3, request.env.user.id)]
-            })
-        else:
-            raise ValidationError(_('Please let Mr. %s fill the form.') % appraisal_obj.employee_id.parent_id.user_id.name)
-
-    def _update_action_confirm2(self, appraisal_obj, vals, vals_lines):
-        login_user = request.env.user.id
-        manager_user = request.env['res.users'].search([('id', '=', 414)])
-        manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
-        if len(appraisal_obj.manager_ids) <= 3:
-            vals.update({'is_md_state': True})
-        elif len(appraisal_obj.manager_ids) <= 4:
-            vals.update({'is_exec_state': True})
-
-        if login_user == 663 or login_user == 626:
-            vals.update({
-                'last_state': appraisal_obj.state,
-                'state': 'pending4',
-                'is_manager': True,
-                'is_exec_state': True,
-                'appraisal_approver_id': manager_user.id
-            })
-            appraisal_obj.write(vals)
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
-
-        elif appraisal_obj.employee_id.parent_id.parent_id.user_id.id == login_user:
-            if not manager.get('manager4'):
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending3',
-                    'is_md_state': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
-                })
-            else:
-                vals.update({
-                    'last_state': appraisal_obj.state,
-                    'state': 'pending2',
-                    'is_manager3': True,
-                    'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
-                })
-            appraisal_obj.write(vals)
-
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
-        else:
-            raise ValidationError(
-                _('Please let Mr. %s proceed the form.') % appraisal_obj.employee_id.parent_id.parent_id.user_id.name)
-
-        appraisal_obj.write({
-            'visible_user_ids': [(3, request.env.user.id)]
-        })
-
-    def _update_action_confirm3(self, appraisal_obj, vals, vals_lines):
-        login_user = request.env.user.id
-        manager_user = request.env['res.users'].search([('id', '=', 414)])
-        manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
-
-        if appraisal_obj.appraisal_approver_id.id == login_user:
-            vals.update({
-                'doc_state': 'draft',
-                'last_state': appraisal_obj.state,
-                'state': 'pending4',
-                'is_manager3': True,
-                'appraisal_last_approver_id': login_user,
-            })
-            if login_user == 663:
-                vals.update({
-                    'appraisal_approver_id': manager_user.id,
-                })
-            else:
-                vals.update({
-                    'appraisal_approver_id': appraisal_obj.appraisal_approver_id.employee_id.parent_id.user_id.id
-                })
-            appraisal_obj.write(vals)
-
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
-
-        else:
-            raise ValidationError(_('Please let Mr. %s proceed the form.') % appraisal_obj.appraisal_approver_id.name)
-
-        appraisal_obj.write({
-            'visible_user_ids': [(3, request.env.user.id)]
-        })
-    def _update_action_done(self, appraisal_obj, vals, vals_lines):
-        login_user = request.env.user.id
+        # ---- Manager adding their remarks or increment ----
+        # remarks_fields = {
+        #     "manager": "remarks",
+        #     "md": "remarks_5",
+        # }
         #
-        # if login_user != 408:
-        #     raise ValidationError(_('Mr.Syed Feisal Ali will complete/done the Appraisal.'))
-        # else:
-        vals.update({
-            'doc_state': 'done',
-            'last_state': appraisal_obj.state,
-            'state': 'done',
-            'appraisal_last_approver_id': login_user,
-            'countersignedby_name': login_user,
-            'countersignature_date': fields.Datetime.now(),
-            'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
-        })
-        appraisal_obj.write(vals)
+        # # Attach remarks if any
+        # vals_write = {}
+        # for field_name in ["remarks", "remarks_2", "remarks_3", "remarks_4", "remarks_5"]:
+        #     if post.get(field_name):
+        #         vals_write[field_name] = post.get(field_name)
 
-        if vals_lines['increment_raise_amount'] != 0:
-            vals_lines.update({
-                'increment_raise_by': login_user,
-                'incremented_date': fields.Datetime.now(),
-                'state': appraisal_obj.state,
-                'increment_raise_id': appraisal_obj.id
-            })
-            request.env["increment.raise.lines"].create(vals_lines)
+        # ------------------------------------------------------------------
+        # Save increment line from portal
+        # ------------------------------------------------------------------
+        increment_amount = float(post.get("increment_raise_amount") or 0)
+        desig_id = int(post.get("recomm_desigantion_id") or 0)
+        grades = post.get("recomm_grades") or ""
 
-        appraisal_obj.write({
-            'visible_user_ids': [(3, request.env.user.id)]
-        })
-    def _update_action_confirm4(self, appraisal_obj, vals, vals_lines):
-        login_user = request.env.user.id
-        manager_user = request.env['res.users'].search([('id', '=', 414)])
+        vals_increment_line = False
+        if increment_amount or desig_id or grades:
+            vals_increment_line = {
+                "increment_raise_amount": increment_amount,
+                "recomm_desigantion_id": desig_id,
+                "recomm_grades": grades,
+            }
+        #
+        # if vals_write:
+        #     appraisal.write(vals_write)
 
-        if login_user == 414:
-            vals.update({
-                'doc_state': 'draft',
-                'last_state': appraisal_obj.state,
-                'state': 'pending3',
-                'appraisal_last_approver_id': login_user,
-                'is_exec_state': True,
-                'appraisal_approver_id': manager_user.id,
-                'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
-            })
+        # ------------------------------------------------------------------
+        # CALL BACKEND ACTION BASED ON STATE
+        # ------------------------------------------------------------------
+        if appraisal.state == "new" or appraisal.state == "pending":
+            remark_text = post.get("remarks") or ""
+            if remark_text:
+                appraisal._append_manager_remark(remark_text)
 
-            appraisal_obj.write(vals)
+            future_prospect_text = post.get("future_project") or ""
+            if future_prospect_text:
+                appraisal._append_line_manager_prospect(future_prospect_text)
 
-            if vals_lines['increment_raise_amount'] != 0:
-                vals_lines.update({
-                    'increment_raise_by': login_user,
-                    'incremented_date': fields.Datetime.now(),
-                    'state': appraisal_obj.state,
-                    'increment_raise_id': appraisal_obj.id
-                })
-                request.env["increment.raise.lines"].create(vals_lines)
-        else:
-            raise ValidationError(_('Please let Mr. Ahad proceed the form.'))
+            appraisal._portal_submit_manager(vals_increment_line)
 
-        appraisal_obj.write({
-            'visible_user_ids': [(3, request.env.user.id)]
-        })
+        elif appraisal.state == "md":
+            appraisal._portal_submit_md(vals_increment_line)
+
+        # Redirect to list view (record should not appear again)
+        return request.redirect("/my/appraisal")
 
     @http.route(['/my/leaves/apply'], type='http', auth="user", website=True, methods=['POST'])
     def leave_apply_submit(self, **post):

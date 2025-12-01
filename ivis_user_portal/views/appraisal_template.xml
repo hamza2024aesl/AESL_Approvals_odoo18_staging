@@ -68,9 +68,9 @@
                                 <td>
                                     <span t-out="appraisal.appointment_date"/>
                                 </td>
-                                <td>
-                                    <t t-out="dict(appraisal.fields_get(allfields=['doc_state'])['doc_state']['selection']).get(appraisal.doc_state, '')"/>
-                                </td>
+                                <!--                                <td>-->
+                                <!--                                    <t t-out="dict(appraisal.fields_get(allfields=['doc_state'])['doc_state']['selection']).get(appraisal.doc_state, '')"/>-->
+                                <!--                                </td>-->
                                 <td>
                                     <t t-out="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
                                 </td>
@@ -78,14 +78,14 @@
                                     <t t-out="appraisal[0].gross_salary"/>
                                 </td>
                                 <td>
-                                    <t t-out="appraisal[0].recommend_raise_amount"/>
+                                    <t t-out="appraisal[0].recomm_increment"/>
                                 </td>
-                                <td>
-                                    <t t-out="appraisal[0].recommend_grades"/>
-                                </td>
-<!--                                <td>-->
-<!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
-<!--                                </td>-->
+                                <!--                                <td>-->
+                                <!--                                    <t t-out="appraisal[0].recommend_grades"/>-->
+                                <!--                                </td>-->
+                                <!--                                <td>-->
+                                <!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
+                                <!--                                </td>-->
                                 <td>
                                     <a t-attf-href="/my/appraisal/view/{{appraisal.id}}" title="Open Appraisal"
                                        aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
@@ -104,44 +104,49 @@
     <template id="appraisal_detail_page_portal">
         <t t-call="portal.portal_layout" t-if="page_name == 'view_appraisal_detail_page'">
             <t t-set="no_breadcrumbs" t-value="1"/>
+
+            <!-- Header -->
             <div class="d-flex gap-2 my-3">
                 <a href="/my/appraisal" title="Go Back" class="btn btn-light px-2 mx-2">
                     <i class="oi oi-chevron-left"/>
                 </a>
                 <h3 class="my-0 mt-1">Appraisal Detail</h3>
             </div>
-            <br/>
 
             <div class="card my-2 shadow-sm">
                 <form method="post" action="/my/appraisal/view/save" class="mb-4">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>
                     <div class="card-body">
+
+                        <!-- Header Row Title -->
                         <div class="row">
                             <div class="col-md-9">
                                 <h5>
-                                    <b>Appraisal Summary ( Status: <span t-out="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')" class="text-primary"></span> )</b>
+                                    <b>Appraisal Summary ( Status:
+                                        <span t-out="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"
+                                              class="text-primary"></span>
+                                        )
+                                    </b>
                                 </h5>
                             </div>
+
+                            <!-- Submit button only for the CURRENT APPROVER -->
                             <div class="col-md-3">
-                                <t t-if="appraisal.state in ['new', 'pending', 'pending2', 'pending3', 'pending4'] and appraisal.employee_id.user_id.id != user.id">
-                                    <button type="submit" class="btn btn-primary mt-2 float-end">Submit</button>
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state not in ['done','draft']">
+                                    <button type="submit" class="btn btn-primary mt-2 float-end">
+                                        Submit
+                                    </button>
                                 </t>
                             </div>
                         </div>
 
+                        <!-- Employee Summary -->
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <t t-call="ivis_user_portal.card_row">
-                                    <t t-set="label" t-value="'Appraisal Batch'"/>
-<!--                                    <t t-set="value"-->
-<!--                                       t-value="appraisal.appraisal_run_ids and ', '.join(appraisal.appraisal_run_ids.mapped('name'))"/>-->
-                                </t>
-                                <t t-call="ivis_user_portal.card_row">
                                     <t t-set="label" t-value="'Employee Name'"/>
                                     <t t-set="value" t-value="appraisal.employee_id.name"/>
-                                </t>
-                                <t t-call="ivis_user_portal.card_row">
-                                    <t t-set="label" t-value="'Grade'"/>
-<!--                                    <t t-set="value" t-value="appraisal.grade"/>-->
                                 </t>
                                 <t t-call="ivis_user_portal.card_row">
                                     <t t-set="label" t-value="'Designation'"/>
@@ -171,10 +176,6 @@
                                     <t t-set="value" t-value="appraisal.employee_id.contract_id.contract_type_id.code"/>
                                 </t>
                                 <t t-call="ivis_user_portal.card_row">
-                                    <t t-set="label" t-value="'Location'"/>
-<!--                                    <t t-set="value" t-value="appraisal.location"/>-->
-                                </t>
-                                <t t-call="ivis_user_portal.card_row">
                                     <t t-set="label" t-value="'Department'"/>
                                     <t t-set="value" t-value="appraisal.department_id.name"/>
                                 </t>
@@ -192,123 +193,46 @@
                                 </t>
                             </div>
                         </div>
-
+                        <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <!-- Remarks Section -->
                         <div class="row">
                             <div class="col-md-8">
-                                <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>
-                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <h5>
                                     <b>Remarks:</b>
-                                    (Work Independently, Analytic, Troubleshooting, Motivation, Technical)
                                 </h5>
+
                                 <p>
                                     <t t-if="appraisal.remarks">
                                         <t t-esc="appraisal.remarks"/>
                                         <br/>
                                     </t>
-                                    <t t-if="appraisal.remarks_2">
-                                        <t t-esc="appraisal.remarks_2"/>
-                                        <br/>
-                                    </t>
-                                    <t t-if="appraisal.remarks_3">
-                                        <t t-esc="appraisal.remarks_3"/>
-                                        <br/>
-                                    </t>
-                                    <t t-if="appraisal.remarks_4">
-                                        <t t-esc="appraisal.remarks_4"/>
-                                        <br/>
-                                    </t>
-                                    <t t-if="appraisal.remarks_5">
-                                        <t t-esc="appraisal.remarks_5"/>
-                                        <br/>
-                                    </t>
                                 </p>
-                                <div class="form-group mb-3">
-                                    <t t-if="appraisal.state == 'new'">
-                                        <input type="text" name="remarks" t-att-value="appraisal.remarks or ''"
-                                               class="form-control"/>
-                                    </t>
-                                    <t t-elif="appraisal.state == 'pending'">
-                                        <input type="text" name="remarks_2" t-att-value="appraisal.remarks_2 or ''"
-                                               class="form-control"/>
-                                    </t>
-                                    <t t-elif="appraisal.state == 'pending2'">
-                                        <input type="text" name="remarks_3" t-att-value="appraisal.remarks_3 or ''"
-                                               class="form-control"/>
-                                    </t>
-                                    <t t-elif="appraisal.state == 'pending4'">
-                                        <input type="text" name="remarks_4" t-att-value="appraisal.remarks_4 or ''"
-                                               class="form-control"/>
-                                    </t>
-                                    <t t-elif="appraisal.state == 'pending3'">
-                                        <input type="text" name="remarks_5" t-att-value="appraisal.remarks_5 or ''"
-                                               class="form-control"/>
-                                    </t>
-                                </div>
 
+                                <!-- Editable Remarks only for CURRENT APPROVER -->
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done'">
+                                    <input type="text" name="remarks"
+                                           t-att-value="''"
+                                           class="form-control mb-3"/>
+                                </t>
+
+                                <!-- Future Project -->
                                 <h5>
                                     <b>Future Prospects:</b>
                                 </h5>
-                                <div class="form-group mb-3">
-                                    <input type="text" name="future_project"
-                                           t-att-value="appraisal.future_project or ''"
-                                           class="form-control"
-                                           t-att-disabled="'disabled' if appraisal.state not in ['new'] else None"/>
-                                </div>
+                                <input type="text" name="future_project"
+                                       t-att-value="appraisal.future_project or ''"
+                                       class="form-control mb-3"
+                                       t-att-disabled="'disabled' if appraisal.is_first_manager == False else None"/>
                             </div>
 
-                            <div class="col-md-4">
-                                <h5>
-                                    <b>Bonus</b>
-                                </h5>
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label>Total Points</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="number" name="total_points"-->
-<!--                                               t-att-value="appraisal.total_points or '0'" class="form-control"/>-->
-<!--                                    </div>-->
-                                    <div class="col-md-6 mb-2">
-                                        <label>Given Points</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="number" name="given_points"-->
-<!--                                               t-att-value="appraisal.given_points or '0'" class="form-control"/>-->
-<!--                                    </div>-->
-                                    <div class="col-md-6 mb-2">
-                                        <label>Leave Points</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="number" name="leave_points"-->
-<!--                                               t-att-value="appraisal.leave_points or '0'" class="form-control"/>-->
-<!--                                    </div>-->
-                                    <div class="col-md-6 mb-2">
-                                        <label>Availed Points</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="number" name="availed_points"-->
-<!--                                               t-att-value="appraisal.availed_points or '0'" class="form-control"/>-->
-<!--                                    </div>-->
-                                    <div class="col-md-6 mb-2">
-                                        <label>Bonus Points</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="number" name="bonus_amount"-->
-<!--                                               t-att-value="appraisal.bonus_amount or '0'" class="form-control"/>-->
-<!--                                    </div>-->
-                                    <div class="col-md-6 mb-2">
-                                        <label>Date Effective</label>
-                                    </div>
-<!--                                    <div class="col-md-6 mb-2">-->
-<!--                                        <input type="date" name="date_effective"-->
-<!--                                               t-att-value="appraisal.date_effective or ''" class="form-control"/>-->
-<!--                                    </div>-->
-                                </div>
-                            </div>
+                            <!--                        &lt;!&ndash; Bonus side section remains unchanged &ndash;&gt;-->
+                            <!--                        <div class="col-md-4">-->
+                            <!--                            <h5><b>Bonus</b></h5>-->
+                            <!--                        </div>-->
                         </div>
 
-
+                        <!-- Increment table -->
                         <h5 class="mt-4">
                             <b>Recommend Raises:</b>
                         </h5>
@@ -316,14 +240,16 @@
                         <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th style="width: 30%">Increment</th>
-                                    <th style="width: 30%">Designation</th>
-                                    <th style="width: 10%">Grade</th>
-                                    <th style="width: 15%">Recommended By</th>
-                                    <th style="width: 15%">Date</th>
+                                    <th>Increment</th>
+                                    <th>Designation</th>
+                                    <th>Grade</th>
+                                    <th>Recommended By</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
+
+                                <!-- Existing Increment Lines -->
                                 <t t-foreach="appraisal.recomm_increment_lines_id" t-as="line">
                                     <tr>
                                         <td t-esc="line.increment_raise_amount"/>
@@ -333,31 +259,32 @@
                                         <td t-esc="line.incremented_date"/>
                                     </tr>
                                 </t>
-                                <t t-if="appraisal.state != 'draft' and not any(line.increment_raise_by.id == user.id for line in appraisal.recomm_increment_lines_id)">
+
+                                <!-- Add new increment line ONLY if current user is active approver -->
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done'">
                                     <tr>
                                         <td>
-                                            <input type="number" name="increment_raise_amount" class="form-control"
-                                                   step="1.00" t-att-value="0.00"/>
+                                            <input type="number" name="increment_raise_amount" class="form-control"/>
                                         </td>
                                         <td>
-                                            <select id="recomm_desigantion_id" class="form-control"
-                                                    name="recomm_desigantion_id">
-                                                <option t-att-value=""/>
-                                                <t t-foreach="desigantions" t-as="desigantion">
-                                                    <option t-att-value="desigantion.id" t-esc="desigantion.name"/>
+                                            <select name="recomm_desigantion_id" class="form-control">
+                                                <option value=""/>
+                                                <t t-foreach="desigantions" t-as="d">
+                                                    <option t-att-value="d.id" t-esc="d.name"/>
                                                 </t>
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="number" name="recomm_grades" t-att-value="0"
-                                                   class="form-control"/>
+                                            <input type="number" name="recomm_grades" class="form-control"/>
                                         </td>
                                         <td></td>
                                         <td></td>
                                     </tr>
                                 </t>
+
                             </tbody>
                         </table>
+
                     </div>
                 </form>
             </div>
