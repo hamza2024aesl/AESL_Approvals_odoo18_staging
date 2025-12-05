@@ -570,8 +570,8 @@ class HrAppraisal(models.Model):
 
                 pl_count = sum(a.number_of_days for a in pl_leave_allocate)
 
-                cl_availed_days = self._calculate_availed_leave(emp, casual_work_entry_type)
-                sl_availed_days = self._calculate_availed_leave(emp, sick_work_entry_type)
+                cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
+                sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
 
                 self.cl_count = cl_availed_days
                 self.sl_count = sl_availed_days
