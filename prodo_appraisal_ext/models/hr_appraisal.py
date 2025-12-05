@@ -530,45 +530,36 @@ class HrAppraisal(models.Model):
                 pl_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'PL Leaves')], limit=1)
 
                 casual_leave_type = self.env['hr.leave.type'].search(
-                    [('work_entry_type_id', '=', casual_work_entry_type.id)], limit=1)
+                    [('work_entry_type_id', '=', casual_work_entry_type.id)])
                 sick_leave_type = self.env['hr.leave.type'].search(
-                    [('work_entry_type_id', '=', sick_work_entry_type.id)], limit=1)
-                pl_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)],
-                                                                 limit=1)
+                    [('work_entry_type_id', '=', sick_work_entry_type.id)])
+                pl_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)])
 
-                cl_leave_allocate = self.env['hr.leave.allocation'].search([
-                    ('holiday_status_id', '=', casual_leave_type.id),
-                    ('state', '=', 'validate'),
-                    ('employee_id', '=', emp.id)
-                ])
-                sick_leave_allocate = self.env['hr.leave.allocation'].search([
-                    ('holiday_status_id', '=', sick_leave_type.id),
-                    ('state', '=', 'validate'),
-                    ('employee_id', '=', emp.id)
-                ])
-                pl_leave_allocate = self.env['hr.leave.allocation'].search([
-                    ('holiday_status_id', '=', pl_leave_type.id),
-                    ('state', '=', 'validate'),
-                    ('employee_id', '=', emp.id)
-                ])
+                # cl_leave_allocate = self.env['hr.leave.allocation'].search([
+                #     ('holiday_status_id', '=', casual_leave_type.id),
+                #     ('state', '=', 'validate'),
+                #     ('employee_id', '=', emp.id)
+                # ])
+                # sick_leave_allocate = self.env['hr.leave.allocation'].search([
+                #     ('holiday_status_id', '=', sick_leave_type.id),
+                #     ('state', '=', 'validate'),
+                #     ('employee_id', '=', emp.id)
+                # ])
+                for pl_leave_type in pl_leave_type:
+                    pl_leave_allocate = self.env['hr.leave.allocation'].search([
+                        ('holiday_status_id', '=', pl_leave_type.id),
+                        ('state', '=', 'validate'),
+                        ('employee_id', '=', emp.id),
 
-                cl_leave_allocate = cl_leave_allocate.filtered(
-                    lambda a: a.date_from and a.date_to and
-                              a.date_from.year <= current_year <= a.date_to.year
-                )
+                               ])
+                    pl_leave_allocate = pl_leave_allocate.filtered(
+                        lambda a: a.date_from and a.date_to and
+                                  a.date_from.year <= current_year <= a.date_to.year
+                    )
 
-                sick_leave_allocate = sick_leave_allocate.filtered(
-                    lambda a: a.date_from and a.date_to and
-                              a.date_from.year <= current_year <= a.date_to.year
-                )
-
-                pl_leave_allocate = pl_leave_allocate.filtered(
-                    lambda a: a.date_from and a.date_to and
-                              a.date_from.year <= current_year <= a.date_to.year
-                )
+                    pl_count = sum(a.number_of_days for a in pl_leave_allocate)
 
 
-                pl_count = sum(a.number_of_days for a in pl_leave_allocate)
 
                 cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
                 sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
@@ -594,12 +585,14 @@ class HrAppraisal(models.Model):
 
 
     def _calculate_availed_leave(self, emp, casual_leave_type):
-        work_entries = self.env['hr.leave'].search([
-            ('employee_id', '=', emp.id),
-            ('holiday_status_id', '=', casual_leave_type.id)
-        ])
+        availed_days = 0
+        for casual_leave_type in casual_leave_type:
+            work_entries = self.env['hr.leave'].search([
+                ('employee_id', '=', emp.id),
+                ('holiday_status_id', '=', casual_leave_type.id)
+            ])
 
-        availed_days = sum(entry.number_of_days for entry in work_entries)
+            availed_days += sum(entry.number_of_days for entry in work_entries)
 
         return availed_days
 
