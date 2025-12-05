@@ -521,8 +521,8 @@ class HrAppraisal(models.Model):
     @api.depends('employee_id')
     def _leaves_count(self):
         current_year = datetime.now().year
-
-        for emp in self.employee_id:
+        if self.employee_id:
+           for emp in self.employee_id:
             if emp:
                 casual_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Casual Time Off')],
                                                                                limit=1)
@@ -587,6 +587,11 @@ class HrAppraisal(models.Model):
                 self.cl_count = 0
                 self.sl_count = 0
                 self.pl_count = 0
+        else:
+            self.cl_count = 0
+            self.sl_count = 0
+            self.pl_count = 0
+
 
     def _calculate_availed_leave(self, emp, casual_leave_type):
         work_entries = self.env['hr.leave'].search([
