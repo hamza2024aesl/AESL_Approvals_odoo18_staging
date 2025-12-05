@@ -38,9 +38,9 @@ class HrAppraisal(models.Model):
 
     appointment_date = fields.Date(related='employee_id.appointment_date', string='Appointment Date')
     registration_number = fields.Char(related='employee_id.registration_number', string='Registration Number')
-    cl_count = fields.Float('Casual leave availed', compute='_leaves_count',store=True)
-    sl_count = fields.Float('Sick leave availed', compute='_leaves_count',store=True)
-    pl_count = fields.Float('Paid leave availed', compute='_leaves_count',store=True)
+    cl_count = fields.Float('Casual leave availed', compute='_leaves_count')
+    sl_count = fields.Float('Sick leave availed', compute='_leaves_count')
+    pl_count = fields.Float('Paid leave availed', compute='_leaves_count')
     earned_leaves_balance = fields.Float('Earned leave Balance')
     increase_percentage = fields.Float(string='Increment (%)', group_operator=False)
 
@@ -568,20 +568,25 @@ class HrAppraisal(models.Model):
                 )
 
 
-                self.pl_count = sum(a.number_of_days for a in pl_leave_allocate)
+                pl_count = sum(a.number_of_days for a in pl_leave_allocate)
 
-                cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
-                sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
+                cl_availed_days = self._calculate_availed_leave(emp, casual_work_entry_type)
+                sl_availed_days = self._calculate_availed_leave(emp, sick_work_entry_type)
 
                 self.cl_count = cl_availed_days
                 self.sl_count = sl_availed_days
+
+                self.sudo().write({
+                    'cl_count':cl_availed_days,
+                    'sl_count' :sl_availed_days,
+                    'pl_count':pl_count
+
+                })
 
             else:
                 self.cl_count = 0
                 self.sl_count = 0
                 self.pl_count = 0
-                self.cl_availed = 0
-                self.sl_availed = 0
 
     def _calculate_availed_leave(self, emp, casual_leave_type):
         work_entries = self.env['hr.leave'].search([

@@ -957,6 +957,8 @@ class EmployeePortal(CustomerPortal):
 
         total = appraisal_obj.sudo().search_count(domain)
         appraisals = appraisal_obj.sudo().search(domain)
+        for appraisal in appraisals:
+            appraisal._leaves_count()
 
         # If grouping is enabled, apply grouping logic
         grouped_appraisal = False
