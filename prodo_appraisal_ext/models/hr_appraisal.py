@@ -598,7 +598,7 @@ class HrAppraisal(models.Model):
     # --------------------------------------------------------------------
     #
     def _append_manager_remark(self, remark_text):
-        if self.doc_type == 'revert':
+        if self.doc_state == 'revert':
             self.sudo().remarks.write({
                 'appraisal_id': self.id,
                 'remark_text': remark_text,
