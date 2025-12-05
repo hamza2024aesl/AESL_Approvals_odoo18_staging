@@ -34,6 +34,13 @@
                                 class="oe_highlight"
                                 invisible="
                                 state != 'md'"/>
+                        <button name="action_hr_published"
+                                string="Published Appraisal"
+                                type="object"
+                                class="oe_highlight"
+                                invisible="
+                                state != 'done'"/>
+
 
                         <!-- CANCEL BUTTON (Optional) -->
                         <button name="action_cancel"
@@ -43,7 +50,7 @@
 
                         <!-- STATUS BAR -->
                         <field name="state" widget="statusbar"
-                               statusbar_visible="draft,new,pending,executive,md,done"
+                               statusbar_visible="draft,new,pending,executive,md,done,published"
                                readonly="1"/>
                     </header>
                 </xpath>
@@ -94,9 +101,12 @@
 
                             <list string="Recommend Raise Lines" editable="top" delete="0">
                                 <field name="increment_raise_id" invisible="1"/>
-                                <field name="increment_raise_amount" string="Raise Amount"/>
-                                <field name="recomm_desigantion_id" string="Designation"/>
-                                <field name="recomm_grades" string="Grade"/>
+                                <field name="check_access_team_id" invisible="1"/>
+                                <field name="increment_raise_amount" string="Raise Amount"
+                                       readonly="check_access_team_id == True"/>
+                                <field name="recomm_desigantion_id" string="Designation"
+                                       readonly="check_access_team_id == False"/>
+                                <field name="recomm_grades" string="Grade" readonly="check_access_team_id == False"/>
                                 <field name="increment_raise_by" readonly="1" string="Approved By"/>
                                 <field name="incremented_date" readonly="1" string="Date"/>
                                 <field name="state" invisible="1"/>
@@ -119,6 +129,15 @@
                 </xpath>
 
             </field>
+        </record>
+
+        <record id="hr_appraisal_published_action" model="ir.actions.server">
+            <field name="name">Publish/Increment Appraisal</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_view_types">list,form</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_hr_published()</field>
         </record>
     </data>
 </odoo>

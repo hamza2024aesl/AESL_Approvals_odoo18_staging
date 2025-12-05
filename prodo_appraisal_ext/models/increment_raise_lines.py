@@ -36,16 +36,14 @@ class IncrementRaiseLines(models.Model):
     #     for rec in self:
     #         rec.manager_id = rec.employee_id.parent_id.id if rec.employee_id.parent_id else False
 
-    @api.depends('increment_raise_by')
+    @api.depends('create_uid')
     def _compute_access_team_id(self):
         list = []
         for rec in self:
-            list.append(rec.increment_raise_by.id)
-            if rec.increment_raise_by.id not in list:
-                rec.check_access_team_id = True
-            elif not rec.increment_raise_by.id:
-                rec.check_access_team_id = True
-            else:
-                rec.check_access_team_id = rec.increment_raise_by.id == self.env.uid == self.increment_raise_id.appraisal_approver_id.id
+             manager_uid = rec.filtered(lambda x: x.create_uid.id == self.env.uid.id)
+             if manager_uid:
+                 rec.check_access_team_id = True
+             else:
+                 rec.check_access_team_id = False
 
 

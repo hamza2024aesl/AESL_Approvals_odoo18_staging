@@ -20,6 +20,9 @@
         'data/ir_sequence_data.xml',
         'views/appraisal_batches.xml',
         'views/hr_appraisal.xml',
+        'report/report.xml',
+        'report/appraisal_letter.xml',
+
     ],
     'installable': True,
     'auto_install': False,

@@ -17,11 +17,12 @@ class HrAppraisal(models.Model):
         ('executive', 'Executive Review'),
         ('md', 'MD Review'),
         ('done', 'HR Final'),
+        ('published', 'Published'),
     ], default='draft', tracking=True)
 
     current_approver_id = fields.Many2one('res.users', string="Current Approver")
     recomm_increment = fields.Float("Final Increment")
-    gross_salary = fields.Float("Gross Salary")
+    gross_salary = fields.Float("Gross Salary", compute='_compute_gross_salary')
 
     recomm_increment_lines_id = fields.One2many('increment.raise.lines', 'increment_raise_id',
                                                 string='Increase Recommended Lines',
@@ -37,15 +38,25 @@ class HrAppraisal(models.Model):
 
     appointment_date = fields.Date(related='employee_id.appointment_date', string='Appointment Date')
     registration_number = fields.Char(related='employee_id.registration_number', string='Registration Number')
-    cl_count = fields.Float('Casual leave availed',compute='_leaves_count')
-    sl_count = fields.Float('Sick leave availed', compute='_leaves_count')
-    pl_count = fields.Float('Paid leave availed', compute='_leaves_count')
+    cl_count = fields.Float('Casual leave availed', compute='_leaves_count',store=True)
+    sl_count = fields.Float('Sick leave availed', compute='_leaves_count',store=True)
+    pl_count = fields.Float('Paid leave availed', compute='_leaves_count',store=True)
     earned_leaves_balance = fields.Float('Earned leave Balance')
     increase_percentage = fields.Float(string='Increment (%)', group_operator=False)
 
     future_project = fields.Char(string='Future Project')
     is_first_manager = fields.Boolean(compute="_compute_is_first_manager")
-    remarks = fields.Text()
+    # remarks = fields.Text()
+    appraisal_employee_id = fields.Many2one('res.users', string="Appraisal Employee")
+    last_approver_id = fields.Many2one('res.users', string='Last Approver')
+    revert_remarks = fields.Char()
+    remarks_text = fields.Char()
+    remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
+    doc_state = fields.Selection([
+        ('draft', 'Draft'),
+        ('save', 'Save'),
+        ('done', 'Done'), ('revert', 'Revert'), ('publish', 'Publish')], default='draft'
+    )
 
     def _compute_is_first_manager(self):
         for rec in self:
@@ -98,7 +109,7 @@ class HrAppraisal(models.Model):
     # Compute Dynamic States
     # --------------------------------------------------------------------
 
-    def _compute_dynamic_state(self,is_hr=False,is_md=False):
+    def _compute_dynamic_state(self, is_hr=False, is_md=False):
         '''set dynamic state based on hirarechy in every hirearchy 1st manager is line manager
          and 2nd manager from till 2nd last manager the state is in manager but on 2nd last manager the state is executive and for last manager the state is md'''
         for rec in self:
@@ -134,7 +145,6 @@ class HrAppraisal(models.Model):
 
             else:
                 rec.state = 'draft'
-
 
     # --------------------------------------------------------------------
     # BUTTON: HR STARTS WORKFLOW
@@ -181,7 +191,6 @@ class HrAppraisal(models.Model):
 
         return True
 
-
     # --------------------------------------------------------------------
     # BUTTON: MANAGER SUBMIT
     # --------------------------------------------------------------------
@@ -200,24 +209,27 @@ class HrAppraisal(models.Model):
             next_manager = rec._next_manager(login_user)
             # state = rec._compute_dynamic_state()
 
-
             if next_manager:
                 # --- NEW FIX: Check if next manager is MD ---
                 if rec._is_md(next_manager):
                     rec.write({
-                        'state': 'md',  # MD stage
+                        'state': 'md',
+                        'last_approver_id': rec.current_approver_id.id,  # MD stage
                         'current_approver_id': next_manager.id,
                     })
                 elif rec._is_executive(next_manager):
                     rec.write({
                         'state': 'executive',  # MD stage
+                        'last_approver_id': rec.current_approver_id.id,  # MD stage
                         'current_approver_id': next_manager.id,
                     })
 
                 else:
+                    rec.last_approver_id = rec.current_approver_id
+
                     # rec._compute_dynamic_state()
                     rec.write({
-                        'state':'pending',
+                        'state': 'pending',
                         'current_approver_id': next_manager.id,
                     })
 
@@ -227,7 +239,8 @@ class HrAppraisal(models.Model):
                 # md_state = rec._compute_dynamic_state(is_md=True)
                 rec.write({
                     'state': 'md',
-                    'current_approver_id': md_user.id,
+                    'last_approver_id': rec.current_approver_id.id,  # MD stage
+                    'current_approver_id': next_manager.id,
                 })
 
     # --------------------------------------------------------------------
@@ -252,16 +265,14 @@ class HrAppraisal(models.Model):
             rec.recomm_increment = final_inc
 
             # Gross salary update
-            rec.gross_salary = rec.gross_salary + final_inc
 
-            # Update employee wage
-            if rec.employee_id.contract_id:
-                new_wage = rec.employee_id.contract_id.wage + final_inc
-                rec.employee_id.contract_id.write({'wage': new_wage})
+            # # Update employee wage
+            # if rec.employee_id.contract_id:
+            #     new_wage = rec.employee_id.contract_id.wage + final_inc
+            #     rec.gross_salary = new_wage
+            #     rec.employee_id.contract_id.write({'wage': new_wage})
 
-            rec._append_manager_remark(self.remarks)
-
-
+            rec._append_manager_remark(self.remarks.remark_text)
 
         return {
             'effect': {
@@ -270,6 +281,22 @@ class HrAppraisal(models.Model):
                 'type': 'rainbow_man',
             }
         }
+
+    # --------------------------------------------------------------------
+    # BUTTON: HR PUBLISHED
+    # --------------------------------------------------------------------
+    def action_hr_published(self):
+        for rec in self:
+            if rec.state == 'done':
+                if rec.employee_id.contract_id:
+                    if rec.employee_id.user_id:
+                        new_wage = rec.employee_id.contract_id.wage + rec.recomm_increment
+                        rec.gross_salary = new_wage
+                        rec.employee_id.contract_id.write({'wage': new_wage})
+                        rec.appraisal_employee_id = rec.employee_id.user_id.id
+                        rec.state = 'published'
+                    else:
+                        raise ValidationError("You are not assigned user to employee.")
 
     # --------------------------------------------------------------------
     # Save Increment Helper
@@ -320,9 +347,18 @@ class HrAppraisal(models.Model):
         """
 
         user = self.env.user
-
+        existing = self.recomm_increment_lines_id.filtered(
+            lambda l: l.increment_raise_by.id == user.id
+        )
         # --- Save increment submitted from portal ---
         if vals_increment_line:
+            if self.doc_state == 'revert':
+                existing.write({
+                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") or 0),
+                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") or 0),
+                    "recomm_grades": vals_increment_line.get("recomm_grades") or "",
+                })
+
             # Check if manager already has a line
             existing = self.recomm_increment_lines_id.filtered(
                 lambda l: l.increment_raise_by.id == user.id
@@ -340,8 +376,48 @@ class HrAppraisal(models.Model):
             # Manager didn't add increment → auto copy previous
             self._save_increment_for_manager(user)
 
+        self.doc_state = 'done'
         # trigger backend internal workflow
         return self.action_manager_submit()
+
+    # --------------------------------------------------------------------
+    # PORTAL REVERT BACK (CALLED FROM CONTROLLER)
+    # --------------------------------------------------------------------
+    def action_revert_back(self, revert_remarks):
+        managers = self._manager_users_ordered()  # Get the full hierarchy of managers
+
+        if self.state == 'md':
+            self.write({
+                'state': 'executive',
+                'current_approver_id': self.last_approver_id.id
+
+            })
+        elif self.state == 'executive':
+            self.write({
+                'state': 'pending',
+                'current_approver_id': self.last_approver_id.id
+
+            })
+        elif self.state == 'pending':
+            manager_index = managers.index(self.last_approver_id)
+
+            if manager_index == 0:
+                self.write({
+                    'state': 'new',
+                    'current_approver_id': self.last_approver_id.id
+                })
+            else:
+                self.write({
+                    'state': 'pending',
+                    'current_approver_id': self.last_approver_id.id
+
+                })
+            # self._append_revert_remark(revert_remarks)
+            manager_uid = self.recomm_increment_lines_id.filtered(
+                lambda x: x.create_uid.id == self.current_approver_id.id)
+            if manager_uid:
+                manager_uid.check_access_team_id = True
+        self.doc_state = 'revert'
 
     # --------------------------------------------------------------------
     # PORTAL MD SUBMIT (CALLED FROM CONTROLLER)
@@ -372,6 +448,7 @@ class HrAppraisal(models.Model):
             # MD did not write increment → auto copy previous
             self._save_increment_for_manager(user)
 
+        self.doc_state = 'done'
         # call final backend MD submit action
         return self.action_md_submit()
 
@@ -379,60 +456,158 @@ class HrAppraisal(models.Model):
     # EMPLOYEE LEAVE COUNT
     # pl = paid leaves , cl = casual leaves , sl = sick leave
     # --------------------------------------------------------------------
+    # @api.depends('employee_id')
+    # def _leaves_count(self):
+    #     current_year = datetime.now().year
+    #
+    #     for emp in self.employee_id:
+    #         if emp:
+    #             casual_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Casual Time Off')])
+    #             sick_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Sick Time Off')])
+    #             pl_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'PL Leaves')])
+    #
+    #             casual_leave_type = self.env['hr.leave.type'].search(
+    #                 [('work_entry_type_id', '=', casual_work_entry_type.id)])
+    #             sick_leave_type = self.env['hr.leave.type'].search(
+    #                 [('work_entry_type_id', '=', sick_work_entry_type.id)])
+    #             pl_work_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)])
+    #
+    #             cl_leave_allocate = self.env['hr.leave.allocation'].search(
+    #                 [('holiday_status_id', 'in', casual_leave_type.ids), ('state', '=', 'validate'),
+    #                  ('employee_id', '=', emp.id)])
+    #             sick_leave_allocate = self.env['hr.leave.allocation'].search(
+    #                 [('holiday_status_id', 'in', sick_leave_type.ids), ('state', '=', 'validate'),
+    #                  ('employee_id', '=', emp.id)])
+    #             pl_leave_allocate = self.env['hr.leave.allocation'].search(
+    #                 [('holiday_status_id', 'in', pl_work_type.ids), ('state', '=', 'validate'),
+    #                  ('employee_id', '=', emp.id)])
+    #
+    #             cl_leave_allocate = cl_leave_allocate.filtered(
+    #                 lambda a: a.date_from and a.date_to and
+    #                           a.date_from.year <= current_year <= a.date_to.year
+    #             )
+    #
+    #             sick_leave_allocate = sick_leave_allocate.filtered(
+    #                 lambda a: a.date_from and a.date_to and
+    #                           a.date_from.year <= current_year <= a.date_to.year
+    #             )
+    #
+    #             pl_leave_allocate = pl_leave_allocate.filtered(
+    #                 lambda a: a.date_from and a.date_to and
+    #                           a.date_from.year <= current_year <= a.date_to.year
+    #             )
+    #             cl_leave_availed = sum(self.env['hr.leave'].search(
+    #                 [('holiday_status_id', '=', casual_leave_type.id), ('employee_id', '=', emp.id),
+    #                  ('state', '=', 'validate')]).filtered(
+    #                 lambda a: a.date_from and a.date_to and
+    #                           (a.date_from.year <= current_year <= a.date_to.year)
+    #             ).mapped('number_of_days'))
+    #             sl_leave_availed = sum(self.env['hr.leave'].search(
+    #                 [('holiday_status_id', '=', sick_leave_type.id), ('employee_id', '=', emp.id),
+    #                  ('state', '=', 'validate')]).filtered(
+    #                 lambda a: a.date_from and a.date_to and
+    #                           (a.date_from.year <= current_year <= a.date_to.year)
+    #             ).mapped('number_of_days'))
+    #
+    #             self.cl_count = cl_leave_availed
+    #             self.sl_count = sl_leave_availed
+    #             self.pl_count = pl_leave_allocate.number_of_days
+    #         else:
+    #             self.cl_count = 0
+    #             self.sl_count = 0
+    #             self.pl_count = 0
+    from datetime import datetime
+
     @api.depends('employee_id')
     def _leaves_count(self):
         current_year = datetime.now().year
 
         for emp in self.employee_id:
-            casual_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Casual Time Off')])
-            sick_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Sick Time Off')])
-            pl_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'PL Leaves')])
+            if emp:
+                casual_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Casual Time Off')],
+                                                                               limit=1)
+                sick_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'Sick Time Off')], limit=1)
+                pl_work_entry_type = self.env['hr.work.entry.type'].search([('name', '=', 'PL Leaves')], limit=1)
 
-            casual_leave_type = self.env['hr.leave.type'].search(
-                [('work_entry_type_id', '=', casual_work_entry_type.id)])
-            sick_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', sick_work_entry_type.id)])
-            pl_work_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)])
+                casual_leave_type = self.env['hr.leave.type'].search(
+                    [('work_entry_type_id', '=', casual_work_entry_type.id)], limit=1)
+                sick_leave_type = self.env['hr.leave.type'].search(
+                    [('work_entry_type_id', '=', sick_work_entry_type.id)], limit=1)
+                pl_leave_type = self.env['hr.leave.type'].search([('work_entry_type_id', '=', pl_work_entry_type.id)],
+                                                                 limit=1)
 
-            cl_leave_allocate = self.env['hr.leave.allocation'].search(
-                [('holiday_status_id', 'in', casual_leave_type.ids), ('state', '=', 'validate'),
-                 ('employee_id', '=', emp.id)])
-            sick_leave_allocate = self.env['hr.leave.allocation'].search(
-                [('holiday_status_id', 'in', sick_leave_type.ids), ('state', '=', 'validate'),
-                 ('employee_id', '=', emp.id)])
-            pl_leave_allocate = self.env['hr.leave.allocation'].search(
-                [('holiday_status_id', 'in', pl_work_type.ids), ('state', '=', 'validate'),
-                 ('employee_id', '=', emp.id)])
+                cl_leave_allocate = self.env['hr.leave.allocation'].search([
+                    ('holiday_status_id', '=', casual_leave_type.id),
+                    ('state', '=', 'validate'),
+                    ('employee_id', '=', emp.id)
+                ])
+                sick_leave_allocate = self.env['hr.leave.allocation'].search([
+                    ('holiday_status_id', '=', sick_leave_type.id),
+                    ('state', '=', 'validate'),
+                    ('employee_id', '=', emp.id)
+                ])
+                pl_leave_allocate = self.env['hr.leave.allocation'].search([
+                    ('holiday_status_id', '=', pl_leave_type.id),
+                    ('state', '=', 'validate'),
+                    ('employee_id', '=', emp.id)
+                ])
 
-            cl_leave_allocate = cl_leave_allocate.filtered(
-                lambda a: a.date_from and a.date_to and
-                          a.date_from.year <= current_year <= a.date_to.year
-            )
+                cl_leave_allocate = cl_leave_allocate.filtered(
+                    lambda a: a.date_from and a.date_to and
+                              a.date_from.year <= current_year <= a.date_to.year
+                )
 
-            sick_leave_allocate = sick_leave_allocate.filtered(
-                lambda a: a.date_from and a.date_to and
-                          a.date_from.year <= current_year <= a.date_to.year
-            )
+                sick_leave_allocate = sick_leave_allocate.filtered(
+                    lambda a: a.date_from and a.date_to and
+                              a.date_from.year <= current_year <= a.date_to.year
+                )
 
-            pl_leave_allocate = pl_leave_allocate.filtered(
-                lambda a: a.date_from and a.date_to and
-                          a.date_from.year <= current_year <= a.date_to.year
-            )
+                pl_leave_allocate = pl_leave_allocate.filtered(
+                    lambda a: a.date_from and a.date_to and
+                              a.date_from.year <= current_year <= a.date_to.year
+                )
 
-            self.cl_count = cl_leave_allocate.number_of_days
-            self.sl_count = sick_leave_allocate.number_of_days
-            self.pl_count = pl_leave_allocate.number_of_days
+
+                self.pl_count = sum(a.number_of_days for a in pl_leave_allocate)
+
+                cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
+                sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
+
+                self.cl_count = cl_availed_days
+                self.sl_count = sl_availed_days
+
+            else:
+                self.cl_count = 0
+                self.sl_count = 0
+                self.pl_count = 0
+                self.cl_availed = 0
+                self.sl_availed = 0
+
+    def _calculate_availed_leave(self, emp, casual_leave_type):
+        work_entries = self.env['hr.leave'].search([
+            ('employee_id', '=', emp.id),
+            ('holiday_status_id', '=', casual_leave_type.id)
+        ])
+
+        availed_days = sum(entry.number_of_days for entry in work_entries)
+
+        return availed_days
 
     # --------------------------------------------------------------------
     # DYNAMIC REMARKS
     # --------------------------------------------------------------------
-
+    #
     def _append_manager_remark(self, remark_text):
-        user = self.env.user
-        now = fields.Datetime.now()
-        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-        new_entry = f"[{timestamp}] {user.name}:\n{remark_text}\n\n"
-
-        self.remarks = (self.remarks or "") + new_entry
+        if self.doc_type == 'revert':
+            self.sudo().remarks.write({
+                'appraisal_id': self.id,
+                'remark_text': remark_text,
+            })
+        else:
+            self.sudo().remarks.create({
+            'appraisal_id': self.id,
+            'remark_text': remark_text,
+        })
 
     def _append_line_manager_prospect(self, future_prospect):
         user = self.env.user
@@ -441,3 +616,44 @@ class HrAppraisal(models.Model):
         new_entry = f"[{timestamp}] {user.name}:\n{future_prospect}\n\n"
 
         self.future_project = (self.future_project or "") + new_entry
+
+    def _append_revert_remark(self, revert_remark_text):
+        user = self.env.user
+        now = fields.Datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+        new_entry = f"[{timestamp}] {user.name}:\n{revert_remark_text}\n\n"
+
+        self.revert_remarks = (self.revert_remarks or "") + new_entry
+
+    @api.depends('employee_id')
+    def _compute_gross_salary(self):
+        for rec in self:
+            if rec.employee_id:
+                if rec.employee_id.contract_id:
+                    rec.gross_salary = rec.employee_id.contract_id.wage
+                else:
+                    rec.gross_salary = 0
+            else:
+                rec.gross_salary = 0
+
+    @api.model
+    def _get_report_values(self, docids, data=None):
+        docs = self.env["hr.appraisal"].browse(docids)
+
+        # Build the values your template expects
+        appraisal_history = self._prepare_appraisal_history(docs)
+        form = self._prepare_form_values(docs)
+        company = docs.company_id.name
+
+        return {
+            'doc_ids': docids,
+            'doc_model': 'hr.appraisal',
+            'docs': docs,
+            'company': company,
+            'appraisal_history': appraisal_history,
+            'form': form,
+        }
+
+    def _get_report_base_filename(self):
+        self.ensure_one()
+        return "Appraisal_Letter_%s" % (self.employee_id.name.replace(" ", "_"))
