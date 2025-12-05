@@ -40,7 +40,7 @@ class IncrementRaiseLines(models.Model):
     def _compute_access_team_id(self):
         list = []
         for rec in self:
-             manager_uid = rec.filtered(lambda x: x.create_uid.id == self.env.uid.id)
+             manager_uid = rec.filtered(lambda x: x.create_uid.id == self.env.user.id)
              if manager_uid:
                  rec.check_access_team_id = True
              else:
