@@ -153,13 +153,15 @@ class HrAppraisal(models.Model):
         for rec in self:
             if not rec.manager_ids:
                 raise ValidationError("Please assign managers first.")
-
-            first_manager = rec._manager_users_ordered()[0]
-            # state = rec._compute_dynamic_state(is_hr=True)
-            rec.write({
-                'state': 'new',
-                'current_approver_id': first_manager.id,
-            })
+            if rec._manager_users_ordered():
+                first_manager = rec._manager_users_ordered()[0]
+                # state = rec._compute_dynamic_state(is_hr=True)
+                rec.write({
+                    'state': 'new',
+                    'current_approver_id': first_manager.id,
+                })
+            else:
+                raise ValidationError("Please assign managers With Users first.")
         return True
 
     # --------------------------------------------------------------------
