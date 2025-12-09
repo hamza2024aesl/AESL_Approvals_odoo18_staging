@@ -3,7 +3,7 @@
 # ---------------------------------------------------------
 
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError,UserError
 from datetime import date, datetime, time
 
 
@@ -615,8 +615,8 @@ class HrAppraisal(models.Model):
     def _append_line_manager_prospect(self, future_prospect):
         user = self.env.user
         now = fields.Datetime.now()
-        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-        new_entry = f"[{timestamp}] {user.name}:\n{future_prospect}\n\n"
+        timestamp = now.strftime("%d %B %Y, %I:%M %p")
+        new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
 
         self.future_project = (self.future_project or "") + new_entry
 
@@ -660,3 +660,22 @@ class HrAppraisal(models.Model):
     def _get_report_base_filename(self):
         self.ensure_one()
         return "Appraisal_Letter_%s" % (self.employee_id.name.replace(" ", "_"))
+
+
+    def action_hr_assigned_batch(self):
+        today = date.today()
+        bacth_id = self.env['appraisal.batches'].search([( 'date_start', '<=' ,today),( 'date_end', '>=' ,today)])
+        if not bacth_id:
+            raise UserError("No appraisal batch is valid for today's date.")
+        if len(bacth_id) > 1:
+            batch_names = ", ".join(bacth_id.mapped('name'))
+            raise UserError(
+                "Multiple appraisal batches match today's date:\n\n%s\n\n"
+                "Only one batch is allowed for a date range." % batch_names
+            )
+        for rec in self:
+            # find all batches where today lies between start & end date
+
+            # Exactly one batch found → Assign
+            rec.appraisal_batch_id = bacth_id.id
+

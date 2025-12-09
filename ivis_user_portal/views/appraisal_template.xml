@@ -50,19 +50,20 @@
                     </t>
                     <thead>
                         <tr class="active">
+                            <th></th>
                             <th>Name</th>
                             <th>Appraisal Deadline</th>
-                            <th>Emp. No</th>
+                            <!--                            <th>Emp. No</th>-->
                             <th>Designation</th>
                             <th>Manager</th>
-                            <th>Emp Type</th>
+                            <!--                            <th>Emp Type</th>-->
                             <th>Appointment Date</th>
-                            <th>Doc Status</th>
                             <th>Status</th>
-                            <th>Gross Salary</th>
-                            <th>Recom. Increment</th>
-                            <th>Recom. Grade</th>
-                            <th>Increment (%)</th>
+                            <!--                            <th>Status</th>-->
+                                                        <th>Gross Salary</th>
+                            <!--                            <th>Recom. Increment</th>-->
+                            <!--                            <th>Recom. Grade</th>-->
+                            <!--                            <th>Increment (%)</th>-->
                             <th>View</th>
                         </tr>
                     </thead>
@@ -161,7 +162,7 @@
                                             <t t-esc="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
                                         </td>
                                         <td>
-                                            <t t-esc="appraisal.gross_salary"/>
+                                            <t t-esc="appraisal.employee_id.contract_id.wage"/>
                                         </td>
                                         <td>
                                             <t t-esc="appraisal[0].recomm_increment"/>
@@ -172,14 +173,14 @@
                                         <!--                                <td>-->
                                         <!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
                                         <!--                                </td>-->
-                                        <td>
+                                        <td t-if="appraisal.doc_state != 'published'">
                                             <a t-attf-href="/my/appraisal/view/{{appraisal.id}}" title="Open Appraisal"
                                                aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                                 <i class="fa fa-arrow-circle-right"/>
                                                 <span class='d-none d-md-inline'>Open Appraisal</span>
                                             </a>
                                         </td>
-                                        <td>
+                                        <td t-if="appraisal.doc_state == 'published'">
                                             <a t-attf-href="/my/appraisal/download/{{appraisal.id}}"
                                                title="Print Report"
                                                aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
@@ -206,47 +207,47 @@
                                     <td>
                                         <t t-out="appraisal.date_close"/>
                                     </td>
-                                    <td>
-                                        <t t-out="appraisal.registration_number"/>
-                                    </td>
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-out="appraisal.registration_number"/>-->
+                                    <!--                                    </td>-->
                                     <td>
                                         <t t-out="appraisal.job_id.name"/>
                                     </td>
                                     <td>
                                         <t t-out="appraisal.employee_id.parent_id.user_id.name"/>
                                     </td>
-                                    <td>
-                                        <t t-out="appraisal.employee_id.contract_id.contract_type_id.code"/>
-                                    </td>
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-out="appraisal.employee_id.contract_id.contract_type_id.code"/>-->
+                                    <!--                                    </td>-->
                                     <td>
                                         <span t-out="appraisal.appointment_date"/>
                                     </td>
-                                    <!--                                <td>-->
-                                    <!--                                    <t t-out="dict(appraisal.fields_get(allfields=['doc_state'])['doc_state']['selection']).get(appraisal.doc_state, '')"/>-->
-                                    <!--                                </td>-->
+                                    <!--                                    &lt;!&ndash;                                <td>&ndash;&gt;-->
+                                    <!--                                    &lt;!&ndash;                                    <t t-out="dict(appraisal.fields_get(allfields=['doc_state'])['doc_state']['selection']).get(appraisal.doc_state, '')"/>&ndash;&gt;-->
+                                    <!--                                    &lt;!&ndash;                                </td>&ndash;&gt;-->
                                     <td>
                                         <t t-out="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
                                     </td>
-                                    <td>
-                                        <t t-out="appraisal.gross_salary"/>
-                                    </td>
-                                    <td>
-                                        <t t-out="appraisal[0].recomm_increment"/>
-                                    </td>
+                                                                        <td>
+                                                                            <t t-out="appraisal.gross_salary"/>
+                                                                        </td>
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-out="appraisal[0].recomm_increment"/>-->
+                                    <!--                                    </td>-->
                                     <!--                                <td>-->
                                     <!--                                    <t t-out="appraisal[0].recommend_grades"/>-->
                                     <!--                                </td>-->
                                     <!--                                <td>-->
                                     <!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
                                     <!--                                </td>-->
-                                    <td>
+                                    <td t-if="appraisal.doc_state != 'published'">
                                         <a t-attf-href="/my/appraisal/view/{{appraisal.id}}" title="Open Appraisal"
                                            aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                             <i class="fa fa-arrow-circle-right"/>
                                             <span class='d-none d-md-inline'>Open Appraisal</span>
                                         </a>
                                     </td>
-                                    <td>
+                                    <td t-if="appraisal.doc_state == 'published'">
                                         <a t-attf-href="/my/appraisal/download/{{appraisal.id}}" title="Print Report"
                                            aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                             <i class="fa fa-arrow-circle-right"/>
@@ -281,13 +282,14 @@
                 <!--                <t t-if="appraisal.state!='new'">-->
 
                 <!--                </t>-->
+                <button
+                        class="btn btn-primary m-2 float-end"
+                        id="create_revert_remarks"
+                        title="Revert"
+                >Revert
+                </button>
             </div>
-            <button
-                    class="btn btn-primary m-2 float-end"
-                    id="create_revert_remarks"
-                    title="Revert"
-            >Revert
-            </button>
+
 
             <form method="post" id="revert_form" action="/my/revert/appraisal" style="display: none; opacity: 1">
                 <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>
@@ -435,11 +437,15 @@
                                     <t t-else="">
                                         <!-- Static Remarks for others -->
                                         <p>
-                                            [<t t-esc="remark.create_date"/>]
-
+                                            <t t-esc="remark.remark_text"/>
+                                        </p>
+                                        <p style="line-height:0.5px;">
+                                            By
                                             <b><t t-esc="remark.create_uid.name"/>:
                                             </b>
-                                            <t t-esc="remark.remark_text"/>
+                                            <time t-field="remark.create_date"
+                                                  t-options="{'format': 'EEEE d MMM yyyy'}"/>
+
                                         </p>
                                     </t>
                                 </t>

@@ -57,6 +57,9 @@
 
                 <!-- Rest of your XML remains same -->
 
+                <xpath expr="//field[@name='employee_id']" position="attributes">
+                    <attribute name="readonly"></attribute>
+                </xpath>
                 <xpath expr="//field[@name='manager_ids']" position="before">
                     <field name="appraisal_type"/>
                     <field name="appraisal_batch_id"/>
@@ -138,6 +141,15 @@
             <field name="binding_view_types">list,form</field>
             <field name="state">code</field>
             <field name="code">action = records.action_hr_published()</field>
+        </record>
+
+      <record id="hr_appraisal_assigned_batch" model="ir.actions.server">
+            <field name="name">Assigned Batch</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_view_types">list,form</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_hr_assigned_batch()</field>
         </record>
     </data>
 </odoo>
