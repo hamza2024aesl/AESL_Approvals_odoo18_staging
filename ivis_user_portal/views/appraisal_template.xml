@@ -50,7 +50,7 @@
                     </t>
                     <thead>
                         <tr class="active">
-                            <th></th>
+                            <th t-if="appraisals[0].state!='new'"></th>
                             <th>Name</th>
                             <th>Appraisal Deadline</th>
                             <!--                            <th>Emp. No</th>-->
