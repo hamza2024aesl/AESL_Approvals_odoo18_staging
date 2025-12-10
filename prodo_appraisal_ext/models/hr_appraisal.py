@@ -105,6 +105,12 @@ class HrAppraisal(models.Model):
                 return managers[index + 1]
         return False  # no next manager → MD stage
 
+    # changing state
+    @api.onchange('state')
+    def onchange_state(self):
+        if self.state:
+            self.doc_state = 'draft'
+
     # --------------------------------------------------------------------
     # Compute Dynamic States
     # --------------------------------------------------------------------
@@ -151,6 +157,7 @@ class HrAppraisal(models.Model):
     # --------------------------------------------------------------------
     def action_hr_confirm(self):
         for rec in self:
+            rec.doc_state = 'draft'
             if not rec.manager_ids:
                 raise ValidationError("Please assign managers first.")
             if rec._manager_users_ordered():
@@ -195,7 +202,9 @@ class HrAppraisal(models.Model):
     # BUTTON: MANAGER SUBMIT
     # --------------------------------------------------------------------
     def action_manager_submit(self):
+
         for rec in self:
+            rec.doc_state = 'draft'
 
             login_user = rec.env.user
 
@@ -248,6 +257,7 @@ class HrAppraisal(models.Model):
     # --------------------------------------------------------------------
     def action_md_submit(self):
         for rec in self:
+            rec.doc_state = 'draft'
 
             login_user = rec.env.user
             if login_user != rec.current_approver_id:
@@ -295,6 +305,7 @@ class HrAppraisal(models.Model):
                         rec.employee_id.contract_id.write({'wage': new_wage})
                         rec.appraisal_employee_id = rec.employee_id.user_id.id
                         rec.state = 'published'
+                        rec.doc_state = 'publish'
                     else:
                         raise ValidationError("You are not assigned user to employee.")
 
@@ -324,7 +335,7 @@ class HrAppraisal(models.Model):
                 'incremented_date': fields.Datetime.now(),
                 'state': rec.state,
             })]
-
+            rec.doc_state = 'save'
     # --------------------------------------------------------------------
     # Identify MD User
     # --------------------------------------------------------------------
@@ -427,6 +438,7 @@ class HrAppraisal(models.Model):
         MD final submission from portal.
         Saves increment if provided then triggers action_md_submit().
         """
+        self.doc_state = 'done'
 
         user = self.env.user
 
@@ -573,7 +585,6 @@ class HrAppraisal(models.Model):
                     'sl_count' :sl_availed_days,
                     'pl_count':pl_count,
                     'earned_leaves_balance': pl_count - pl_availed_days
-
                 })
 
             else:
@@ -614,12 +625,15 @@ class HrAppraisal(models.Model):
             'appraisal_id': self.id,
             'remark_text': remark_text,
         })
+        self.doc_state = 'save'
+
 
     def _append_line_manager_prospect(self, future_prospect):
         user = self.env.user
         now = fields.Datetime.now()
         timestamp = now.strftime("%d %B %Y, %I:%M %p")
         new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
+        self.doc_state = 'save'
 
         self.future_project = (self.future_project or "") + new_entry
 
