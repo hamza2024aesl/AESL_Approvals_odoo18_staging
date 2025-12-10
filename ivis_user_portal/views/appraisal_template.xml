@@ -58,8 +58,9 @@
                             <!--                            <th>Emp Type</th>-->
                             <th>Appointment Date</th>
                             <th>Status</th>
+                            <th>Doc State</th>
                             <!--                            <th>Status</th>-->
-                                                        <th>Gross Salary</th>
+                            <th>Gross Salary</th>
                             <!--                            <th>Recom. Increment</th>-->
                             <!--                            <th>Recom. Grade</th>-->
                             <!--                            <th>Increment (%)</th>-->
@@ -161,6 +162,9 @@
                                             <t t-esc="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
                                         </td>
                                         <td>
+                                            <t t-esc="appraisal.doc_state"/>
+                                        </td>
+                                        <td>
                                             <t t-esc="appraisal.employee_id.contract_id.wage"/>
                                         </td>
                                         <td>
@@ -172,14 +176,14 @@
                                         <!--                                <td>-->
                                         <!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
                                         <!--                                </td>-->
-                                        <td t-if="appraisal.doc_state != 'published'">
+                                        <td t-if="appraisal.doc_state != 'publish'">
                                             <a t-attf-href="/my/appraisal/view/{{appraisal.id}}" title="Open Appraisal"
                                                aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                                 <i class="fa fa-arrow-circle-right"/>
                                                 <span class='d-none d-md-inline'>Open Appraisal</span>
                                             </a>
                                         </td>
-                                        <td t-if="appraisal.doc_state == 'published'">
+                                        <td t-if="appraisal.doc_state == 'publish'">
                                             <a t-attf-href="/my/appraisal/download/{{appraisal.id}}"
                                                title="Print Report"
                                                aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
@@ -200,54 +204,96 @@
                                                    t-att-data-id="appraisal.id" class="bulk-approve-checkbox"/>
                                         </td>
                                     </t>
-                                    <td>
-                                        <span t-out="appraisal.employee_id.name"/>
+                                    <td style="padding-left: 25px;">
+                                        <t t-out="appraisal.employee_id.name"/>
                                     </td>
-                                    <td>
+
+                                    <td class="text-right">
                                         <t t-out="appraisal.date_close"/>
                                     </td>
-                                    <!--                                    <td>-->
-                                    <!--                                        <t t-out="appraisal.registration_number"/>-->
+                                    <!--                                    <td class="text-right">-->
+                                    <!--                                -->
+                                    <!--                                        <t t-else="">-->
+                                    <!--                                        </t>-->
                                     <!--                                    </td>-->
-                                    <td>
-                                        <t t-out="appraisal.job_id.name"/>
+                                    <!--                                <td class="text-right">-->
+                                    <!--                                    <t t-if="attendance.status">-->
+                                    <!--                                        <t t-esc="dict(attendance.fields_get(allfields=['status'])['status']['selection']).get(attendance.status, '')"/>-->
+                                    <!--                                    </t>-->
+                                    <!--                                    <t t-else="">-->
+                                    <!--                                    </t>-->
+                                    <!--                                </td>-->
+                                    <td class="text-right">
+                                        <t t-if="appraisal.registration_number">
+                                            <t t-esc="appraisal.registration_number"/>
+                                        </t>
+                                        <t t-else="">
+                                        </t>
+                                    </td>
+
+                                    <td class="text-right">
+                                        <t t-if="appraisal.job_id">
+                                            <t t-esc="appraisal.job_id.name"/>
+                                        </t>
+                                        <t t-else="">
+                                        </t>
+                                    </td>
+                                    <td class="text-right">
+                                        <t t-if="appraisal.employee_id.parent_id">
+                                            <t t-esc="appraisal.employee_id.parent_id.user_id.name"/>
+                                        </t>
+                                        <t t-else="">
+                                        </t>
+                                    </td>
+                                    <td class="text-right">
+                                        <t t-if="appraisal.employee_id.contract_id">
+                                            <t t-esc="appraisal.employee_id.contract_id.contract_type_id.code"/>
+                                        </t>
+                                        <t t-else="">
+                                        </t>
+                                    </td>
+                                    <!--                                <td class="text-center">-->
+                                    <!--                                    <t t-if="attendance.on_leave">-->
+                                    <!--                                        <i class="fa fa-check"/>-->
+                                    <!--                                    </t>-->
+                                    <!--                                    <t t-else="">-->
+                                    <!--                                    </t>-->
+                                    <!--                                </td>-->
+                                    <td class="text-right">
+                                        <t t-if="appraisal.appointment_date">
+                                            <t t-esc="appraisal.appointment_date"/>
+                                        </t>
+                                        <t t-else="">
+                                        </t>
                                     </td>
                                     <td>
-                                        <t t-out="appraisal.employee_id.parent_id.user_id.name"/>
+                                        <t t-esc="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
                                     </td>
-                                    <!--                                    <td>-->
-                                    <!--                                        <t t-out="appraisal.employee_id.contract_id.contract_type_id.code"/>-->
-                                    <!--                                    </td>-->
                                     <td>
-                                        <span t-out="appraisal.appointment_date"/>
+                                        <t t-esc="appraisal.doc_state"/>
                                     </td>
-                                    <!--                                    &lt;!&ndash;                                <td>&ndash;&gt;-->
-                                    <!--                                    &lt;!&ndash;                                    <t t-out="dict(appraisal.fields_get(allfields=['doc_state'])['doc_state']['selection']).get(appraisal.doc_state, '')"/>&ndash;&gt;-->
-                                    <!--                                    &lt;!&ndash;                                </td>&ndash;&gt;-->
                                     <td>
-                                        <t t-out="dict(appraisal.fields_get(allfields=['state'])['state']['selection']).get(appraisal.state, '')"/>
+                                        <t t-esc="appraisal.employee_id.contract_id.wage"/>
                                     </td>
-                                                                        <td>
-                                                                            <t t-out="appraisal.gross_salary"/>
-                                                                        </td>
-                                    <!--                                    <td>-->
-                                    <!--                                        <t t-out="appraisal[0].recomm_increment"/>-->
-                                    <!--                                    </td>-->
+                                    <td>
+                                        <t t-esc="appraisal[0].recomm_increment"/>
+                                    </td>
                                     <!--                                <td>-->
                                     <!--                                    <t t-out="appraisal[0].recommend_grades"/>-->
                                     <!--                                </td>-->
                                     <!--                                <td>-->
                                     <!--                                   <t t-out="'%.2f' % appraisal[0].increase_percentage"/>-->
                                     <!--                                </td>-->
-                                    <td t-if="appraisal.doc_state != 'published'">
+                                    <td t-if="appraisal.doc_state != 'publish'">
                                         <a t-attf-href="/my/appraisal/view/{{appraisal.id}}" title="Open Appraisal"
                                            aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                             <i class="fa fa-arrow-circle-right"/>
                                             <span class='d-none d-md-inline'>Open Appraisal</span>
                                         </a>
                                     </td>
-                                    <td t-if="appraisal.doc_state == 'published'">
-                                        <a t-attf-href="/my/appraisal/download/{{appraisal.id}}" title="Print Report"
+                                    <td t-if="appraisal.doc_state == 'publish'">
+                                        <a t-attf-href="/my/appraisal/download/{{appraisal.id}}"
+                                           title="Print Report"
                                            aria-label="Open Appraisal" class="btn btn-sm btn-primary" role="button">
                                             <i class="fa fa-arrow-circle-right"/>
                                             <span class='d-none d-md-inline'>Print Report</span>
