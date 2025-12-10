@@ -563,6 +563,7 @@ class HrAppraisal(models.Model):
 
                 cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
                 sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
+                pl_availed_days = self._calculate_availed_leave(emp, pl_leave_type)
 
                 self.cl_count = cl_availed_days
                 self.sl_count = sl_availed_days
@@ -570,7 +571,8 @@ class HrAppraisal(models.Model):
                 self.sudo().write({
                     'cl_count':cl_availed_days,
                     'sl_count' :sl_availed_days,
-                    'pl_count':pl_count
+                    'pl_count':pl_count,
+                    'earned_leaves_balance': pl_count - pl_availed_days
 
                 })
 
@@ -578,11 +580,12 @@ class HrAppraisal(models.Model):
                 self.cl_count = 0
                 self.sl_count = 0
                 self.pl_count = 0
+                self.earned_leaves_balance = 0
         else:
             self.cl_count = 0
             self.sl_count = 0
             self.pl_count = 0
-
+            self.earned_leaves_balance = 0
 
     def _calculate_availed_leave(self, emp, casual_leave_type):
         availed_days = 0
