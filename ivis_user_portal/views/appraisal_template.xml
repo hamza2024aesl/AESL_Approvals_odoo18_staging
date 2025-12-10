@@ -281,7 +281,7 @@
                 <!--                <t t-if="appraisal.state!='new'">-->
 
                 <!--                </t>-->
-                <button
+                <button t-if="appraisal.state != 'published'"
                         class="btn btn-primary m-2 float-end"
                         id="create_revert_remarks"
                         title="Revert"

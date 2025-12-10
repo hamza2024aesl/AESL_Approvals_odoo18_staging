@@ -162,8 +162,6 @@ class HrAppraisal(models.Model):
                 })
             else:
                 raise ValidationError("Please assign managers With Users first.")
-        return True
-
     # --------------------------------------------------------------------
     # CHECKING: MD USER
     # --------------------------------------------------------------------
