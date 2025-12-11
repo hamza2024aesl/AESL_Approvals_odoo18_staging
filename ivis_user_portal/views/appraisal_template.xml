@@ -64,7 +64,7 @@
                             <!--                            <th>Recom. Increment</th>-->
                             <!--                            <th>Recom. Grade</th>-->
                             <!--                            <th>Increment (%)</th>-->
-                            <th>View</th>
+                            <th style="margin-right:5px">View</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,18 +197,21 @@
                         </t>
                         <t t-if="not grouped_appraisal">
                             <t t-foreach="appraisals" t-as="appraisal">
-                                <tr class="text-center">
+<!--                                <tr class="text-center">-->
+                                <tr class="text-left">
                                     <t t-if="appraisal.state != 'new'">
                                         <td>
                                             <input type="checkbox" name="selected_appraisals"
                                                    t-att-data-id="appraisal.id" class="bulk-approve-checkbox"/>
                                         </td>
                                     </t>
-                                    <td style="padding-left: 25px;">
+<!--                                    <td style="padding-left: 25px;">-->
+                                    <td >
                                         <t t-out="appraisal.employee_id.name"/>
                                     </td>
 
-                                    <td class="text-right">
+<!--                                    <td class="text-right">-->
+                                    <td >
                                         <t t-out="appraisal.date_close"/>
                                     </td>
                                     <!--                                    <td class="text-right">-->
@@ -223,35 +226,39 @@
                                     <!--                                    <t t-else="">-->
                                     <!--                                    </t>-->
                                     <!--                                </td>-->
-                                    <td class="text-right">
-                                        <t t-if="appraisal.registration_number">
-                                            <t t-esc="appraisal.registration_number"/>
-                                        </t>
-                                        <t t-else="">
-                                        </t>
-                                    </td>
+<!--                                    <td class="text-right">-->
+<!--                                    <td>-->
+<!--                                        <t t-if="appraisal.registration_number">-->
+<!--                                            <t t-esc="appraisal.registration_number"/>-->
+<!--                                        </t>-->
+<!--                                        <t t-else="">-->
+<!--                                        </t>-->
+<!--                                    </td>-->
 
-                                    <td class="text-right">
+<!--                                    <td class="text-right">-->
+                                    <td >
                                         <t t-if="appraisal.job_id">
                                             <t t-esc="appraisal.job_id.name"/>
                                         </t>
                                         <t t-else="">
                                         </t>
                                     </td>
-                                    <td class="text-right">
+<!--                                    <td class="text-right">-->
+                                    <td >
                                         <t t-if="appraisal.employee_id.parent_id">
                                             <t t-esc="appraisal.employee_id.parent_id.user_id.name"/>
                                         </t>
                                         <t t-else="">
                                         </t>
                                     </td>
-                                    <td class="text-right">
-                                        <t t-if="appraisal.employee_id.contract_id">
-                                            <t t-esc="appraisal.employee_id.contract_id.contract_type_id.code"/>
-                                        </t>
-                                        <t t-else="">
-                                        </t>
-                                    </td>
+<!--                                    <td class="text-right">-->
+<!--                                    <td>-->
+<!--                                        <t t-if="appraisal.employee_id.contract_id">-->
+<!--                                            <t t-esc="appraisal.employee_id.contract_id.contract_type_id.code"/>-->
+<!--                                        </t>-->
+<!--                                        <t t-else="">-->
+<!--                                        </t>-->
+<!--                                    </td>-->
                                     <!--                                <td class="text-center">-->
                                     <!--                                    <t t-if="attendance.on_leave">-->
                                     <!--                                        <i class="fa fa-check"/>-->
@@ -259,7 +266,8 @@
                                     <!--                                    <t t-else="">-->
                                     <!--                                    </t>-->
                                     <!--                                </td>-->
-                                    <td class="text-right">
+<!--                                    <td class="text-right">-->
+                                    <td >
                                         <t t-if="appraisal.appointment_date">
                                             <t t-esc="appraisal.appointment_date"/>
                                         </t>
@@ -275,9 +283,9 @@
                                     <td>
                                         <t t-esc="appraisal.employee_id.contract_id.wage"/>
                                     </td>
-                                    <td>
-                                        <t t-esc="appraisal[0].recomm_increment"/>
-                                    </td>
+<!--                                    <td>-->
+<!--                                        <t t-esc="appraisal[0].recomm_increment"/>-->
+<!--                                    </td>-->
                                     <!--                                <td>-->
                                     <!--                                    <t t-out="appraisal[0].recommend_grades"/>-->
                                     <!--                                </td>-->

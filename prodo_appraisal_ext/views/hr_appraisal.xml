@@ -52,6 +52,11 @@
                         <field name="state" widget="statusbar"
                                statusbar_visible="draft,new,pending,executive,md,done,published"
                                readonly="1"/>
+
+<!--                        <field name="doc_state" widget="statusbar"-->
+<!--                               statusbar_visible="draft,save,done,revert,publish"-->
+<!--                               readonly="1"/>-->
+
                     </header>
                 </xpath>
 
@@ -63,6 +68,10 @@
                 <xpath expr="//field[@name='manager_ids']" position="before">
                     <field name="appraisal_type"/>
                     <field name="appraisal_batch_id"/>
+                </xpath>
+
+                <xpath expr="//field[@name='appraisal_template_id']" position="after">
+                    <field name="doc_state" readonly="1"/>
                 </xpath>
 
                 <xpath expr="//page[@name='private_note']" position="after">
