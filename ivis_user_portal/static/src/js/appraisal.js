@@ -149,3 +149,46 @@ publicWidget.registry.AppraisalBulkApproval = publicWidget.Widget.extend({
         });
     },
 });
+
+
+// publicWidget.registry.LocalStorageForm = publicWidget.Widget.extend({
+//     selector: "#appraisal_detail",
+//
+//     events: {
+//         "click .save-btn": "_saveToLocalStorage",
+//     },
+//
+//     // Load saved data on page start
+//     start: function () {
+//         const saved = localStorage.getItem("appraisal_form_data");
+//
+//         if (saved) {
+//             const formData = JSON.parse(saved);
+//             this._applyValues(formData);
+//         }
+//
+//         return this._super(...arguments);
+//     },
+//
+//     // Save to localStorage
+//     _saveToLocalStorage: function (ev) {
+//         ev.preventDefault();
+//
+//         const formData = {};
+//         this.$("input, textarea, select").each(function () {
+//             formData[this.name] = $(this).val();
+//         });
+//
+//         localStorage.setItem("appraisal_form_data", JSON.stringify(formData));
+//
+//         alert("Saved locally!");
+//     },
+//
+//     // Fill values from localStorage
+//     _applyValues: function (data) {
+//         for (let key in data) {
+//             this.$(`[name="${key}"]`).val(data[key]);
+//         }
+//     },
+// });
+

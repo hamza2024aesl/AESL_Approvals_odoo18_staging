@@ -333,7 +333,20 @@
                         title="Revert"
                 >Revert
                 </button>
+
+                <!--                <button type="button" class="btn btn-primary save-btn">Save</button>-->
+                <!--                <button type="button"-->
+                <!--                        class="o_form_button_save btn btn-light border-0 px-1 py-0 lh-sm"-->
+                <!--                >Save-->
+                <!--                </button>-->
             </div>
+            <!--            <form method="post" action="/my/form/save">-->
+            <!--                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>-->
+            <!--                <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>-->
+            <!--                <button type="submit" class="btn btn-primary m-2 float-end">-->
+            <!--                    Save-->
+            <!--                </button>-->
+            <!--            </form>-->
 
 
             <form method="post" id="revert_form" action="/my/revert/appraisal" style="display: none; opacity: 1">
@@ -373,7 +386,7 @@
             </form>
 
             <div class="card my-2 shadow-sm">
-                <form method="post" action="/my/appraisal/view/save" class="mb-4">
+                <form method="post" action="/my/appraisal/view/save" class="mb-4" id="appraisal_detail">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <input type="hidden" name="appraisal_id" t-att-value="appraisal.id"/>
                     <div class="card-body">
@@ -392,10 +405,21 @@
 
                             <!-- Submit button only for the CURRENT APPROVER -->
                             <div class="col-md-3">
+                                <input type="hidden" id="action_type" name="action_type" value=""/>
+
                                 <t t-if="appraisal.current_approver_id.id == uid">
-                                    <button type="submit" class="btn btn-primary m-2 float-end">
+                                    <button type="submit" class="btn btn-primary m-2 float-end" >
                                         Submit
                                     </button>
+                                    <button type="submit" onclick="document.getElementById('action_type').value='save'" class="btn btn-primary m-2 float-end">
+                                        Save
+                                    </button>
+
+                                    <button type="submit" onclick="document.getElementById('action_type').value='unlink'" class="btn btn-primary m-2 float-end">
+                                        Discard
+                                    </button>
+
+
                                     <!--                                    <t t-if="appraisal.state!='new'">-->
                                     <!--                                      <div class="col-md-3">-->
                                     <!--                                <t t-if="appraisal.current_approver_id.id == user.id or appraisal.appraisal_employee_id == user.id">-->

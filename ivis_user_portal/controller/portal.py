@@ -1031,16 +1031,6 @@ class EmployeePortal(CustomerPortal):
         user = request.env.user
 
         # ---- Manager adding their remarks or increment ----
-        # remarks_fields = {
-        #     "manager": "remarks",
-        #     "md": "remarks_5",
-        # }
-        #
-        # # Attach remarks if any
-        # vals_write = {}
-        # for field_name in ["remarks", "remarks_2", "remarks_3", "remarks_4", "remarks_5"]:
-        #     if post.get(field_name):
-        #         vals_write[field_name] = post.get(field_name)
 
         # ------------------------------------------------------------------
         # Save increment line from portal
@@ -1063,22 +1053,59 @@ class EmployeePortal(CustomerPortal):
         # ------------------------------------------------------------------
         # CALL BACKEND ACTION BASED ON STATE
         # ------------------------------------------------------------------
-        if appraisal.state == "new" or appraisal.state == "pending" or appraisal.state == "executive":
-            remark_text = post.get("new_remark") or ""
-            if remark_text:
-                appraisal._append_manager_remark(remark_text)
 
-            future_prospect_text = post.get("future_project") or ""
-            if future_prospect_text:
-                appraisal._append_line_manager_prospect(future_prospect_text)
+        if post.get('action_type') == 'save':
+            appraisal.save_recom_incrment(vals_increment_line)
+            #
+            # if vals_write:
+            #     appraisal.write(vals_write)
 
-            appraisal._portal_submit_manager(vals_increment_line)
+            # ------------------------------------------------------------------
+            # CALL BACKEND ACTION BASED ON STATE
+            # ------------------------------------------------------------------
+            if appraisal.state == "new" or appraisal.state == "pending" or appraisal.state == "executive":
+                remark_text = post.get("new_remark") or ""
+                if remark_text:
+                    appraisal._save_manager_remark(remark_text)
 
-        elif appraisal.state == "md":
-            appraisal._portal_submit_md(vals_increment_line)
+                future_prospect_text = post.get("future_project") or ""
+                if future_prospect_text:
+                    appraisal._save_line_manager_prospect(future_prospect_text)
+
+                appraisal.save_recom_incrment(vals_increment_line)
+        #
+        # if vals_write:
+        #     appraisal.write(vals_write)
+
+        elif post.get('action_type') == 'unlink':
+            # appraisal.unlink()
+            return request.redirect(f"/my/appraisal/view/{appraisal.id}")
+
+            # print("unlink_increament")
+            # appraisal.unlink_remarks()
+            # print("unlink_remarks")
+
+
+        else:
+            if appraisal.state == "new" or appraisal.state == "pending" or appraisal.state == "executive":
+                remark_text = post.get("new_remark") or ""
+                if remark_text:
+                    appraisal._append_manager_remark(remark_text)
+
+                future_prospect_text = post.get("future_project") or ""
+                if future_prospect_text:
+                    appraisal._append_line_manager_prospect(future_prospect_text)
+
+                appraisal._portal_submit_manager(vals_increment_line)
+
+            elif appraisal.state == "md":
+                appraisal._portal_submit_md(vals_increment_line)
 
         # Redirect to list view (record should not appear again)
         return request.redirect("/my/appraisal")
+
+
+
 
         # -------------------------------------------------------------
         # PORTAL SUBMIT – SINGLE ENTRY POINT
@@ -1199,3 +1226,57 @@ class EmployeePortal(CustomerPortal):
         request.env['hr.leave'].sudo().create(vals)
 
         return request.redirect('/my/leaves')
+
+    @http.route(["/my/form/save"], type="http", auth="user", website=True, methods=["POST"])
+    def portal_appraisal_save_button(self, **post):
+
+        appraisal_id = int(post.get("appraisal_id"))
+        appraisal = request.env["hr.appraisal"].sudo().browse(appraisal_id)
+        if not appraisal.exists():
+            return request.redirect("/my/appraisal")
+
+        user = request.env.user
+        # ------------------------------------------------------------------
+        # Save increment line from portal
+        # ------------------------------------------------------------------
+        increment_amount = float(post.get("increment_raise_amount") or 0)
+        desig_id = int(post.get("recomm_desigantion_id") or 0)
+        grades = post.get("recomm_grades") or ""
+
+        vals_increment_line = False
+        if increment_amount or desig_id or grades:
+            vals_increment_line = {
+                "increment_raise_amount": increment_amount,
+                "recomm_desigantion_id": desig_id,
+                "recomm_grades": grades,
+            }
+
+            appraisal.save_recom_incrment(vals_increment_line)
+        #
+        # if vals_write:
+        #     appraisal.write(vals_write)
+
+        # ------------------------------------------------------------------
+        # CALL BACKEND ACTION BASED ON STATE
+        # ------------------------------------------------------------------
+        if appraisal.state == "new" or appraisal.state == "pending" or appraisal.state == "executive":
+            remark_text = post.get("new_remark") or ""
+            if remark_text:
+                appraisal._save_manager_remark(remark_text)
+
+            future_prospect_text = post.get("future_project") or ""
+            if future_prospect_text:
+                appraisal._save_line_manager_prospect(future_prospect_text)
+
+
+            #
+            # appraisal._portal_submit_manager(vals_increment_line)
+
+        # elif appraisal.state
+        #
+        #
+        # == "md":
+        #     appraisal._portal_submit_md(vals_increment_line)
+
+        # Redirect to list view (record should not appear again)
+        return request.redirect("/my/appraisal")

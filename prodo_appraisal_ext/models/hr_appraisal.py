@@ -365,9 +365,9 @@ class HrAppraisal(models.Model):
         if vals_increment_line:
             if self.doc_state == 'revert':
                 existing.write({
-                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") or 0),
-                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") or 0),
-                    "recomm_grades": vals_increment_line.get("recomm_grades") or "",
+                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
+                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                    "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
                 })
 
             # Check if manager already has a line
@@ -376,9 +376,9 @@ class HrAppraisal(models.Model):
             )
             if not existing:
                 self.recomm_increment_lines_id = [(0, 0, {
-                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") or 0),
-                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") or 0),
-                    "recomm_grades": vals_increment_line.get("recomm_grades") or "",
+                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
+                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                    "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
                     "increment_raise_by": user.id,
                     "incremented_date": fields.Datetime.now(),
                     "state": self.state,
@@ -449,9 +449,9 @@ class HrAppraisal(models.Model):
             )
             if not existing:
                 self.recomm_increment_lines_id = [(0, 0, {
-                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") or 0),
-                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") or 0),
-                    "recomm_grades": vals_increment_line.get("recomm_grades") or "",
+                    "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
+                    "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                    "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
                     "increment_raise_by": user.id,
                     "incremented_date": fields.Datetime.now(),
                     "state": self.state,
@@ -614,6 +614,16 @@ class HrAppraisal(models.Model):
     # DYNAMIC REMARKS
     # --------------------------------------------------------------------
     #
+
+    def _save_manager_remark(self, remark_text):
+        if not self.remarks:
+            self.sudo().remarks.create({
+            'appraisal_id': self.id,
+            'remark_text': remark_text,
+        })
+        self.doc_state = 'save'
+
+
     def _append_manager_remark(self, remark_text):
         if self.doc_state == 'revert':
             self.sudo().remarks.write({
@@ -626,6 +636,50 @@ class HrAppraisal(models.Model):
             'remark_text': remark_text,
         })
         self.doc_state = 'save'
+
+
+    def _save_line_manager_prospect(self, future_prospect):
+        if not self.future_project:
+            user = self.env.user
+            now = fields.Datetime.now()
+            timestamp = now.strftime("%d %B %Y, %I:%M %p")
+            new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
+            self.doc_state = 'save'
+
+            self.future_project = (self.future_project or "") + new_entry
+
+    def save_recom_incrment(self,vals_increment_line):
+        self.doc_state = 'save'
+
+        user = self.env.user
+        filtered_increment = self.recomm_increment_lines_id.filtered(lambda x: x.increment_raise_by.id == user.id)
+        if not filtered_increment:
+            self.recomm_increment_lines_id = [(0, 0, {
+                "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
+                "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
+                "increment_raise_by": user.id,
+                "incremented_date": fields.Datetime.now(),
+                "state": self.state,
+            })]
+
+    def unlink_increament(self):
+        user = self.env.user
+        filtered_increment = self.recomm_increment_lines_id.filtered(lambda x: x.increment_raise_by.id == user.id)
+        if filtered_increment:
+            filtered_increment.unlink()
+
+
+    def unlink_remarks(self):
+        user = self.env.user
+        filtered_remarks = self.remarks.filtered(lambda x: x.create_uid.id == user.id)
+        if filtered_remarks:
+            filtered_remarks.unlink()
+        else:
+            print('Not Working')
+
+
+
 
 
     def _append_line_manager_prospect(self, future_prospect):
