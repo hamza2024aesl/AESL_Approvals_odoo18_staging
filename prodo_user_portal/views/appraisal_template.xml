@@ -691,7 +691,7 @@
                                 </t>
 
                                 <!-- Add new increment line ONLY if current user is active approver -->
-                                    <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' ">
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' ">
                                     <tr>
                                         <td>
                                             <input type="number" name="increment_raise_amount" class="form-control"/>

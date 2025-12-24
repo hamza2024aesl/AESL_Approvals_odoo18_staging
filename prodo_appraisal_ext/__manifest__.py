@@ -12,7 +12,7 @@
     'author': 'A.Rafay',
     'website': '',
     'images': [],
-    'depends': ['hr_appraisal','hr','ivis_employee_details'],
+    'depends': ['hr_appraisal','hr','prodo_user_portal'],
     'data': [
         'security/ir.model.access.csv',
         'data/groups.xml',
@@ -22,7 +22,6 @@
         'views/hr_appraisal.xml',
         'report/report.xml',
         'report/appraisal_letter.xml',
-
     ],
     'installable': True,
     'auto_install': False,

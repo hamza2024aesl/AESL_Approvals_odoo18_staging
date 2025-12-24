@@ -10,7 +10,7 @@
     "description": """User Portal""",
     "version": "18.0",
     "depends": ['portal', 'hr', 'hr_attendance', 'hr_holidays', 'hr_payroll', 'mail', 'calendar', 'hr_zk_attendance',
-                'ivis_leaves_chart', 'ivis_hr_employee_loan', 'prodo_appraisal_ext'],
+                'ivis_leaves_chart', 'ivis_hr_employee_loan'],
     "data": [
         'security/ir.model.access.csv',
         # 'views/employee.xml',
@@ -36,7 +36,7 @@
             '/ivis_user_portal/static/src/js/leave.js',
             '/ivis_user_portal/static/src/js/loan.js',
             '/ivis_user_portal/static/src/js/payslip.js',
-            '/ivis_user_portal/static/src/js/appraisal.js',
+            # '/ivis_user_portal/static/src/js/appraisal.js',
         ],
     },
     "images": [],

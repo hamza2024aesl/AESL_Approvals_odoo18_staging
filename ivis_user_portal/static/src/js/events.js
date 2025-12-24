@@ -19,11 +19,11 @@ $(document).ready(function() {
         event.preventDefault();
         $('#leave_form').addClass('element-to-hide-show').show();
     })
-    $(document).on('click', '#create_revert_remarks', function(event) {
-    debugger;
-        event.preventDefault();
-        $('#revert_form').addClass('element-to-hide-show').show();
-    })
+//    $(document).on('click', '#create_revert_remarks', function(event) {
+//    debugger;
+//        event.preventDefault();
+//        $('#revert_form').addClass('element-to-hide-show').show();
+//    })
 
     $(document).on('click', '#create_loan', function(event) {
         event.preventDefault();
