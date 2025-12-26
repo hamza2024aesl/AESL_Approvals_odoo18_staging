@@ -95,6 +95,6 @@ class HrLeaveTypeInherit(models.Model):
 
 class AppraisalSystemInherit(models.Model):
     _inherit = "hr.appraisal"
-
-class IncrementRaiseLinesInherit(models.Model):
-    _inherit = "increment.raise.lines"
+#
+# class IncrementRaiseLinesInherit(models.Model):
+#     _inherit = "increment.raise.lines"

@@ -25,7 +25,7 @@
         'views/index.xml',
         'views/pin_reset.xml',
         'views/res_config_settings_views.xml',
-        'views/appraisal_template.xml',
+        # 'views/appraisal_template.xml',
     ],
     "assets": {
         "web.assets_frontend": [

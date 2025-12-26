@@ -9,14 +9,14 @@
     "summary": "User Portal",
     "description": """User Portal""",
     "version": "18.0",
-    "depends": ['portal'],
+    "depends": ['portal','prodo_appraisal_ext'],
     "data": [
         'views/appraisal_template.xml',
     ],
     "assets": {
         "web.assets_frontend": [
-            '/prodo_user_portal/static/src/js/events.js',
-            '/prodo_user_portal/static/src/js/appraisal.js',
+            'prodo_user_portal/static/src/js/events.js',
+            'prodo_user_portal/static/src/js/appraisal.js',
         ],
     },
     "images": [],

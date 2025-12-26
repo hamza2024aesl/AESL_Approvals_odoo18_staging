@@ -16,8 +16,8 @@
                                 string="HR Confirm"
                                 type="object"
                                 class="oe_highlight"
-                                groups="prodo_appraisal_ext.group_hr_manager_appraisal_3"
                                 invisible="state != 'draft'"/>
+<!--                        groups="prodo_appraisal_ext.group_hr_manager_appraisal_3"-->
 
                         <!-- MANAGER SUBMIT (Dynamic manager flow) -->
                         <button name="action_manager_submit"
@@ -53,9 +53,9 @@
                                statusbar_visible="draft,new,pending,executive,md,done,published"
                                readonly="1"/>
 
-<!--                        <field name="doc_state" widget="statusbar"-->
-<!--                               statusbar_visible="draft,save,done,revert,publish"-->
-<!--                               readonly="1"/>-->
+                        <!--                        <field name="doc_state" widget="statusbar"-->
+                        <!--                               statusbar_visible="draft,save,done,revert,publish"-->
+                        <!--                               readonly="1"/>-->
 
                     </header>
                 </xpath>
@@ -79,11 +79,19 @@
 
                         <!-- REMARKS -->
                         <group string="Remarks">
-                            <field name="remarks"
-                                   readonly="current_approver_id != uid"
-                                   nolabel="1"
-                                   style="border-bottom: 1px solid #000; width:100%;"/>
+                            <!--                            <field name="remarks"-->
+                            <!--                                   readonly="current_approver_id != uid"-->
+                            <!--                                   nolabel="1"-->
+                            <!--                                   style="border-bottom: 1px solid #000; width:100%;"/>-->
+                            <field name="appraisal_remarks" readonly="1">
+                                <list readonly="1">
+                                    <field name="create_date"/>
+                                    <field name="create_uid"/>
+                                    <field name="remark_text"/>
+                                </list>
+                            </field>
                         </group>
+
 
                         <!-- INCREMENT -->
                         <group string="Increase Recommendation">
@@ -102,6 +110,12 @@
                                    nolabel="1"
                                    style="border-bottom: 1px solid #000; width:100%;"/>
                         </group>
+                        <group string="Revert Remarks">
+                            <field name="revert_remarks"
+                                   readonly="1"
+                                   nolabel="1"
+                                   style="border-bottom: 1px solid #000; width:100%;"/>
+                        </group>
 
                         <separator string="Increment Details"/>
 
@@ -109,7 +123,7 @@
                         <field name="recomm_increment_lines_id"
                                widget="one2many_list"
                                nolabel="1"
-                               readonly="state == 'draft' or state == 'done'">
+                              readonly="1">
 
                             <list string="Recommend Raise Lines" editable="top" delete="0">
                                 <field name="increment_raise_id" invisible="1"/>
@@ -152,7 +166,7 @@
             <field name="code">action = records.action_hr_published()</field>
         </record>
 
-      <record id="hr_appraisal_assigned_batch" model="ir.actions.server">
+        <record id="hr_appraisal_assigned_batch" model="ir.actions.server">
             <field name="name">Assigned Batch</field>
             <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
             <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal"/>

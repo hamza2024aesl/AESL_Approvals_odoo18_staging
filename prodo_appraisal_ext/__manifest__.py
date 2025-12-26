@@ -12,10 +12,10 @@
     'author': 'A.Rafay',
     'website': '',
     'images': [],
-    'depends': ['hr_appraisal','hr','prodo_user_portal'],
+    'depends': ['hr_appraisal','ivis_employee_details','hr'],
     'data': [
         'security/ir.model.access.csv',
-        'data/groups.xml',
+        # 'data/groups.xml',
         'data/mail_data.xml',
         'data/ir_sequence_data.xml',
         'views/appraisal_batches.xml',

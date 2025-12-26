@@ -14,7 +14,7 @@
                         Group By
                     </button>
                     <t t-if="appraisals">
-                        <t t-if="appraisals[0].state!='new'">
+                        <t t-if="appraisals[0].state !='new'">
                             <button class="btn btn-primary" type="button" id="bulkApproveButton">Bulk Approve</button>
                         </t>
                     </t>
@@ -197,7 +197,7 @@
                         </t>
                         <t t-if="not grouped_appraisal">
                             <t t-foreach="appraisals" t-as="appraisal">
-<!--                                <tr class="text-center">-->
+                                <!--                                <tr class="text-center">-->
                                 <tr class="text-left">
                                     <t t-if="appraisal.state != 'new'">
                                         <td>
@@ -205,13 +205,13 @@
                                                    t-att-data-id="appraisal.id" class="bulk-approve-checkbox"/>
                                         </td>
                                     </t>
-<!--                                    <td style="padding-left: 25px;">-->
-                                    <td >
+                                    <!--                                    <td style="padding-left: 25px;">-->
+                                    <td>
                                         <t t-out="appraisal.employee_id.name"/>
                                     </td>
 
-<!--                                    <td class="text-right">-->
-                                    <td >
+                                    <!--                                    <td class="text-right">-->
+                                    <td>
                                         <t t-out="appraisal.date_close"/>
                                     </td>
                                     <!--                                    <td class="text-right">-->
@@ -226,39 +226,39 @@
                                     <!--                                    <t t-else="">-->
                                     <!--                                    </t>-->
                                     <!--                                </td>-->
-<!--                                    <td class="text-right">-->
-<!--                                    <td>-->
-<!--                                        <t t-if="appraisal.registration_number">-->
-<!--                                            <t t-esc="appraisal.registration_number"/>-->
-<!--                                        </t>-->
-<!--                                        <t t-else="">-->
-<!--                                        </t>-->
-<!--                                    </td>-->
+                                    <!--                                    <td class="text-right">-->
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-if="appraisal.registration_number">-->
+                                    <!--                                            <t t-esc="appraisal.registration_number"/>-->
+                                    <!--                                        </t>-->
+                                    <!--                                        <t t-else="">-->
+                                    <!--                                        </t>-->
+                                    <!--                                    </td>-->
 
-<!--                                    <td class="text-right">-->
-                                    <td >
+                                    <!--                                    <td class="text-right">-->
+                                    <td>
                                         <t t-if="appraisal.job_id">
                                             <t t-esc="appraisal.job_id.name"/>
                                         </t>
                                         <t t-else="">
                                         </t>
                                     </td>
-<!--                                    <td class="text-right">-->
-                                    <td >
+                                    <!--                                    <td class="text-right">-->
+                                    <td>
                                         <t t-if="appraisal.employee_id.parent_id">
                                             <t t-esc="appraisal.employee_id.parent_id.user_id.name"/>
                                         </t>
                                         <t t-else="">
                                         </t>
                                     </td>
-<!--                                    <td class="text-right">-->
-<!--                                    <td>-->
-<!--                                        <t t-if="appraisal.employee_id.contract_id">-->
-<!--                                            <t t-esc="appraisal.employee_id.contract_id.contract_type_id.code"/>-->
-<!--                                        </t>-->
-<!--                                        <t t-else="">-->
-<!--                                        </t>-->
-<!--                                    </td>-->
+                                    <!--                                    <td class="text-right">-->
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-if="appraisal.employee_id.contract_id">-->
+                                    <!--                                            <t t-esc="appraisal.employee_id.contract_id.contract_type_id.code"/>-->
+                                    <!--                                        </t>-->
+                                    <!--                                        <t t-else="">-->
+                                    <!--                                        </t>-->
+                                    <!--                                    </td>-->
                                     <!--                                <td class="text-center">-->
                                     <!--                                    <t t-if="attendance.on_leave">-->
                                     <!--                                        <i class="fa fa-check"/>-->
@@ -266,8 +266,8 @@
                                     <!--                                    <t t-else="">-->
                                     <!--                                    </t>-->
                                     <!--                                </td>-->
-<!--                                    <td class="text-right">-->
-                                    <td >
+                                    <!--                                    <td class="text-right">-->
+                                    <td>
                                         <t t-if="appraisal.appointment_date">
                                             <t t-esc="appraisal.appointment_date"/>
                                         </t>
@@ -283,9 +283,9 @@
                                     <td>
                                         <t t-esc="appraisal.employee_id.contract_id.wage"/>
                                     </td>
-<!--                                    <td>-->
-<!--                                        <t t-esc="appraisal[0].recomm_increment"/>-->
-<!--                                    </td>-->
+                                    <!--                                    <td>-->
+                                    <!--                                        <t t-esc="appraisal[0].recomm_increment"/>-->
+                                    <!--                                    </td>-->
                                     <!--                                <td>-->
                                     <!--                                    <t t-out="appraisal[0].recommend_grades"/>-->
                                     <!--                                </td>-->
@@ -416,14 +416,17 @@
                                 <input type="hidden" id="action_type" name="action_type" value=""/>
 
                                 <t t-if="appraisal.current_approver_id.id == uid">
-                                    <button type="submit" class="btn btn-primary m-2 float-end" >
+                                    <button type="submit" class="btn btn-primary m-2 float-end">
                                         Submit
                                     </button>
-                                    <button type="submit" onclick="document.getElementById('action_type').value='save'" class="btn btn-primary m-2 float-end">
+                                    <button type="submit" onclick="document.getElementById('action_type').value='save'"
+                                            class="btn btn-primary m-2 float-end">
                                         Save
                                     </button>
 
-                                    <button type="submit" onclick="document.getElementById('action_type').value='unlink'" class="btn btn-primary m-2 float-end">
+                                    <button type="submit"
+                                            onclick="document.getElementById('action_type').value='unlink'"
+                                            class="btn btn-primary m-2 float-end">
                                         Discard
                                     </button>
 
@@ -504,7 +507,7 @@
                                 </h5>
 
 
-                                <t t-foreach="appraisal.remarks" t-as="remark">
+                                <t t-foreach="appraisal.appraisal_remarks" t-as="remark">
                                     <t t-if="remark.create_uid.id == uid">
                                         <!-- Editable Remarks only for the CURRENT APPROVER -->
                                         <input type="text" name="remarks"
@@ -525,14 +528,14 @@
 
                                         </p>
                                     </t>
+                                    <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not remark.create_uid.id == uid">
+                                        <input type="text" name="new_remark"
+                                               placeholder="Enter your remark"
+                                               class="form-control mb-3"/>
+                                    </t>
                                 </t>
 
                                 <!-- Allow the current approver to add a new remark -->
-                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert'">
-                                    <input type="text" name="new_remark"
-                                           placeholder="Enter your remark"
-                                           class="form-control mb-3"/>
-                                </t>
 
                                 <!-- Future Project -->
                                 <h5>
@@ -688,29 +691,31 @@
                                             </tr>
                                         </t>
                                     </t>
+                                    <!-- Add new increment line ONLY if current user is active approver -->
+                                    <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not line.create_uid.id == user.id">
+                                        <tr>
+                                            <td>
+                                                <input type="number" name="increment_raise_amount"
+                                                       class="form-control"/>
+                                            </td>
+                                            <td>
+                                                <select name="recomm_desigantion_id" class="form-control">
+                                                    <option value=""/>
+                                                    <t t-foreach="desigantions" t-as="d">
+                                                        <option t-att-value="d.id" t-esc="d.name"/>
+                                                    </t>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" name="recomm_grades" class="form-control"/>
+                                            </td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    </t>
+
                                 </t>
 
-                                <!-- Add new increment line ONLY if current user is active approver -->
-                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' ">
-                                    <tr>
-                                        <td>
-                                            <input type="number" name="increment_raise_amount" class="form-control"/>
-                                        </td>
-                                        <td>
-                                            <select name="recomm_desigantion_id" class="form-control">
-                                                <option value=""/>
-                                                <t t-foreach="desigantions" t-as="d">
-                                                    <option t-att-value="d.id" t-esc="d.name"/>
-                                                </t>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="number" name="recomm_grades" class="form-control"/>
-                                        </td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </t>
 
                             </tbody>
                         </table>

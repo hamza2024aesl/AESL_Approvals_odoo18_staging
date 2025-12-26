@@ -51,7 +51,8 @@ class HrAppraisal(models.Model):
     last_approver_id = fields.Many2one('res.users', string='Last Approver')
     revert_remarks = fields.Char()
     remarks_text = fields.Char()
-    remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
+    # remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
+    appraisal_remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
     doc_state = fields.Selection([
         ('draft', 'Draft'),
         ('save', 'Save'),
@@ -175,8 +176,11 @@ class HrAppraisal(models.Model):
 
     def _is_md(self, user):
         """MD = employee whose parent_id is False."""
-        emp = self.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-        return emp and not emp.parent_id
+        if user:
+            emp = self.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
+            return emp and not emp.parent_id
+        else:
+            raise UserError(_("No User Id Found For the MD"))
 
     def _is_executive(self, user):
         """Return True if employee is Executive.
@@ -281,7 +285,7 @@ class HrAppraisal(models.Model):
             #     new_wage = rec.employee_id.contract_id.wage + final_inc
             #     rec.gross_salary = new_wage
             #     rec.employee_id.contract_id.write({'wage': new_wage})
-            for remark in self.remarks:
+            for remark in self.appraisal_remarks:
                 rec._append_manager_remark(remark.remark_text)
 
         return {
@@ -616,26 +620,32 @@ class HrAppraisal(models.Model):
     #
 
     def _save_manager_remark(self, remark_text):
-        if not self.remarks:
-            self.sudo().remarks.create({
+        if not self.appraisal_remarks:
+            self.sudo().appraisal_remarks.create({
             'appraisal_id': self.id,
             'remark_text': remark_text,
         })
-        self.doc_state = 'save'
+        else:
+            self.sudo().appraisal_remarks.write({
+                # 'appraisal_id': self.id,
+                'remark_text': remark_text
+            })
+
+        # self.doc_state = 'save'
 
 
     def _append_manager_remark(self, remark_text):
         if self.doc_state == 'revert':
-            self.sudo().remarks.write({
+            self.sudo().appraisal_remarks.write({
                 'appraisal_id': self.id,
                 'remark_text': remark_text,
             })
         else:
-            self.sudo().remarks.create({
+            self.appraisal_remarks.create({
             'appraisal_id': self.id,
             'remark_text': remark_text,
         })
-        self.doc_state = 'save'
+        # self.doc_state = 'save'
 
 
     def _save_line_manager_prospect(self, future_prospect):
@@ -643,10 +653,21 @@ class HrAppraisal(models.Model):
             user = self.env.user
             now = fields.Datetime.now()
             timestamp = now.strftime("%d %B %Y, %I:%M %p")
-            new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
-            self.doc_state = 'save'
+            new_entry = f"{future_prospect}\n By {user.name} [{timestamp}]:\n\n"
+            # self.doc_state = 'save'
 
-            self.future_project = (self.future_project or "") + new_entry
+            self.future_project = new_entry
+        else:
+            user = self.env.user
+            now = fields.Datetime.now()
+            timestamp = now.strftime("%d %B %Y, %I:%M %p")
+            new_entry = f"{future_prospect}\n By {user.name} [{timestamp}]:\n\n"
+            # self.doc_state = 'save'
+
+            self.future_project = new_entry
+
+
+
 
     def save_recom_incrment(self,vals_increment_line):
         self.doc_state = 'save'
@@ -662,6 +683,13 @@ class HrAppraisal(models.Model):
                 "incremented_date": fields.Datetime.now(),
                 "state": self.state,
             })]
+        else:
+            filtered_increment.write({
+               'increment_raise_amount':vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0,
+                'recomm_desigantion_id':int(vals_increment_line.get("recomm_desigantion_id")),
+                'recomm_grades':vals_increment_line.get("recomm_grades") if vals_increment_line else "",
+            })
+
 
     def unlink_increament(self):
         user = self.env.user
@@ -672,7 +700,7 @@ class HrAppraisal(models.Model):
 
     def unlink_remarks(self):
         user = self.env.user
-        filtered_remarks = self.remarks.filtered(lambda x: x.create_uid.id == user.id)
+        filtered_remarks = self.appraisal_remarks.filtered(lambda x: x.create_uid.id == user.id)
         if filtered_remarks:
             filtered_remarks.unlink()
         else:
@@ -687,9 +715,9 @@ class HrAppraisal(models.Model):
         now = fields.Datetime.now()
         timestamp = now.strftime("%d %B %Y, %I:%M %p")
         new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
-        self.doc_state = 'save'
+        # self.doc_state = 'save'
 
-        self.future_project = (self.future_project or "") + new_entry
+        self.future_project = new_entry
 
     def _append_revert_remark(self, revert_remark_text):
         user = self.env.user

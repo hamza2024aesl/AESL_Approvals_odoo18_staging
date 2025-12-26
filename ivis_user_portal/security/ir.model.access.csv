@@ -5,4 +5,3 @@ access_mail_activity_type,access.mail.activity.type,model_mail_activity_type,bas
 access_calendar_event,access.calendar.event,model_calendar_event,base.group_portal,1,1,1,1
 access_calendar_attendee,access.calendar.attendee,model_calendar_attendee,base.group_portal,1,1,1,1
 access_hr_leave_type,access.hr.leave.type,model_hr_leave_type,base.group_portal,1,0,0,0
-access_increment_raise_lines,access.increment.raise.lines,model_increment_raise_lines,base.group_portal,1,1,1,1
