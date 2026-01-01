@@ -93,8 +93,8 @@ class ResConfigSettingInherit(models.TransientModel):
 class HrLeaveTypeInherit(models.Model):
     _inherit = ["hr.leave.type"]
 
-class AppraisalSystemInherit(models.Model):
-    _inherit = "hr.appraisal"
+# class AppraisalSystemInherit(models.Model):
+#     _inherit = "hr.appraisal"
 #
 # class IncrementRaiseLinesInherit(models.Model):
 #     _inherit = "increment.raise.lines"

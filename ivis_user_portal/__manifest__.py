@@ -10,7 +10,7 @@
     "description": """User Portal""",
     "version": "18.0",
     "depends": ['portal', 'hr', 'hr_attendance', 'hr_holidays', 'hr_payroll', 'mail', 'calendar', 'hr_zk_attendance',
-                'ivis_leaves_chart', 'ivis_hr_employee_loan'],
+                'ivis_leaves_chart', 'ivis_hr_employee_loan','hr_appraisal'],
     "data": [
         'security/ir.model.access.csv',
         # 'views/employee.xml',

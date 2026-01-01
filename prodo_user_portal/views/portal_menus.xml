@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <template id="portal_my_home_portal" name="Show Appraisal" inherit_id="portal.portal_my_home"
+              customize_show="True">
+        <xpath expr="//div[@id='portal_common_category']" position="after"  >
+            <div class="o_portal_category row g-2 mt-3" id="portal_custom_category">
+                 <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/icons8-performance-64.png'"/>
+                    <t t-set="title">Appraisal</t>
+                    <t t-set="text">Manage your Appraisal</t>
+                    <t t-set="url" t-value="'/my/appraisal'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </div>
+        </xpath>
+    </template>
+
+    <template id="card_row_appraisal" name="Field Row">
+        <div class="row">
+            <div class="col-sm-3">
+                <p class="mb-0">
+                    <t t-esc="label"/>
+                </p>
+            </div>
+            <div class="col-sm-9">
+                <p class="text-muted mb-0">
+                    <t t-esc="value"/>
+                </p>
+            </div>
+        </div>
+        <t t-if="not no_hr">
+            <hr/>
+        </t>
+    </template>
+
+</odoo>

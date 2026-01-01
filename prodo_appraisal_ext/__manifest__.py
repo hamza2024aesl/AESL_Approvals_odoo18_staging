@@ -22,6 +22,7 @@
         'views/hr_appraisal.xml',
         'report/report.xml',
         'report/appraisal_letter.xml',
+        'wizard/appraisal_group_by.xml'
     ],
     'installable': True,
     'auto_install': False,

@@ -17,7 +17,7 @@
                                 type="object"
                                 class="oe_highlight"
                                 invisible="state != 'draft'"/>
-<!--                        groups="prodo_appraisal_ext.group_hr_manager_appraisal_3"-->
+                        <!--                        groups="prodo_appraisal_ext.group_hr_manager_appraisal_3"-->
 
                         <!-- MANAGER SUBMIT (Dynamic manager flow) -->
                         <button name="action_manager_submit"
@@ -50,7 +50,7 @@
 
                         <!-- STATUS BAR -->
                         <field name="state" widget="statusbar"
-                               statusbar_visible="draft,new,pending,executive,md,done,published"
+                               statusbar_visible="draft,new,pending,executive,md,done,published,cancel"
                                readonly="1"/>
 
                         <!--                        <field name="doc_state" widget="statusbar"-->
@@ -83,7 +83,7 @@
                             <!--                                   readonly="current_approver_id != uid"-->
                             <!--                                   nolabel="1"-->
                             <!--                                   style="border-bottom: 1px solid #000; width:100%;"/>-->
-                            <field name="appraisal_remarks" readonly="1">
+                            <field name="appraisal_remarks" readonly="1" nolabel="1">
                                 <list readonly="1">
                                     <field name="create_date"/>
                                     <field name="create_uid"/>
@@ -105,10 +105,17 @@
 
                         <!-- FUTURE PROSPECT -->
                         <group string="Future Prospects">
-                            <field name="future_project"
-                                   readonly="is_first_manager == False"
-                                   nolabel="1"
-                                   style="border-bottom: 1px solid #000; width:100%;"/>
+                            <field name="future_prospect_remarks" readonly="1" nolabel="1">
+                                <list readonly="1">
+                                    <field name="create_date"/>
+                                    <field name="create_uid"/>
+                                    <field name="future_prospect_text"/>
+                                </list>
+                            </field>
+                            <!--                            <field name="future_project"-->
+                            <!--                                   readonly="1"-->
+                            <!--                                   nolabel="1"-->
+                            <!--                                   style="border-bottom: 1px solid #000; width:100%;"/>-->
                         </group>
                         <group string="Revert Remarks">
                             <field name="revert_remarks"
@@ -123,11 +130,9 @@
                         <field name="recomm_increment_lines_id"
                                widget="one2many_list"
                                nolabel="1"
-                              readonly="1">
+                               readonly="1">
 
                             <list string="Recommend Raise Lines" editable="top" delete="0">
-                                <field name="increment_raise_id" invisible="1"/>
-                                <field name="check_access_team_id" invisible="1"/>
                                 <field name="increment_raise_amount" string="Raise Amount"
                                        readonly="check_access_team_id == True"/>
                                 <field name="recomm_desigantion_id" string="Designation"
@@ -135,7 +140,6 @@
                                 <field name="recomm_grades" string="Grade" readonly="check_access_team_id == False"/>
                                 <field name="increment_raise_by" readonly="1" string="Approved By"/>
                                 <field name="incremented_date" readonly="1" string="Date"/>
-                                <field name="state" invisible="1"/>
                             </list>
 
                         </field>
@@ -149,10 +153,26 @@
                     <field name="sl_count" readonly="1"/>
                     <field name="cl_count" readonly="1"/>
                     <field name="pl_count" readonly="1"/>
-                    <field name="earned_leaves_balance"/>
+                    <field name="earned_leaves_balance" readonly="1"/>
                     <field name="gross_salary"/>
                     <field name="increase_percentage" readonly="1"/>
                 </xpath>
+
+                <!--                <xpath expr="//field[@name='department_id']" position="attributes">-->
+                <!--                    <attribute name="readonly">appraisal_type not in ('department')</attribute>-->
+                <!--                </xpath>-->
+                <!--                <xpath expr="//field[@name='company_id']" position="attributes">-->
+                <!--                    <attribute name="readonly">appraisal_type not in ('company')</attribute>-->
+                <!--                </xpath>-->
+                <!--                <xpath expr="//field[@name='manager_ids']" position="attributes">-->
+                <!--                    <attribute name="required">appraisal_type not in ('department','company')</attribute>-->
+                <!--                </xpath>-->
+                <!--                <xpath expr="//field[@name='employee_id']" position="attributes">-->
+                <!--                    <attribute name="required">appraisal_type not in ('department','company')</attribute>-->
+                <!--                </xpath>-->
+                <!--                <xpath expr="//field[@name='company_id']" position="attributes">-->
+                <!--                    <attribute name="required">appraisal_type not in ('department')</attribute>-->
+                <!--                </xpath>-->
 
             </field>
         </record>
@@ -182,6 +202,22 @@
             <field name="binding_view_types">list,form</field>
             <field name="state">code</field>
             <field name="code">action = records.action_hr_confirm()</field>
+        </record>
+        <record id="hr_appraisal_hr_department" model="ir.actions.server">
+            <field name="name">Department Appraisal</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_view_types">list,form</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_open_department_wizard()</field>
+        </record>
+        <record id="hr_appraisal_hr_company" model="ir.actions.server">
+            <field name="name">Company Appraisal</field>
+            <field name="model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_model_id" ref="hr_appraisal.model_hr_appraisal"/>
+            <field name="binding_view_types">list,form</field>
+            <field name="state">code</field>
+            <field name="code">action = records.action_open_company_wizard()</field>
         </record>
     </data>
 </odoo>

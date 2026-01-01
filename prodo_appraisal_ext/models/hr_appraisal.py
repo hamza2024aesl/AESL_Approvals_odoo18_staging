@@ -18,6 +18,7 @@ class HrAppraisal(models.Model):
         ('md', 'MD Review'),
         ('done', 'HR Final'),
         ('published', 'Published'),
+        ('cancel', 'Cancelled')
     ], default='draft', tracking=True)
 
     current_approver_id = fields.Many2one('res.users', string="Current Approver")
@@ -53,6 +54,7 @@ class HrAppraisal(models.Model):
     remarks_text = fields.Char()
     # remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
     appraisal_remarks = fields.One2many('hr.appraisal.remarks', 'appraisal_id', string='Remarks')
+    future_prospect_remarks = fields.One2many('appraisal.future.prospect', 'appraisal_id', string='Remarks')
     doc_state = fields.Selection([
         ('draft', 'Draft'),
         ('save', 'Save'),
@@ -577,9 +579,9 @@ class HrAppraisal(models.Model):
 
 
 
-                cl_availed_days = self._calculate_availed_leave(emp, casual_leave_type)
-                sl_availed_days = self._calculate_availed_leave(emp, sick_leave_type)
-                pl_availed_days = self._calculate_availed_leave(emp, pl_leave_type)
+                cl_availed_days = self._calculate_availed_leave(emp, current_year,casual_leave_type)
+                sl_availed_days = self._calculate_availed_leave(emp, current_year,sick_leave_type)
+                pl_availed_days = self._calculate_availed_leave(emp, current_year,pl_leave_type)
 
                 self.cl_count = cl_availed_days
                 self.sl_count = sl_availed_days
@@ -602,13 +604,16 @@ class HrAppraisal(models.Model):
             self.pl_count = 0
             self.earned_leaves_balance = 0
 
-    def _calculate_availed_leave(self, emp, casual_leave_type):
+    def _calculate_availed_leave(self, emp, current_year,casual_leave_type):
         availed_days = 0
         for casual_leave_type in casual_leave_type:
             work_entries = self.env['hr.leave'].search([
                 ('employee_id', '=', emp.id),
                 ('holiday_status_id', '=', casual_leave_type.id)
-            ])
+            ]).filtered(
+                        lambda a: a.date_from and a.date_to and
+                                  a.date_from.year <= current_year <= a.date_to.year
+                    )
 
             availed_days += sum(entry.number_of_days for entry in work_entries)
 
@@ -620,7 +625,7 @@ class HrAppraisal(models.Model):
     #
 
     def _save_manager_remark(self, remark_text):
-        if not self.appraisal_remarks:
+        if not self.appraisal_remarks.create_uid == self.env.user:
             self.sudo().appraisal_remarks.create({
             'appraisal_id': self.id,
             'remark_text': remark_text,
@@ -635,37 +640,40 @@ class HrAppraisal(models.Model):
 
 
     def _append_manager_remark(self, remark_text):
-        if self.doc_state == 'revert':
-            self.sudo().appraisal_remarks.write({
-                'appraisal_id': self.id,
-                'remark_text': remark_text,
-            })
+        existing = self.appraisal_remarks.filtered(
+            lambda l: l.create_uid.id == self.env.user.id
+        )
+        if not existing:
+            if remark_text:
+                 self.appraisal_remarks.create({
+                    'appraisal_id': self.id,
+                    'remark_text': remark_text,
+                })
+
+
+
+
         else:
-            self.appraisal_remarks.create({
-            'appraisal_id': self.id,
-            'remark_text': remark_text,
-        })
+            if self.doc_state == 'revert':
+                self.sudo().appraisal_remarks.write({
+                    'appraisal_id': self.id,
+                    'remark_text': remark_text,
+                })
+
         # self.doc_state = 'save'
 
 
     def _save_line_manager_prospect(self, future_prospect):
-        if not self.future_project:
-            user = self.env.user
-            now = fields.Datetime.now()
-            timestamp = now.strftime("%d %B %Y, %I:%M %p")
-            new_entry = f"{future_prospect}\n By {user.name} [{timestamp}]:\n\n"
-            # self.doc_state = 'save'
-
-            self.future_project = new_entry
-        else:
-            user = self.env.user
-            now = fields.Datetime.now()
-            timestamp = now.strftime("%d %B %Y, %I:%M %p")
-            new_entry = f"{future_prospect}\n By {user.name} [{timestamp}]:\n\n"
-            # self.doc_state = 'save'
-
-            self.future_project = new_entry
-
+        if future_prospect:
+            if not self.future_prospect_remarks:
+              self.future_prospect_remarks.create({
+                  'appraisal_id': self.id,
+                  'future_prospect_text': future_prospect,
+              })
+            else:
+                self.future_prospect_remarks.write({
+                    'future_prospect_text': future_prospect,
+                })
 
 
 
@@ -677,7 +685,8 @@ class HrAppraisal(models.Model):
         if not filtered_increment:
             self.recomm_increment_lines_id = [(0, 0, {
                 "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
-                "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                # "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                "recomm_desigantion_id": vals_increment_line.get("recomm_desigantion_id") ,
                 "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
                 "increment_raise_by": user.id,
                 "incremented_date": fields.Datetime.now(),
@@ -711,13 +720,18 @@ class HrAppraisal(models.Model):
 
 
     def _append_line_manager_prospect(self, future_prospect):
-        user = self.env.user
-        now = fields.Datetime.now()
-        timestamp = now.strftime("%d %B %Y, %I:%M %p")
-        new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
-        # self.doc_state = 'save'
+        # user = self.env.user
+        # now = fields.Datetime.now()
+        # timestamp = now.strftime("%d %B %Y, %I:%M %p")
+        # new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
 
-        self.future_project = new_entry
+        self.future_prospect_text.create({
+            'appraisal_id': self.id,
+            'future_prospect_text': future_prospect
+        })
+        self.doc_state = 'save'
+
+        # self.future_project = new_entry
 
     def _append_revert_remark(self, revert_remark_text):
         user = self.env.user
@@ -778,3 +792,25 @@ class HrAppraisal(models.Model):
             # Exactly one batch found → Assign
             rec.appraisal_batch_id = bacth_id.id
 
+    def action_open_department_wizard(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Department Wizard',
+            'res_model': 'appraisal.group.by',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_mode': 'department',
+            }
+        }
+    def action_open_company_wizard(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Department Wizard',
+            'res_model': 'appraisal.group.by',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_mode': 'company',
+            }
+        }

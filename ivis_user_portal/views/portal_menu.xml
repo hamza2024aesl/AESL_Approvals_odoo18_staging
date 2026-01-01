@@ -46,13 +46,13 @@
                     <t t-set="url" t-value="'/my/loans'"/>
                     <t t-set="config_card" t-value="True"/>
                 </t>
-                 <t t-call="portal.portal_docs_entry">
-                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-performance-64.png'"/>
-                    <t t-set="title">Appraisal</t>
-                    <t t-set="text">Manage your Appraisal</t>
-                    <t t-set="url" t-value="'/my/appraisal'"/>
-                    <t t-set="config_card" t-value="True"/>
-                </t>
+<!--                 <t t-call="portal.portal_docs_entry">-->
+<!--                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-performance-64.png'"/>-->
+<!--                    <t t-set="title">Appraisal</t>-->
+<!--                    <t t-set="text">Manage your Appraisal</t>-->
+<!--                    <t t-set="url" t-value="'/my/appraisal'"/>-->
+<!--                    <t t-set="config_card" t-value="True"/>-->
+<!--                </t>-->
                 <t t-call="portal.portal_docs_entry">
                     <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-employee-64.png'"/>
                     <t t-set="title">My Profile</t>

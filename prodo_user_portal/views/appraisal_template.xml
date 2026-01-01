@@ -3,6 +3,7 @@
 <odoo>
     <template id="appraisal_list_view_portal">
         <t t-call="portal.portal_layout" t-if="page_name == 'view_appraisal_page'">
+
             <t t-set="no_breadcrumbs" t-value="1"/>
             <div class="d-flex gap-2 my-3">
                 <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
@@ -37,6 +38,11 @@
                     </div>
                 </div>
             </div>
+            <t t-if="request.session.get('my_appraisal_success')">
+                <div class="alert alert-success">
+                    <t t-esc="request.session.pop('my_appraisal_success')"/>
+                </div>
+            </t>
 
             <t t-call="portal.portal_table">
                 <t t-if="appraisals">
@@ -319,6 +325,7 @@
             </t>
             <!-- Fallback message if no appraisals -->
 
+
         </t>
     </template>
 
@@ -448,50 +455,50 @@
                         <!-- Employee Summary -->
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Employee Name'"/>
                                     <t t-set="value" t-value="appraisal.employee_id.name"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Designation'"/>
                                     <t t-set="value" t-value="appraisal.job_id.name"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Appointment Date'"/>
                                     <t t-set="value" t-value="appraisal.appointment_date"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Gross Salary'"/>
                                     <t t-set="value" t-value="appraisal.gross_salary"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Emp. No.'"/>
-                                    <t t-set="value" t-value="appraisal.registration_number"/>
+                                    <t t-set="value" t-value="appraisal.employee_id.identification_id"/>
                                 </t>
                             </div>
 
                             <div class="col-md-6">
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Manager Name'"/>
                                     <t t-set="value" t-value="appraisal.employee_id.parent_id.user_id.name"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Emp Type'"/>
                                     <t t-set="value" t-value="appraisal.employee_id.contract_id.contract_type_id.code"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Department'"/>
                                     <t t-set="value" t-value="appraisal.department_id.name"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Casual Leave Availed'"/>
                                     <t t-set="value" t-value="appraisal.cl_count"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Sick Leave Availed'"/>
                                     <t t-set="value" t-value="appraisal.sl_count"/>
                                 </t>
-                                <t t-call="ivis_user_portal.card_row">
+                                <t t-call="prodo_user_portal.card_row_appraisal">
                                     <t t-set="label" t-value="'Earned Leave Balance'"/>
                                     <t t-set="value" t-value="appraisal.earned_leaves_balance"/>
                                 </t>
@@ -514,6 +521,7 @@
                                                t-att-value="remark.remark_text or ''"
                                                class="form-control mb-3"/>
                                     </t>
+
                                     <t t-else="">
                                         <!-- Static Remarks for others -->
                                         <p>
@@ -528,12 +536,15 @@
 
                                         </p>
                                     </t>
-                                    <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not remark.create_uid.id == uid">
-                                        <input type="text" name="new_remark"
-                                               placeholder="Enter your remark"
-                                               class="form-control mb-3"/>
-                                    </t>
                                 </t>
+                                <t t-set="user_appraisal_remarks"
+                                   t-value="appraisal.appraisal_remarks.filtered(lambda r: r.create_uid.id == uid)"/>
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not user_appraisal_remarks">
+                                    <input type="text" name="new_remark"
+                                           placeholder="Enter your remark"
+                                           class="form-control mb-3"/>
+                                </t>
+
 
                                 <!-- Allow the current approver to add a new remark -->
 
@@ -541,10 +552,40 @@
                                 <h5>
                                     <b>Future Prospects:</b>
                                 </h5>
-                                <input type="text" name="future_project"
-                                       t-att-value="appraisal.future_project or ''"
-                                       class="form-control mb-3"
-                                       t-att-disabled="'disabled' if appraisal.is_first_manager == False else None"/>
+                                <t t-foreach="appraisal.future_prospect_remarks" t-as="prospect">
+                                    <t t-if="prospect.create_uid.id == uid">
+                                        <!-- Editable Remarks only for the CURRENT APPROVER -->
+                                        <input type="text" name="future_prospect_remarks"
+                                               t-att-value="prospect.future_prospect_text or ''"
+                                               class="form-control mb-3"/>
+                                    </t>
+
+                                    <t t-else="">
+                                        <!-- Static Remarks for others -->
+                                        <p>
+                                            <t t-esc="prospect.future_prospect_text"/>
+                                        </p>
+                                        <p style="line-height:0.5px;">
+                                            By
+                                            <b><t t-esc="prospect.create_uid.name"/>:
+                                            </b>
+                                            <time t-field="prospect.create_date"
+                                                  t-options="{'format': 'EEEE d MMM yyyy'}"/>
+
+                                        </p>
+                                    </t>
+                                </t>
+                                <t t-if="appraisal.is_first_manager and not appraisal.future_prospect_remarks.create_uid.id == uid">
+                                    <input type="text" name="new_prospect"
+                                           placeholder="Enter your remark"
+                                           class="form-control mb-3"/>
+                                </t>
+
+
+                                <!--                                <input type="text" name="future_project"-->
+                                <!--                                       t-att-value="appraisal.future_project or ''"-->
+                                <!--                                       class="form-control mb-3"-->
+                                <!--                                       t-att-disabled="'disabled' if appraisal.is_first_manager == False else None"/>-->
                             </div>
 
                             <!--                        &lt;!&ndash; Bonus side section remains unchanged &ndash;&gt;-->
@@ -692,28 +733,30 @@
                                         </t>
                                     </t>
                                     <!-- Add new increment line ONLY if current user is active approver -->
-                                    <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not line.create_uid.id == user.id">
-                                        <tr>
-                                            <td>
-                                                <input type="number" name="increment_raise_amount"
-                                                       class="form-control"/>
-                                            </td>
-                                            <td>
-                                                <select name="recomm_desigantion_id" class="form-control">
-                                                    <option value=""/>
-                                                    <t t-foreach="desigantions" t-as="d">
-                                                        <option t-att-value="d.id" t-esc="d.name"/>
-                                                    </t>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input type="number" name="recomm_grades" class="form-control"/>
-                                            </td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
-                                    </t>
 
+                                </t>
+                                <t t-set="user_recommend"
+                                   t-value="appraisal.recomm_increment_lines_id.filtered(lambda r: r.create_uid.id == uid)"/>
+                                <t t-if="appraisal.current_approver_id.id == user.id and appraisal.state != 'done' and appraisal.doc_state != 'revert' and not user_recommend">
+                                    <tr>
+                                        <td>
+                                            <input type="number" name="increment_raise_amount"
+                                                   class="form-control"/>
+                                        </td>
+                                        <td>
+                                            <select name="recomm_desigantion_id" class="form-control">
+                                                <option value=""/>
+                                                <t t-foreach="desigantions" t-as="d">
+                                                    <option t-att-value="d.id" t-esc="d.name"/>
+                                                </t>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="recomm_grades" class="form-control"/>
+                                        </td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
                                 </t>
 
 

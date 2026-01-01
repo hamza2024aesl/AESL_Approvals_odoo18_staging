@@ -143,17 +143,21 @@ class AppraisalPortal(CustomerPortal):
                 if remark_text:
                     appraisal._save_manager_remark(remark_text)
 
-                future_prospect_text = post.get("future_project") or ""
+                future_prospect_text = post.get("future_prospect_remarks") or post.get("new_prospect")
                 if future_prospect_text:
                     appraisal._save_line_manager_prospect(future_prospect_text)
 
+
                 # appraisal.save_recom_incrment(vals_increment_line)
+            request.session['my_appraisal_success'] = "Appraisal save successfully!"
         #
         # if vals_write:
         #     appraisal.write(vals_write)
 
         elif post.get('action_type') == 'unlink':
             # appraisal.unlink()
+            request.session['my_appraisal_success'] = "Appraisal Discard successfully!"
+
             return request.redirect(f"/my/appraisal/view/{appraisal.id}")
 
             # print("unlink_increament")
@@ -167,7 +171,7 @@ class AppraisalPortal(CustomerPortal):
                 if remark_text:
                     appraisal._append_manager_remark(remark_text)
 
-                future_prospect_text = post.get("future_project") or ""
+                future_prospect_text = post.get("new_prospect")
                 if future_prospect_text:
                     appraisal._append_line_manager_prospect(future_prospect_text)
 
@@ -175,6 +179,8 @@ class AppraisalPortal(CustomerPortal):
 
             elif appraisal.state == "md":
                 appraisal._portal_submit_md(vals_increment_line)
+
+        request.session['my_appraisal_success'] = "Appraisal Save successfully!"
 
         # Redirect to list view (record should not appear again)
         return request.redirect("/my/appraisal")
@@ -275,7 +281,7 @@ class AppraisalPortal(CustomerPortal):
             if remark_text:
                 appraisal._save_manager_remark(remark_text)
 
-            future_prospect_text = post.get("future_project") or ""
+            future_prospect_text = post.get("new_prospect") or ""
             if future_prospect_text:
                 appraisal._save_line_manager_prospect(future_prospect_text)
 
@@ -311,6 +317,7 @@ class AppraisalPortal(CustomerPortal):
         hr_appraisal = request.env['hr.appraisal'].sudo().browse(appr_id)
         if revert_remarks:
             hr_appraisal.action_revert_back(revert_remarks)
-            hr_appraisal.revert_remarks = revert_remarks
+            hr_appraisal._append_revert_remark(revert_remarks)
+            # hr_appraisal.revert_remarks = revert_remarks
 
         return request.redirect("/my/appraisal")
