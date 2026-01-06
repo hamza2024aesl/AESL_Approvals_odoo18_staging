@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_website_visitor_designer,access_website_visitor_designer,model_website_visitor,base.group_system,1,1,0,1
+access_website_visitor_system,access_website_visitor_system,model_website_visitor,base.group_system,1,1,0,1
