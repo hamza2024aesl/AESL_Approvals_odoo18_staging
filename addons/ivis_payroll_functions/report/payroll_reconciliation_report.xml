@@ -1,0 +1,841 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <template id="packing_header_diff">
+            <div class="header">
+                <table style="margin-left: auto;margin-right: auto;">
+                    <tr>
+                        <td>
+                            <h3 class="text-center">
+                                <span t-esc="doc.current_company.name"/>
+                            </h3>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </template>
+
+        <template id="report_reconciliation_report">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-call="ivis_payroll_functions.packing_header_diff"/>
+                    <div class="page">
+                        <style>
+                            .mw {
+                            max-width:100%;
+                            width:100%;
+                            }
+                            .bb td {
+                            border-bottom: 1px solid black !important;
+                            border-left: 1px solid black !important;
+                            border-right: 1px solid black !important;
+                            border-top: 1px solid black !important;
+                            }
+                            .aa td{
+                            border-top: 1px solid black !important;
+                            }
+                            img.wrap {float: left !important}
+                        </style>
+                        <t t-as="rec" t-foreach="doc.report_Data()">
+                            <t t-set="grand_current" t-value="0"/>
+                            <t t-set="grand_previous" t-value="0"/>
+                            <span align="left" style="font-color: black">
+                                <h3>For the Periods of
+                                    <span t-esc="rec[&apos;month1&apos;]"/>
+                                    and
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h3>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; border:1px solid black; font-weight:bold; color: black;}">
+                                        <td align="left"
+                                            t-attf-style="width:70%; font-weight:bold;color:black;padding-right:20px;"
+                                            colspan="2"></td>
+                                        <td align="center"
+                                            t-attf-style="width:70%; font-weight:bold;color:black;padding-right:20px;"
+                                            colspan="2">
+                                            <span>Total Employees</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Gross</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <style>
+                                        .bb td{
+                                        border-bottom: 1px solid black !important;
+                                        border-left: 1px solid black !important;
+                                        border-right: 1px solid black !important;
+                                        border-top: 1px solid black !important;
+                                        padding-left:10px;
+                                        padding-right:10px;
+                                        }
+                                        .aa td{
+                                        border-top: 1px solid black !important;
+                                        }
+                                        img.wrap {float: left !important}
+                                    </style>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:40%;" colspan="2">
+                                            <p>
+                                                <span t-esc="rec[&apos;month1&apos;]"/>
+                                                Gross Salary as per Payroll Sheet
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%;" colspan="2">
+                                            <span t-esc="rec[&apos;previous_month_total_employees&apos;]"/>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%;" colspan="2">
+                                            <p>Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:40%;" colspan="2">
+                                            <p>
+                                                <span t-esc="rec[&apos;month2&apos;]"/>
+                                                Gross Salary as per Payroll Sheet
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%;" colspan="2">
+                                            <span t-esc="rec[&apos;current_month_total_employees&apos;]"/>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%;" colspan="2">
+                                            <p>Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br/>
+                            <table class="mw">
+                                <div style="display:flex;flex-direction:row;">
+                                    <div style="margin-left:180px;">
+                                        <b>Previous Month</b>
+                                    </div>
+                                    <div style="margin-left:600px;margin-top:-20px;">
+                                        <b>Current Month</b>
+                                    </div>
+                                </div>
+                                <br/>
+                                <tbody>
+                                    <style></style>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Gross</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Gross</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>LWPA</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_month_lwpa&apos;])"/>
+                                            </p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>LWPA</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_month_lwpa&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Arrear</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;arrears&apos;])"/>
+                                            </p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Total</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_month_total&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Total</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_month_total&apos;])"/>
+                                            </p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>
+                                                <strong>Outgoing Employees</strong>
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Gross</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>LWPA</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_old_lwpa&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Total</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_total&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>
+                                                <strong>New Employees</strong>
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Gross</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>LWPA</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_new_lwpa&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p></p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>Total</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_new_total&apos;])"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>
+                                                <strong>Grand Total</strong>
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <t t-set="grand_previous" t-value="rec[&apos;previous_month_total&apos;]"/>
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_previous)"/>
+                                            </p>
+                                        </td>
+                                        <td align="left" t-attf-style="width:35%;" colspan="2">
+                                            <p>
+                                                <strong>Grand Total</strong>
+                                            </p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:15%;" colspan="2">
+                                            <t t-set="grand_current"
+                                               t-value="rec[&apos;current_month_total&apos;] + rec[&apos;outgoing_total&apos;] - rec[&apos;sum_new_total&apos;]"/>
+                                            <p>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_current)"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; border:1px solid black; color: black;}">
+                                        <td align="left"
+                                            t-attf-style="width:70%; font-weight:bold;color:black;padding-right:20px;"
+                                            colspan="2">
+                                            <p>Difference</p>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <td align="left" t-attf-style="width:70%;" colspan="2">
+                                            <p>Difference Amount</p>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%;" colspan="2">
+                                            <p>Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_current - grand_previous)"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br/>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; border:1px solid black; color: black;}">
+                                        <td align="left"
+                                            t-attf-style="width:70%; font-weight:bold;color:black;padding-right:20px;"
+                                            colspan="2">
+                                            <p>ADD: Arrear / Increment
+                                                <t t-esc="rec[&apos;month2&apos;]"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="recc" t-foreach="doc.get_current_month_arrears()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <td align="left" t-attf-style="width:70%;" colspan="2">
+                                                <p>Total No. of Employees:
+                                                    <span t-esc="recc[&apos;employees_arrears&apos;]"/>
+                                                </p>
+                                            </td>
+                                            <td align="right" t-attf-style="width:30%;" colspan="2">
+                                                <p>Rs.
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(recc[&apos;arrears&apos;])"/>
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>New Employment for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>S No.</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Employee Name</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Gross</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <t t-as="l" t-foreach="rec[&apos;new_emp&apos;]">
+                                            <tr class="bb" style="font-size:13px; font-color: black;">
+                                                <td align="right" t-attf-style="width:10%;" colspan="2">
+                                                    <span t-esc="l_index + 1"/>
+                                                </td>
+                                                <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                    <span t-esc="l[0]"/>
+                                                </td>
+                                                <td align="right" t-attf-style="width:30%;" colspan="2">
+                                                    Rs.
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(l[1])"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tr>
+                                    <tr style="font-size:13px; font-color: black;">
+                                        <td class="bb" align="center" t-attf-style="width:10%;font-weight:bold;"
+                                            colspan="2"></td>
+                                        <td class="bb" align="right" t-attf-style="width:60%;font-weight:bold;"
+                                            colspan="2">
+                                            <p>Total :</p>
+                                        </td>
+                                        <td class="bb" align="right" t-attf-style="width:30%;font-weight:bold;"
+                                            colspan="2">
+                                            Rs.
+                                            <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>Outgoing Staff for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>S No.</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Employee Name</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Gross</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bb" style="font-size:13px; font-color: black;">
+                                        <t t-as="l" t-foreach="rec[&apos;out_going&apos;]">
+                                            <tr class="bb" style="font-size:13px; font-color: black;">
+                                                <td align="right" t-attf-style="width:10%;" colspan="2">
+                                                    <span t-esc="l_index + 1"/>
+                                                </td>
+                                                <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                    <span t-esc="l[0]"/>
+                                                </td>
+                                                <td align="right" t-attf-style="width:30%;" colspan="2">
+                                                    Rs.
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(l[1])"/>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tr>
+                                    <tr style="font-size:13px; font-color: black;">
+                                        <td class="bb" align="center" t-attf-style="width:10%;font-weight:bold;"
+                                            colspan="2"></td>
+                                        <td class="bb" align="right" t-attf-style="width:60%;font-weight:bold;"
+                                            colspan="2">
+                                            <p>Total :</p>
+                                        </td>
+                                        <td class="bb" align="right" t-attf-style="width:30%;font-weight:bold;"
+                                            colspan="2">
+                                            Rs.
+                                            <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>LWP for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>S No.</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:50%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Employee Name</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Emp #</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>LWP</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_l" t-foreach="doc.get_leave_without_pay()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <t t-as="l" t-foreach="rec_l[&apos;lwp&apos;]">
+                                                <tr class="bb" style="font-size:13px; font-color: black;">
+                                                    <td align="right" t-attf-style="width:10%;" colspan="2">
+                                                        <span t-esc="l_index + 1"/>
+                                                    </td>
+                                                    <td align="left" t-attf-style="width:50%;" colspan="2">
+                                                        <span t-esc="l['name']"/>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                        <span t-esc="l['emp_no']"/>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                        Rs.
+                                                        <span t-esc="&apos;{:,.2f}&apos;.format(float(l['amount']))"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tr>
+                                        <tr style="font-size:13px; font-color: black;">
+                                            <td class="bb" align="center" t-attf-style="width:10%;font-weight:bold;"
+                                                colspan="2"></td>
+                                            <td class="bb" align="center" t-attf-style="width:50%;font-weight:bold;"
+                                                colspan="2"></td>
+                                            <td class="bb" align="right" t-attf-style="width:20%;font-weight:bold;"
+                                                colspan="2">
+                                                <p>Total :</p>
+                                            </td>
+                                            <td class="bb" align="right" t-attf-style="width:20%;font-weight:bold;"
+                                                colspan="2">
+                                                Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec_l[&apos;total&apos;])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>Deductions for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>S No.</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Name</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:30%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Amount</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_d" t-foreach="doc.get_total_deductions()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <t t-as="l" t-foreach="rec_d[&apos;deduction&apos;]">
+                                                <tr class="bb" style="font-size:13px; font-color: black;">
+                                                    <td align="right" t-attf-style="width:10%;" colspan="2">
+                                                        <span t-esc="l_index + 1"/>
+                                                    </td>
+                                                    <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                        <span t-esc="l[0]"/>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:30%;" colspan="2">
+                                                        Rs.
+                                                        <span t-esc="&apos;{:,.2f}&apos;.format(float(l[1]))"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tr>
+                                        <tr style="font-size:13px; font-color: black;">
+                                            <td class="bb" align="center" t-attf-style="width:10%;font-weight:bold;"
+                                                colspan="2"></td>
+                                            <td class="bb" align="right" t-attf-style="width:60%;font-weight:bold;"
+                                                colspan="2">
+                                                <p>Total :</p>
+                                            </td>
+                                            <td class="bb" align="right" t-attf-style="width:30%;font-weight:bold;"
+                                                colspan="2">
+                                                Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec_d[&apos;total&apos;])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>Net Salary Payable for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="center" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2"></td>
+                                        <td align="center" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Total</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_gn" t-foreach="doc.get_net_salary()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <tr class="bb" style="font-size:13px; font-color: black;">
+                                                <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                    <p>NET Salary as per Payroll Sheet</p>
+                                                </td>
+                                                <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                    Rs.
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(float(rec_gn[&apos;total&apos;]))"/>
+                                                </td>
+                                            </tr>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>Payment Through Bank and Cheque for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="left" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Payment Type</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Total Employees</span>
+                                        </td>
+                                        <td align="right" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Amount</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_gp" t-foreach="doc.get_payment_type_and_amount()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <t t-as="l" t-foreach="rec_gp[&apos;payment&apos;]">
+                                                <tr class="bb" style="font-size:13px; font-color: black;">
+                                                    <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                        <span t-esc="l[0]"/>
+                                                    </td>
+                                                    <td align="center" t-attf-style="width:20%;" colspan="2">
+                                                        <span t-esc="l[2]"/>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                        Rs.
+                                                        <span t-esc="&apos;{:.2f}&apos;.format(float(l[1]))"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tr>
+                                        <tr style="font-size:13px; font-color: black;">
+                                            <td class="bb" align="right" t-attf-style="width:60%;font-weight:bold;"
+                                                colspan="2">
+                                                <p>Total :</p>
+                                            </td>
+                                            <td class="bb" align="center" t-attf-style="width:20%;font-weight:bold;"
+                                                colspan="2">
+                                                <span t-esc="rec_gp[&apos;sum_emp&apos;]"/>
+                                            </td>
+                                            <td class="bb" align="right" t-attf-style="width:20%;font-weight:bold;"
+                                                colspan="2">
+                                                Rs.
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec_gp[&apos;amount_sum&apos;])"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <span align="left" style="font-color: black">
+                                <h4>EOBI Contributors for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="left" t-attf-style="width:80%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>City Name</span>
+                                        </td>
+                                        <td align="center" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Total Employees</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_e" t-foreach="doc.get_eobi_contributors()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <t t-as="l" t-foreach="rec_e[&apos;eobi&apos;]">
+                                                <tr class="bb" style="font-size:13px; font-color: black;">
+                                                    <td align="left" t-attf-style="width:80%;" colspan="2">
+                                                        <p>Contribution for
+                                                            <span t-esc="l[0]"/>
+                                                            staff
+                                                        </p>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                        <span t-esc="l[1]"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+<!--                            <span align="left" style="font-color: black">-->
+<!--                                <h4>EOBI Non-Contributors for the month of-->
+<!--                                    <span t-esc="rec[&apos;month2&apos;]"/>-->
+<!--                                </h4>-->
+<!--                            </span>-->
+<!--                            <table class="mw">-->
+<!--                                <thead>-->
+<!--                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">-->
+<!--                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>S No.</span>-->
+<!--                                        </td>-->
+<!--                                        <td align="left" t-attf-style="width:60%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>Employee Name</span>-->
+<!--                                        </td>-->
+<!--                                        <td align="center" t-attf-style="width:30%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>City Name</span>-->
+<!--                                        </td>-->
+<!--                                    </tr>-->
+<!--                                </thead>-->
+<!--                                <tbody>-->
+<!--                                    <t t-as="rec_ec" t-foreach="doc.get_eobi_non_contributors()">-->
+<!--                                        <tr class="bb" style="font-size:13px; font-color: black;">-->
+<!--                                            <t t-as="l" t-foreach="rec_ec[&apos;eobi&apos;]">-->
+<!--                                                <tr class="bb" style="font-size:13px; font-color: black;">-->
+<!--                                                    <td align="right" t-attf-style="width:10%;" colspan="2">-->
+<!--                                                        <span t-esc="l_index+1"/>-->
+<!--                                                    </td>-->
+<!--                                                    <td align="left" t-attf-style="width:60%;" colspan="2">-->
+<!--                                                        <span t-esc="l[1]"/>-->
+<!--                                                    </td>-->
+<!--                                                    <td align="center" t-attf-style="width:30%;" colspan="2">-->
+<!--                                                        <span t-esc="l[0]"/>-->
+<!--                                                    </td>-->
+<!--                                                </tr>-->
+<!--                                            </t>-->
+<!--                                        </tr>-->
+<!--                                    </t>-->
+<!--                                </tbody>-->
+<!--                            </table>-->
+                            <span align="left" style="font-color: black">
+                                <h4>Total EOBI and Non-EOBI Contributors for the month of
+                                    <span t-esc="rec[&apos;month2&apos;]"/>
+                                </h4>
+                            </span>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
+                                        <td align="left" t-attf-style="width:60%; font-weight:bold;color:black;"
+                                            colspan="2"><!--                                        <span>Employee Name</span>--></td>
+                                        <td align="center" t-attf-style="width:20%; font-weight:bold;color:black;"
+                                            colspan="2">
+                                            <span>Total</span>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="rec_t" t-foreach="doc.total_contributors()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <t t-as="l" t-foreach="rec_t[&apos;eobi&apos;]">
+                                                <tr class="bb" style="font-size:13px; font-color: black;">
+                                                    <td align="left" t-attf-style="width:60%;" colspan="2">
+                                                        <span t-esc="l[0]"/>
+                                                    </td>
+                                                    <td align="right" t-attf-style="width:20%;" colspan="2">
+                                                        <span t-esc="l[1]"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tr>
+                                        <tr style="font-size:13px; font-color: black;">
+                                            <td class="bb" align="right" t-attf-style="width:60%;font-weight:bold;"
+                                                colspan="2">
+                                                <p>Total :</p>
+                                            </td>
+                                            <td class="bb" align="right" t-attf-style="width:20%;font-weight:bold;"
+                                                colspan="2">
+                                                <span t-esc="rec_t[&apos;total&apos;]"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

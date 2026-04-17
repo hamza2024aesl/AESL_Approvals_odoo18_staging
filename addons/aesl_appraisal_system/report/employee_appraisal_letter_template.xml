@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <template id="appraisal_letter_layout_header">
+            <t t-call="aesl_appraisal_system.appraisal_letter_header"/>
+            <t t-raw="0"/>
+        </template>
+
+        <template id="appraisal_letter_header">
+            <div class="header">
+                <div style="text-align: left; padding-bottom: 5px; margin: 0;">
+                    <t t-if="company == 'Allied Engineering &amp; Services (Pvt.) Limited'">
+                        <img src="/aesl_appraisal_system/static/description/aesl_logo.png"
+                             alt="Image is not loading" width="185" height="52"/>
+                    </t>
+                    <t t-else="">
+                        <img src="/aesl_appraisal_system/static/description/apex_logo.jpg"
+                             alt="Image is not loading" width="185" height="52"/>
+                    </t>
+                </div>
+                <strong>
+                    <h3 class="text-center">
+                        <t t-esc="company"/>
+                    </h3>
+                </strong>
+            </div>
+        </template>
+
+        <template id="template_employee_appraisal_letter">
+            <t t-call="web.basic_layout">
+                <t t-call="aesl_appraisal_system.appraisal_letter_layout_header"/>
+                <div class="page">
+                    <div style="font-size:18px;">
+                        <u>
+                            <strong>
+                                <h5 style="text-align: center;">CONFIDENTIAL</h5>
+                            </strong>
+                        </u>
+                        <br/>
+                        <div style=" width:100%;">
+                            <div style="width:50%; float:left;">Ref:
+                                <span t-esc="appraisal_history[0]['file_no']"/>
+                            </div>
+                            <div style="width:50%; text-align: right; float:left;">Date:
+                                <span style="text-align: right;" t-esc="appraisal_history[0]['date']"/>
+                            </div>
+                        </div>
+
+                        <br/>
+                        <br/>
+                        <p>To:
+                            <br/>
+                            <strong>
+                                <span t-esc="appraisal_history[0]['emp_name']"/>
+                                <br/>
+                            </strong>
+                            <span t-esc="appraisal_history[0]['designation']"/>
+                            <br/>
+                            <span t-esc="appraisal_history[0]['department']"/>
+                            <br/>
+                            <span t-esc="appraisal_history[0]['location']"/>
+                        </p>
+                        <br/>
+
+                        <strong>
+                            <h7>Subject:
+                                <u>INCREMENT</u>
+                            </h7>
+                        </strong>
+                        <br/>
+                        <br/>
+                        <br/>
+
+                        <p>Dear
+                            <span t-esc="appraisal_history[0]['emp_name']"/>
+                        </p>
+                        <p>
+                            The Management is pleased to inform you that, effective 1st January 2025,
+                            your salary has been increased by
+                            <strong>Rs.<span t-esc="'{:,}'.format(round(form['increment_amount']))"/>/-
+                            </strong>
+                            , bringing your total salary to
+                            <strong>Rs.<span t-esc="'{:,}'.format(round(appraisal_history[0]['new_salary']))"/>/-
+                            </strong>
+                            per month.
+                            <t t-if="appraisal_history[0]['increment_grade']">Additionally, you have been promoted to
+                                <strong>Grade
+                                    <span t-esc="form['recommended_grade']"/>
+                                </strong>
+                            </t>
+                            <t t-if="appraisal_history[0]['increment_designation']">, and your new designation is
+                                <strong>“<span t-esc="form['recommended_designation']"/>”
+                                </strong>
+                                .
+                            </t>
+                        </p>
+                        <p>
+                            We would also like to take this opportunity to remind you to review and update any changes
+                            required
+                            in your nomination forms filed with the company. If updates are needed, kindly complete a
+                            new form,
+                            sign it, and submit it to the Accounts Department at your earliest convenience.
+                        </p>
+                        <p>
+                            We are confident that your contributions in the coming year will continue to reflect the
+                            trust and
+                            confidence we place in you. Thank you for your hard work and dedication.
+                        </p>
+                        <br/>
+                        <p>Best Regards,</p>
+                        <p>
+                            <strong>SYED FEISAL ALI</strong>
+                            <br/>
+                            MANAGING DIRECTOR
+                        </p>
+                    </div>
+                </div>
+            </t>
+        </template>
+    </data>
+</odoo>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- General Config List View -->
+    <record id="view_approval_config_list" model="ir.ui.view">
+        <field name="name">approval.config.list</field>
+        <field name="model">approval.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="config_type"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- General Config Form View -->
+    <record id="view_approval_config_form" model="ir.ui.view">
+        <field name="name">approval.config.form</field>
+        <field name="model">approval.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Regions Policy"/>
+                        </h1>
+                        <group invisible="1">
+                            <field name="config_type"/>
+                        </group>
+                    </div>
+                    
+                    <!-- Dynamic Label for the first section -->
+                    <separator string="Approver" class="mt-4 mb-2" invisible="config_type != 'domestic'"/>
+                    <separator string="1st Approver" class="mt-4 mb-2" invisible="config_type != 'international'"/>
+
+                    <field name="first_approver_line_ids" context="{'default_line_type': 'first_approver'}">
+                        <list editable="bottom">
+                            <field name="work_location_id" string="Region"/>
+                            <field name="department_id" string="Department"/>
+                            <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="line_type" column_invisible="True"/>
+                        </list>
+                    </field>
+
+                    <!-- Only shown for International -->
+                    <separator string="2nd Approver" class="mt-4 mb-2" invisible="config_type != 'international'"/>
+                    <field name="second_approver_line_ids" 
+                           context="{'default_line_type': 'second_approver'}" 
+                           invisible="config_type != 'international'">
+                        <list editable="bottom">
+                            <field name="work_location_id" string="Region"/>
+                            <field name="department_id" string="Department"/>
+                            <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="line_type" column_invisible="True"/>
+                        </list>
+                    </field>
+
+                    <separator string="Finance &amp; Admin" class="mt-4 mb-2"/>
+                    <field name="finance_line_ids" context="{'default_line_type': 'finance'}">
+                        <list editable="bottom">
+                            <field name="work_location_id" string="Region"/>
+                            <field name="department_id" string="Department"/>
+                            <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="line_type" column_invisible="True"/>
+                        </list>
+                    </field>
+
+                    <separator string="HR" class="mt-4 mb-2"/>
+                    <field name="hr_line_ids" context="{'default_line_type': 'hr'}">
+                        <list editable="bottom">
+                            <field name="work_location_id" string="Region"/>
+                            <field name="department_id" string="Department"/>
+                            <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="line_type" column_invisible="True"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Domestic Config -->
+    <record id="action_approval_config_domestic" model="ir.actions.act_window">
+        <field name="name">Domestic Configuration</field>
+        <field name="res_model">approval.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('config_type', '=', 'domestic')]</field>
+        <field name="context">{'default_config_type': 'domestic'}</field>
+    </record>
+
+    <!-- Action for International Config -->
+    <record id="action_approval_config_international" model="ir.actions.act_window">
+        <field name="name">International Configuration</field>
+        <field name="res_model">approval.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('config_type', '=', 'international')]</field>
+        <field name="context">{'default_config_type': 'international'}</field>
+    </record>
+</odoo>

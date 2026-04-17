@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="employee_clearance_form_view" model="ir.ui.view">
+            <field name="name">employee.clearance.view</field>
+            <field name="model">employee.clearance</field>
+            <field name="arch" type="xml">
+                <form string="Clearance Certificate">
+                    <header>
+                        <button name="buh_clearance" type="object" string="Proceed"
+                                class="oe_highlight"
+                                invisible="state in ('buh','vp','final_approval','approved')"/>
+
+                        <button name="vp_clearance" type="object" string="First Approval"
+                                class="oe_highlight"
+                                invisible="state in ('draft','vp','final_approval','approved')"/>
+
+                        <button name="fa_clearance" type="object" string="Second Approval"
+                                class="oe_highlight"
+                                invisible="state in ('draft','buh','final_approval','approved')"/>
+
+                        <button name="approve_clearance" type="object" string="Final Approval"
+                                class="oe_highlight"
+                                invisible="state in ('draft','buh','vp','approved')"/>
+
+                        <button name="%(clearance_action_view_ga)d" type="action" string="Reject"
+                                invisible="state in ('draft','approved')"/>
+
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <!--                        <field name="emp_image" widget="image" class="oe_avatar"/>-->
+                        <div class="oe_title">
+                            <label for="emp_name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="emp_name" placeholder="Employee's Name"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="emp_designation" readonly="1"/>
+                                <field name="emp_division" readonly="1"/>
+                                <field name="company" readonly="1"/>
+                                <field name="department" readonly="1"/>
+                                <field name="immediate_boss" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="station" readonly="1"/>
+                                <field name="appointment_date" readonly="1"/>
+                                <field name="leaving_date" readonly="1"/>
+                                <field name="leaving_status" readonly="1"/>
+                            </group>
+                            <group string='Company Property '>
+                                <!--								<field name="company_property" widget="many2many_tags" />-->
+                                <field name="description"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="employee_clearance_tree_view" model="ir.ui.view">
+            <field name="name">employee.clearance.view</field>
+            <field name="model">employee.clearance</field>
+            <field name="arch" type="xml">
+                <list string="Clearance Form">
+                    <field name="emp_name"/>
+                    <field name="emp_designation"/>
+                    <field name="company"/>
+                    <field name="department"/>
+                    <field name="immediate_boss"/>
+                    <field name="station"/>
+                    <field name="appointment_date"/>
+                    <field name="leaving_date"/>
+                    <field name="leaving_status"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="action_hr_certificate" model="ir.actions.act_window">
+            <field name="name">Clearance Form</field>
+            <field name="res_model">employee.clearance</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <menuitem id="hr_certificate"
+                  name="Clearance Forms"
+                  action="action_hr_certificate"
+                  groups="hr.group_hr_user,hr.group_hr_manager"
+                  parent="hr.menu_hr_root"
+                  sequence="94"/>
+    </data>
+</odoo>

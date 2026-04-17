@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="loan_employee_extd_form" model="ir.ui.view">
+        <field name="name">loan.employee.extd.form</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <data>
+                <xpath expr="//notebook//page[@name='hr_settings']//group[@name='application_group']" position="after">
+                    <group string="Loan" name="employee_settings_loan">
+                        <field name="allow_multiple_loan" string="Allow Multiple Loan"/>
+                    </group>
+                </xpath>
+
+                <xpath expr="//notebook//page[@name='hr_settings']" position="before">
+                    <page string="Loan Details">
+                        <group string="Loan Details">
+                            <field name="loan_ids" height="360" nolabel="1" colspan="4">
+                                <list string="Loans">
+                                    <field name="name"/>
+                                    <field name="date_applied"/>
+                                    <field name="date_approved"/>
+                                    <field name="loan_type"/>
+                                    <field name="int_rate" string="Rate"/>
+                                    <field name="principal_amount"/>
+                                    <field name="final_total"/>
+                                    <field name="total_amount_paid"/>
+                                    <field name="total_amount_due"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </group>
+                        <group string="Loan Policies">
+                            <field name="loan_policy" nolabel="1" colspan="4"/>
+                        </group>
+                    </page>
+                </xpath>
+            </data>
+        </field>
+    </record>
+</odoo>

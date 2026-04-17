@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="payroll_report" model="ir.actions.report">
+        <field name="name">Payroll Report</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">xlsx_payroll_report.xlsx_payroll_report</field>
+        <field name="report_file">xlsx_payroll_report.xlsx_payroll_report</field>
+        <field name="binding_model_id" ref="hr_payroll.model_hr_payslip_run"/>
+        <field name="binding_type">report</field>
+        <field name="attachment_use">False</field>
+    </record>
+
+    <record id="payroll_report_one" model="ir.actions.report">
+        <field name="name">Salary Sheet Bank Report</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">xlsx_payroll_report.xlsx_payroll_report_one</field>
+        <field name="report_file">xlsx_payroll_report.xlsx_payroll_report_one</field>
+        <field name="binding_model_id" ref="hr_payroll.model_hr_payslip_run"/>
+        <field name="binding_type">report</field>
+        <field name="attachment_use">False</field>
+    </record>
+
+    <record id="payroll_report_two" model="ir.actions.report">
+        <field name="name">Statement Of Deduction Of Tax</field>
+        <field name="model">hr.payslip.run</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">xlsx_payroll_report.xlsx_payroll_report_two</field>
+        <field name="report_file">xlsx_payroll_report.xlsx_payroll_report_two</field>
+        <field name="binding_model_id" ref="hr_payroll.model_hr_payslip_run"/>
+        <field name="binding_type">report</field>
+        <field name="attachment_use">False</field>
+    </record>
+</odoo>

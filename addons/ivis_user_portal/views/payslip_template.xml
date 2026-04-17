@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <template id="payslip_list_view_portal">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1" style="margin-right:auto">Payslips</h3>
+                <div class="btn-group ms-auto payslip-groupby-container">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Group By
+                    </button>
+                    <div class="dropdown-menu p-3">
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-payslip" type="checkbox" value="month"
+                                   id="groupByMonth"/>
+                            <label class="form-check-label" for="groupByMonth">Month</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-payslip" type="checkbox" value="year"
+                                   id="groupByYear"/>
+                            <label class="form-check-label" for="groupByYear">Year</label>
+                        </div>
+                    </div>
+                </div>
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">&#8203;</t>
+                </t>
+            </div>
+            <br/>
+            <t t-if="not payslips">
+                <p class="alert alert-warning">There are currently no payslips.</p>
+            </t>
+            <t t-call="portal.portal_table">
+                <t t-if="payslips">
+                    <thead>
+                        <th>Payslip Number</th>
+                        <th>Employee</th>
+                        <th>Batch Name</th>
+                        <th class="text-right">Net Wage</th>
+                        <th class="text-center">Status</th>
+                        <th/>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="grouped_payslips.items()" t-as="group" t-if="grouped_payslips">
+                            <tr class="bg-light">
+                                <td colspan="11">
+                                    <button class="btn btn-link btn-sm payslip-expand-btn"
+                                            t-att-data-group-id="group[0]">
+                                        <i class="fa fa-plus payslip-expand-icon"/>
+                                    </button>
+                                    <strong>
+                                        <t t-if="group_by == 'month'">
+                                            Month:
+                                            <t t-out="group[0]"/>
+                                        </t>
+                                        <t t-elif="group_by == 'year'">
+                                            Year:
+                                            <t t-out="group[0]"/>
+                                        </t>
+                                    </strong>
+                                </td>
+                            </tr>
+                            <t t-foreach="sorted(group[1], key=lambda p: p.payslip_run_id.id, reverse=True)"
+                               t-as="payslip">
+                                <tr t-attf-data-group-id="{{group[0]}}" class="payslip-group-row"
+                                    style="display: none;">
+                                    <td style="padding-left: 25px;">
+                                        <span t-out="payslip.number"/>
+                                    </td>
+                                    <td>
+                                        <t t-out="payslip.employee_id.name"/>
+                                    </td>
+                                    <td>
+                                        <t t-out="payslip.payslip_run_id.name"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-if="payslip.net_wage == 0" t-out="payslip.net_wage"
+                                              t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'
+                                              style="color:red"/>
+                                        <span t-else="" t-out="payslip.net_wage"
+                                              t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'/>
+                                    </td>
+                                    <td class="text-center">
+                                        <span style="color:rgb(23, 162, 184); font-style:italic">
+                                            <t t-out="payslip.state"/>
+                                        </span>
+                                    </td>
+                                    <td class="text-right">
+                                        <a t-attf-href="/my/payslips/view/{{payslip.id}}" title="Open Payslip"
+                                           aria-label="Open Payslip" class="btn btn-sm btn-primary" role="button">
+                                            <i class="fa fa-arrow-circle-right"/>
+                                            <span class='d-none d-md-inline'>Open Payslip</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </t>
+                        </t>
+
+                        <t t-foreach="sorted(payslips, key=lambda p: p.payslip_run_id.id, reverse=True)" t-as="payslip"
+                           t-if="payslips and not grouped_payslips">
+                            <tr>
+                                <td>
+                                    <span t-out="payslip.number"/>
+                                </td>
+                                <td>
+                                    <t t-out="payslip.employee_id.name"/>
+                                </td>
+                                <td>
+                                    <t t-out="payslip.payslip_run_id.name"/>
+                                </td>
+                                <td class="text-right">
+                                    <span t-if="payslip.net_wage == 0" t-out="payslip.net_wage"
+                                          t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'
+                                          style="color:red"/>
+                                    <span t-else="" t-out="payslip.net_wage"
+                                          t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'/>
+                                </td>
+                                <td class="text-center">
+                                    <span style="color:rgb(23, 162, 184); font-style:italic">
+                                        <t t-out="payslip.state"/>
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <a t-attf-href="/my/payslips/view/{{payslip.id}}" title="Open Payslip"
+                                       aria-label="Open Payslip" class="btn btn-sm btn-primary" role="button">
+                                        <i class="fa fa-arrow-circle-right"/>
+                                        <span class='d-none d-md-inline'>Open Payslip</span>
+                                    </a>
+                                </td>
+                                <!--                                <td class="text-right">-->
+                                <!--                                    <t>-->
+                                <!--                                        <span t-if="payslip.state == 'done'"-->
+                                <!--                                              class="badge rounded-pill text-bg-success w80">-->
+                                <!--                                            <i class="fa fa-fw fa-check" aria-label="Done" title="Done"-->
+                                <!--                                               role="img"/>-->
+                                <!--                                            <span class="d-none d-md-inline">Done</span>-->
+                                <!--                                        </span>-->
+                                <!--                                        <span t-if="payslip.state == 'verify'"-->
+                                <!--                                              class="badge rounded-pill text-bg-warning w80">-->
+                                <!--                                            <i class="fa fa-fw fa-clock-o" aria-label="Waiting" title="Waiting"-->
+                                <!--                                               role="img"/>-->
+                                <!--                                            <span class="d-none d-md-inline">Waiting</span>-->
+                                <!--                                        </span>-->
+                                <!--                                        <span t-if="payslip.state == 'draft'"-->
+                                <!--                                              class="badge rounded-pill text-bg-info w80">-->
+                                <!--                                            <i class="fa fa-fw fa-arrow-circle-right" aria-label="Draft"-->
+                                <!--                                               title="Draft" role="img"/>-->
+                                <!--                                            <span class="d-none d-md-inline">Draft</span>-->
+                                <!--                                        </span>-->
+                                <!--                                        <span t-if="payslip.state == 'cancel'"-->
+                                <!--                                              class="badge rounded-pill text-bg-danger w80">-->
+                                <!--                                            <i class="fa fa-fw fa-remove" aria-label="Rejected" title="Rejected"-->
+                                <!--                                               role="img"/>-->
+                                <!--                                            <span class="d-none d-md-inline">Rejected</span>-->
+                                <!--                                        </span>-->
+                                <!--                                        <span t-if="payslip.state == 'paid'"-->
+                                <!--                                              class="badge rounded-pill text-bg-primary w80">-->
+                                <!--                                            <i class="fa fa-fw fa-check" aria-label="Paid" title="Paid"-->
+                                <!--                                               role="img"/>-->
+                                <!--                                            <span class="d-none d-md-inline">Paid</span>-->
+                                <!--                                        </span>-->
+                                <!--                                    </t>-->
+                                <!--                                </td>-->
+                            </tr>
+                        </t>
+                    </tbody>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="payslip_view_page_portal" name="Payslip" inherit_id="portal.portal_sidebar" primary="True">
+        <xpath expr="//div[hasclass('o_portal_sidebar')]" position="inside">
+            <!--            <t t-set="o_portal_fullwidth_alert">-->
+            <!--                <t t-call="portal.portal_back_in_edit_mode">-->
+            <!--                    <t t-set="backend_url"-->
+            <!--                       t-value="'/web#model=%s&amp;id=%s&amp;action=%s&amp;view_type=form' % (invoice._name, invoice.id, invoice.env.ref('account.action_move_out_invoice_type').id)"/>-->
+            <!--                </t>-->
+            <!--            </t>-->
+            <t t-if="page_name == 'payslip_view_page'">
+                <t t-set="no_breadcrumbs" t-value="1"/>
+                <div class="d-flex gap-2" style="margin-top:1rem; margin-bottom:2.5rem">
+                    <a href="/my/payslips" title="Go Back" class="btn btn-light px-2 mx-2">
+                        <i class="oi oi-chevron-left"/>
+                    </a>
+                    <h3 class="my-0 mt-1">Payslip</h3>
+                </div>
+                <div class="row mt16 o_portal_invoice_sidebar">
+                    <!-- Sidebar -->
+                    <t t-call="portal.portal_record_sidebar">
+                        <t t-set="classes" t-value="'col-lg-3 col-xl-4 d-print-none me-lg-auto'"/>
+                        <t t-set="title">
+                            <h2>
+                                <t t-out="this_payslip.number"/> &#8195;&#8195;&#8195;
+                            </h2>
+                        </t>
+
+                        <t t-set="entries">
+                            <div class="d-flex flex-column gap-4">
+                                <div class="flex-basis-100 flex-basis-sm-50 flex-basis-lg-100 order-1 order-lg-0">
+                                    <a t-attf-href="/my/payslips/download/{{this_payslip.id}}"
+                                       class="btn btn-primary d-block mb-2">
+                                        <i class="fa fa-download"/>&#8194;Download Payslip
+                                    </a>
+                                    <div class="o_download_pdf d-flex gap-1 flex-lg-column flex-xl-row">
+                                        <!--                                    <div class="flex-grow-1">-->
+                                        <!--                                        <a class="btn btn-primary flex-grow-1"-->
+                                        <!--                                           t-attf-href="/my/payslips/download/{{this_payslip.id}}"-->
+                                        <!--                                           title="Download">-->
+                                        <!--                                            <i class="fa fa-download"/>-->
+                                        <!--                                            Download-->
+                                        <!--                                        </a>-->
+                                        <!--                                    </div>-->
+                                        <!--                                    <div class="flex-grow-1">-->
+                                        <!--                                        <a class="btn btn-secondary d-block o_print_btn o_portal_invoice_print"-->
+                                        <!--                                           href="/my"-->
+                                        <!--                                           id="print_invoice_report" title="Print" target="_blank">-->
+                                        <!--                                            <i class="fa fa-print"/>-->
+                                        <!--                                            Print-->
+                                        <!--                                        </a>-->
+                                        <!--                                    </div>-->
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+
+                    <!-- Page Content -->
+                    <div id="payslip_content" class="o_portal_content col-12 col-lg-9 col-xl-8">
+                        <div class="o_portal_html_view shadow p-3">
+                            <!--                            <div class="o_portal_html_loader text-center">-->
+                            <!--                                <i class="fa fa-circle-o-notch fa-spin fa-2x fa-fw text-black-50"/>-->
+                            <!--                            </div>-->
+                            <iframe id="invoice_html" class="mt8 mb8" width="100%" height="100%" frameborder="0"
+                                    scrolling="no" t-attf-src="/my/payslips/html/{{this_payslip.id}}"/>
+                        </div>
+                        <!-- chatter -->
+                        <!--                    <div id="invoice_communication" class="mt-4">-->
+                        <!--                        <h3>Communication history</h3>-->
+                        <!--                        <t t-call="portal.message_thread"/>-->
+                        <!--                    </div>-->
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>

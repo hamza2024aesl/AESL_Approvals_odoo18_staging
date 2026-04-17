@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_interest_distribution,interest.distribution,model_interest_distribution,,1,1,1,1
+access_interest_distribution_line,interest.distribution.line,model_interest_distribution_line,,1,1,1,1
