@@ -1,0 +1,164 @@
+<odoo>
+    <data>
+    <record id="action_report_appraisal123" model="ir.actions.report">
+        <field name="name">Employee Appraisal Letter</field>
+        <field name="model">hr.contract</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">aesl_appraisal.template_employee_appraisal_letter123</field>
+        <field name="report_file">aesl_appraisal.template_employee_appraisal_letter123</field>
+        <field name="print_report_name">"'Appraisal Letter - %s' % (object.employee_id.name)"</field>
+        <field name="binding_model_id" ref="model_hr_contract"/>
+        <field name="binding_type">report</field>
+    </record>
+
+
+                <template id="appraisal_letter_layout_header">
+            <t t-call="aesl_appraisal.appraisal_letter_header"/>
+            <t t-raw="0"/>
+        </template>
+
+                <template id="appraisal_letter_header">
+            <div class="header">
+                <div style="text-align: left; padding-bottom: 5px; margin: 0;">
+                    <!--                    <span t-field="company_id.logo" t-options='{"widget": "image"}'/>-->
+                    <t t-if="company == 'Allied Engineering &amp; Services (Pvt.) Limited'">
+                        <img src="/aesl_appraisal/static/description/aesl_logo.png"
+                             alt="Image is not loading" width="185" height="52"/>
+                    </t>
+                    <t t-else="">
+                        <img src="/aesl_appraisal/static/description/apex_logo.jpg"
+                             alt="Image is not loading" width="185" height="52"/>
+                    </t>
+                </div>
+                <strong>
+                    <h3 class="text-center">
+                        <t t-esc="company"/>
+                    </h3>
+                </strong>
+                <!--                <strong><h3 class="text-center"><t t-esc=".company_id"/></h3></strong>-->
+                <!--                <strong><h3 class="text-center">Allied Engineering &amp; Services (Pvt.) Ltd.</h3></strong>-->
+
+            </div>
+        </template>
+
+
+           <template id="template_employee_appraisal_letter123">
+        <t t-call="web.basic_layout">
+
+            <t t-set="datetime" t-value="datetime"/>
+                <t t-set="context_timestamp" t-value="context_timestamp"/>
+                <t t-set="today" t-value="context_timestamp(datetime.datetime.now())"/>
+                <!--                    <t t-set="next_month_first_date" t-value="(today.replace(day=1) + relativedelta(months=1))"/>-->
+                <t t-set="next_month" t-value="1 if today.month == 12 else today.month + 1"/>
+                <t t-set="next_year" t-value="today.year + 1 if today.month == 12 else today.year"/>
+                <t t-set="next_date" t-value="datetime.datetime(next_year, next_month, 1)"/>
+                <t t-call="aesl_appraisal.appraisal_letter_layout_header"/>
+
+            <div class="page">
+
+                                    <div style="font-size:18px;">
+                        <u>
+                            <strong>
+                                <h5 style="text-align: center;">CONFIDENTIAL</h5>
+                            </strong>
+                        </u>
+                        <br/>
+                        <!--                <p>Ref: <span t-esc="appraisal[0]['file_no']"/>-->
+                        <!--                    Date: <span t-esc="appraisal[0]['date']"/></p><br/>-->
+                        <div style=" width:100%;">
+                            <div style="width:50%; float:left;">Ref:
+                                <span t-esc="appraisal.employee_id.x_studio_personal_file_number"/>
+                            </div>
+                            <div style="width:50%; text-align: right; float:left;">Date:
+                                <span style="text-align: right;">01 Jan 2026</span>
+                            </div>
+                        </div>
+
+                        <br/>
+                        <br/>
+                        <p>To:
+                            <br/>
+                            <strong>
+                                <span t-esc="appraisal.employee_id.name"/>
+                                <br/>
+                            </strong>
+                            <span t-esc="appraisal.employee_id.job_id.name"/>
+                            <br/>
+                            <span t-esc="appraisal.employee_id.department_id.name"/>
+                            <br/>
+                            <span t-esc="appraisal.employee_id.work_location_id.name"/>
+                        </p>
+                        <br/>
+
+                        <strong>
+                            <h7>Subject:
+                                <u>INCREMENT</u>
+                            </h7>
+                        </strong>
+                        <br/>
+                        <br/>
+                        <br/>
+
+                        <p>Dear
+                            <span t-esc="appraisal.employee_id.name"/>
+                        </p>
+
+                                        <p>
+                            The Management is pleased to inform you that, effective 1st January 2025,
+                            your salary has been increased by
+                            <strong>Rs.<span t-esc="'{:,}'.format(round(values['increment']))"/>/-
+                            </strong>
+                            , bringing your total salary to
+                            <strong>Rs.<span t-esc="'{:,}'.format(round(values['wage']))"/>/-
+                            </strong>
+                            per month.
+                            <t t-if="values['grade']">Additionally, you have been promoted to
+                                <strong>Grade
+                                    <span t-esc="values['grade']"/>
+                                </strong>
+                            </t>
+                            <t t-if="values['job_id']">, and your new designation is
+                                <strong>“<span t-esc="values['job_id']"/>”
+                                </strong>
+                                .
+                            </t>
+                        </p>
+
+<!--                        <p>-->
+<!--                            The Management is pleased to inform you that, effective<t-->
+<!--                                t-esc="next_date.strftime('%d %B %Y')"/>,-->
+<!--                            your salary has been increased by-->
+<!--                            <strong>Rs.<span t-esc="'{:,}'.format(round(values['increment']))"/>/- -->
+<!--                            </strong>-->
+<!--                            , bringing your total salary to-->
+<!--                            <strong>Rs.<span t-esc="'{:,}'.format(round(appraisal.wage))"/>/- -->
+<!--                            </strong>-->
+<!--                            per month.-->
+<!--                        </p>-->
+                        <p>
+                            We would also like to take this opportunity to remind you to review and update any changes
+                            required
+                            in your nomination forms filed with the company. If updates are needed, kindly complete a
+                            new form,
+                            sign it, and submit it to the Accounts Department at your earliest convenience.
+                        </p>
+                        <p>
+                            We are confident that your contributions in the coming year will continue to reflect the
+                            trust and
+                            confidence we place in you. Thank you for your hard work and dedication.
+                        </p>
+                        <br/>
+                        <p>Best Regards,</p>
+                        <p>
+                            <strong>SYED FEISAL ALI</strong>
+                            <br/>
+                            MANAGING DIRECTOR
+                        </p>
+                    </div>
+
+            </div>
+        </t>
+    </template>
+
+</data>
+</odoo>

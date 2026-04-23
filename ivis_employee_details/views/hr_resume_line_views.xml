@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="view_hr_resume_line_form_custom" model="ir.ui.view">
+        <field name="name">hr.resume.line.form.custom</field>
+        <field name="model">hr.resume.line</field>
+        <field name="inherit_id" ref="hr_skills.resume_line_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group/group" position="inside">
+                <!--Education Fields-->
+                <field name="organization" string="Institute/Board" invisible="selected_type != 'Education'"/>
+                <field name="degree" invisible="selected_type != 'Education'"/>
+                <field name="degree_title" invisible="selected_type != 'Education'"/>
+                <field name="specialization" invisible="selected_type != 'Education'"/>
+                <field name="percentage" invisible="selected_type != 'Education'"/>
+                <field name="cgpa" invisible="selected_type != 'Education'"/>
+                <field name="division" invisible="selected_type != 'Education'"/>
+                <field name="attachment" filename="attachment_filename" invisible="selected_type != 'Education'"/>
+
+                <!--Certification Fields-->
+                <field name="organization" string="Organization" invisible="selected_type not in ['Experience', 'Certification']"/>
+                <field name="certificate_no" invisible="selected_type != 'Certification'"/>
+                <field name="issued_by" invisible="selected_type != 'Certification'"/>
+                <field name="expiry_date" invisible="selected_type != 'Certification'"/>
+                <field name="attachment" filename="attachment_filename" invisible="selected_type != 'Certification'"/>
+
+                <!--Work Experience Fields-->
+                <field name="designation" invisible="selected_type != 'Experience'"/>
+                <field name="pay_scale" invisible="selected_type != 'Experience'"/>
+                <field name="job_description" invisible="selected_type != 'Experience'"/>
+                <field name="attachment" filename="attachment_filename" invisible="selected_type != 'Experience'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

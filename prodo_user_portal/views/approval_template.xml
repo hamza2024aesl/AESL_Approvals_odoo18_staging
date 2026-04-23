@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <template id="travel_request_list_view_portal">
+        <t t-call="portal.portal_layout" t-if="page_name == 'travel_request_list_page'">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex align-items-center my-3">
+                <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
+                <h3 class="my-0">Travel Requests</h3>
+            </div>
+
+            <t t-call="portal.portal_table">
+                <thead>
+                    <tr class="active">
+                        <th>Description</th>
+                        <th>Requester</th>
+                        <th>Category</th>
+                        <th>Date From</th>
+                        <th>Date To</th>
+                        <th>Travel Mode</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="requests" t-as="req">
+                        <tr>
+                            <td><t t-esc="req.name"/></td>
+                            <td><t t-esc="req.employee_id.name"/></td>
+                            <td><t t-esc="req.category_id.name"/></td>
+                            <td><t t-esc="req.date_start"/></td>
+                            <td><t t-esc="req.date_end"/></td>
+                            <td><t t-esc="dict(req.fields_get(['travel_mode'])['travel_mode']['selection']).get(req.travel_mode, '')"/></td>
+                            <td>
+                                <span t-attf-class="badge rounded-pill {{ 'bg-success' if req.request_status == 'approved' else 'bg-danger' if req.request_status == 'refused' else 'bg-warning text-dark' }}">
+                                    <t t-esc="dict(req.fields_get(['request_status'])['request_status']['selection']).get(req.request_status, '')"/>
+                                </span>
+                            </td>
+                            <td>
+                                <a t-attf-href="/my/travel/view/{{req.id}}" class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+            <t t-if="not requests">
+                <p class="alert alert-warning">There are currently no Travel Requests.</p>
+            </t>
+        </t>
+    </template>
+
+    <template id="travel_request_form_portal">
+        <t t-call="portal.portal_layout" t-if="page_name == 'travel_request_new_page'">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my/travel" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1">New Travel Request</h3>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <form action="/my/travel/save" method="post">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                        <!-- Employee Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Employee Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Category</label>
+                                <select name="category_id" class="form-control" required="1">
+                                    <t t-foreach="categories" t-as="cat">
+                                        <option t-att-value="cat.id"><t t-esc="cat.name"/></option>
+                                    </t>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Employee Name</label>
+                                <input type="text" class="form-control" t-att-value="employee_name" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Registration No</label>
+                                <input type="text" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Department</label>
+                                <input type="text" class="form-control" t-att-value="employee_department_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Region</label>
+                                <input type="text" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Designation</label>
+                                <input type="text" class="form-control" t-att-value="employee_job_id" readonly="1"/>
+                            </div>
+                        </div>
+
+                        <!-- Period Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Period Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Date From</label>
+                                <input type="datetime-local" name="date_start" class="form-control" required="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Date To</label>
+                                <input type="datetime-local" name="date_end" class="form-control" required="1"/>
+                            </div>
+                        </div>
+
+                        <!-- Travel Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Travel Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold d-block">Travel Mode</label>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_mode" id="mode_air" value="air" required="1"/>
+                                    <label class="form-check-label" for="mode_air">Air</label>
+                                </div>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_mode" id="mode_train" value="train"/>
+                                    <label class="form-check-label" for="mode_train">Train</label>
+                                </div>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_mode" id="mode_car" value="car"/>
+                                    <label class="form-check-label" for="mode_car">Car</label>
+                                </div>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_mode" id="mode_bus" value="bus"/>
+                                    <label class="form-check-label" for="mode_bus">Bus</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold d-block">Travel Request Type</label>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_request_type" id="type_domestic" value="domestic" required="1"/>
+                                    <label class="form-check-label" for="type_domestic">Domestic</label>
+                                </div>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="travel_request_type" id="type_international" value="international"/>
+                                    <label class="form-check-label" for="type_international">International</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Important Notes -->
+                        <div class="alert alert-warning mb-4">
+                            <ul class="mb-0">
+                                <li>1) If travel advance is required in T.C. this requisition must reach the Finance Department at least 72 hours in advance.</li>
+                                <li>2) Admin Department will normally require 3 days notice to arrange tickets.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Admin Remarks Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Administration Section</h5>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="fw-bold">Employee Remarks</label>
+                                <textarea name="admin_remarks" class="form-control" rows="3" placeholder="Enter any additional information..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="/my/travel" class="btn btn-secondary">Discard</a>
+                            <button type="submit" class="btn btn-primary px-4">Submit Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+    <template id="travel_request_detail_template">
+        <t t-call="portal.portal_layout" t-if="page_name == 'travel_request_detail_page'">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my/travel" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1">Travel Request Detail</h3>
+                <span t-attf-class="ms-3 badge rounded-pill pt-2 {{ 'bg-success' if request_rec.request_status == 'approved' else 'bg-danger' if request_rec.request_status == 'refused' else 'bg-warning text-dark' }}">
+                    <t t-esc="dict(request_rec.fields_get(['request_status'])['request_status']['selection']).get(request_rec.request_status, '')"/>
+                </span>
+            </div>
+
+            <t t-if="request.params.get('message') == 'approved'">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    Request Approved Successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </t>
+            <t t-if="request.params.get('message') == 'refused'">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    Request Refused.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </t>
+
+            <div class="d-flex justify-content-start gap-2 mb-3" t-if="is_approver">
+                <a t-attf-href="/my/travel/approve/{{request_rec.id}}" class="btn btn-success px-4">Approve</a>
+                <a t-attf-href="/my/travel/refuse/{{request_rec.id}}" class="btn btn-danger px-4">Refuse</a>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <form action="/my/travel/update" method="post">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="request_id" t-att-value="request_rec.id"/>
+
+                        <!-- Employee Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Employee Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Category</label>
+                                <select name="category_id" class="form-control" t-att-disabled="not is_editable">
+                                    <t t-foreach="categories" t-as="cat">
+                                        <option t-att-value="cat.id" t-att-selected="cat.id == request_rec.category_id.id">
+                                            <t t-esc="cat.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                                <t t-if="not is_editable">
+                                    <input type="hidden" name="category_id" t-att-value="request_rec.category_id.id"/>
+                                </t>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Employee Name</label>
+                                <input type="text" class="form-control" t-att-value="employee_name" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Registration No</label>
+                                <input type="text" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Department</label>
+                                <input type="text" class="form-control" t-att-value="employee_department_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Region</label>
+                                <input type="text" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Designation</label>
+                                <input type="text" class="form-control" t-att-value="employee_job_id" readonly="1"/>
+                            </div>
+                        </div>
+
+                        <!-- Period Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Period Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Date From</label>
+                                <input type="datetime-local" name="date_start" class="form-control" 
+                                       t-att-value="request_rec.date_start.strftime('%Y-%m-%dT%H:%M') if request_rec.date_start else ''" 
+                                       t-att-readonly="not is_editable"/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Date To</label>
+                                <input type="datetime-local" name="date_end" class="form-control" 
+                                       t-att-value="request_rec.date_end.strftime('%Y-%m-%dT%H:%M') if request_rec.date_end else ''" 
+                                       t-att-readonly="not is_editable"/>
+                            </div>
+                        </div>
+
+                        <!-- Travel Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Travel Section</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold d-block">Travel Mode</label>
+                                <t t-foreach="request_rec.fields_get(['travel_mode'])['travel_mode']['selection']" t-as="mode">
+                                    <div class="form-check form-check-inline mt-2">
+                                        <input class="form-check-input" type="radio" name="travel_mode" 
+                                               t-attf-id="mode_{{mode[0]}}" t-att-value="mode[0]" 
+                                               t-att-checked="request_rec.travel_mode == mode[0]"
+                                               t-att-disabled="not is_editable"/>
+                                        <label class="form-check-label" t-attf-for="mode_{{mode[0]}}"><t t-esc="mode[1]"/></label>
+                                    </div>
+                                </t>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold d-block">Travel Request Type</label>
+                                <t t-foreach="request_rec.fields_get(['travel_request_type'])['travel_request_type']['selection']" t-as="type_">
+                                    <div class="form-check form-check-inline mt-2">
+                                        <input class="form-check-input" type="radio" name="travel_request_type" 
+                                               t-attf-id="type_{{type_[0]}}" t-att-value="type_[0]" 
+                                               t-att-checked="request_rec.travel_request_type == type_[0]"
+                                               t-att-disabled="not is_editable"/>
+                                        <label class="form-check-label" t-attf-for="type_{{type_[0]}}"><t t-esc="type_[1]"/></label>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Important Notes -->
+                        <div class="alert alert-warning mb-4">
+                            <ul class="mb-0">
+                                <li>1) If travel advance is required in T.C. this requisition must reach the Finance Department at least 72 hours in advance.</li>
+                                <li>2) Admin Department will normally require 3 days notice to arrange tickets.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Admin Remarks Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2">Administration Section</h5>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="fw-bold">Employee Remarks</label>
+                                <textarea name="admin_remarks" class="form-control" rows="3" 
+                                          t-att-readonly="not is_editable"><t t-esc="request_rec.admin_remarks"/></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4" t-if="is_editable">
+                            <a href="/my/travel" class="btn btn-secondary">Discard</a>
+                            <button type="submit" class="btn btn-primary px-4">Update &amp; Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
+

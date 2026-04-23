@@ -1,0 +1,757 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <template id="leave_list_view_portal">
+        <style>
+            .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+            }
+        </style>
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1" style="margin-right:auto">Leaves</h3>
+                <div class="d-flex align-items-center ms-3">
+                    <div class="btn-group ms-auto leave-groupby-container">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Group By
+                        </button>
+                        <div class="dropdown-menu p-3">
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-leaves" type="checkbox" value="month"
+                                       id="groupByMonth"/>
+                                <label class="form-check-label" for="groupByMonth">Month</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-leaves" type="checkbox" value="year"
+                                       id="groupByYear"/>
+                                <label class="form-check-label" for="groupByYear">Year</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-leaves" type="checkbox" value="type"
+                                       id="groupByType"/>
+                                <label class="form-check-label" for="groupByType">Type</label>
+                            </div>
+                            <div t-if="is_manager and subordinate" class="form-check">
+                                <input class="form-check-input group-by-checkbox-leaves" type="checkbox"
+                                       value="employee"
+                                       id="groupByEmp"/>
+                                <label class="form-check-label" for="groupByEmp">Employee</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">&#8203;</t>
+                    <t t-if="request.env.user.employee_id.company_id.allow_portal_leaves_management">
+                        <a t-if="request.env.user.employee_id.child_ids"
+                           href="/my/leaves/manage"
+                           class="btn btn-primary"
+                           id="manage_leaves"
+                           title="Manage Leaves"
+                           style="margin-left: auto;
+                                   border: none;
+                                   border-radius: 0.25rem;
+                                   padding: 0px 10px 0px 10px;
+                                   display: inline-flex;
+                                   justify-content: center;
+                                   align-items: center;
+                                   position: relative;"
+                        >
+                            <t t-if="manage_leaves_count">
+                                <span class="notification-bubble">
+                                    <t t-if="manage_leaves_count > 9">9</t>
+                                    <t t-else="" t-esc="manage_leaves_count"/>
+                                </span>
+                            </t>
+                            Manage
+                        </a>
+                    </t>
+                    <button
+                            class="btn-primary"
+                            id="create_leave"
+                            title="Create Leave"
+                            style=" border: none;
+                                border-radius: 0.25rem; 
+                                padding: 0px 10px 0px 10px"
+                    >
+                        Apply
+                    </button>
+                </t>
+            </div>
+            <br/>
+            <form method="post" id="leave_form" action="/my/leaves/apply" style="display: none; opacity: 1">
+                <div class="row o_portal_details">
+                    <div>
+                        <div class="row">
+                            <div id="already_booked_id" style="display: none">
+                                <p class="alert alert-danger">Days are already booked</p>
+                            </div>
+                            <div id="duration_error_id" style="display: none">
+                                <p class="alert alert-warning">
+                                    Date is invalid
+                                </p>
+                            </div>
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="timeoff">Time Off Type</label>
+                                <select id="time_off_type" name="timeoff" class="form-select">
+                                    <t t-foreach="leaves_types" t-as="leave">
+                                        <option t-att-value="leave['id']">
+                                            <t t-out="leave['display_name']"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="name">Description</label>
+                                <input type="text" id="desc_id" name="desc"
+                                       t-attf-class="form-control description-input" placeholder="Description">
+                                </input>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="date">From</label>
+                                <input type="date" id="date_from_id" name="date_from"
+                                       class="form-control compute-duration" placeholder="From"/>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="date">To</label>
+                                <input type="date" id="date_to_id" name="date_to" class="form-control compute-duration"
+                                       placeholder="To"/>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="date_from_period_id">Period</label>
+                                <select id="date_from_period_id" name="date_from_period" class="form-select">
+                                    <option value="am">Morning</option>
+                                    <option value="pm">Afternoon</option>
+                                </select>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="duration">Duration</label>
+                                <input type="number" id="duration_id" name="duration" class="form-control"
+                                       placeholder="0"
+                                       readonly="1"/>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="half_day">Half Day</label>
+                                <div class="form-check form-switch form-switch-lg">
+                                    <input
+                                            type="checkbox"
+                                            id="half_day"
+                                            name="half_day"
+                                            class="form-check-input"
+                                            style="width:3em;height:1.5em"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="clearfix text-end mb-5">
+                            <a id="discard_form" href="/my" class="btn btn-secondary me-2">
+                                Discard
+                            </a>
+                            <button id="submit_leave_id" type="submit" class="btn btn-primary float-end" disabled="0">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div style="border-bottom: 1px solid purple; margin-bottom: 40px"/>
+            </form>
+            <t t-if="not leaves">
+                <p class="alert alert-warning">There are currently no leaves.</p>
+            </t>
+            <t t-call="ivis_user_portal.leaves_table"/>
+            <!-- Refuse / Withdraw modal -->
+            <div class="modal fade" id="leaveRefuseModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Refuse / Withdraw Leave</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="leave_refuse_form">
+                                <input type="hidden" id="refuse_leave_id"/>
+                                <div class="row">
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_time_off_type">Time Off Type</label>
+                                        <input type="text" id="refuse_time_off_type" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_desc">Description</label>
+                                        <input type="text" id="refuse_desc" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_date_from">From</label>
+                                        <input type="date" id="refuse_date_from" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_date_to">To</label>
+                                        <input type="date" id="refuse_date_to" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_duration">Duration</label>
+                                        <input type="text" id="refuse_duration" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6 d-flex align-items-center">
+                                        <label class="col-form-label me-2" for="refuse_half_day">Half Day</label>
+                                        <input type="checkbox" id="refuse_half_day" class="form-check-input"
+                                               disabled="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-12">
+                                        <label class="col-form-label" for="refuse_reason">Reason (required)</label>
+                                        <textarea id="refuse_reason" class="form-control" required="1"
+                                                  placeholder="Enter reason for refusal/withdrawal"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="button" id="btn_refuse_leave" class="btn btn-danger">
+                                Refuse / Withdraw
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="leaves_manage_portal">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my/leaves" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1 me-auto">Manage Leaves</h3>
+                <div class="btn-group ms-auto leave-groupby-container">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Group By
+                    </button>
+                    <div class="dropdown-menu p-3">
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-leaves-manage" type="checkbox"
+                                   value="month"
+                                   id="groupByMonth"/>
+                            <label class="form-check-label" for="groupByMonth">Month</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-leaves-manage" type="checkbox" value="year"
+                                   id="groupByYear"/>
+                            <label class="form-check-label" for="groupByYear">Year</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-leaves-manage" type="checkbox" value="type"
+                                   id="groupByType"/>
+                            <label class="form-check-label" for="groupByType">Type</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input group-by-checkbox-leaves-manage" type="checkbox"
+                                   value="subordinate"
+                                   id="groupBySubordinate"/>
+                            <label class="form-check-label" for="groupBySubordinate">Subordinate</label>
+                        </div>
+                    </div>
+                </div>
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">&#8203;</t>
+                </t>
+            </div>
+            <br/>
+            <t t-if="not leaves">
+                <p class="alert alert-warning">There are currently no leaves for you to manage.</p>
+            </t>
+            <t t-if="leaves">
+                <button type="button"
+                        id="btn-approve-selected"
+                        class="btn btn-success mb-2">
+                    Approve Selected
+                </button>
+            </t>
+            <t t-call="ivis_user_portal.leaves_table">
+                <t t-if="request.httprequest.path == '/my/leaves/manage'">
+                    <t t-set="approval_button" t-value="1"/>
+                </t>
+            </t>
+            <!-- Refuse / Withdraw modal -->
+            <div class="modal fade" id="leaveRefuseModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Refuse / Withdraw Leave</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="leave_refuse_form">
+                                <input type="hidden" id="refuse_leave_id"/>
+                                <div class="row">
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_time_off_type">Time Off Type</label>
+                                        <input type="text" id="refuse_time_off_type" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_desc">Description</label>
+                                        <input type="text" id="refuse_desc" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_date_from">From</label>
+                                        <input type="date" id="refuse_date_from" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_date_to">To</label>
+                                        <input type="date" id="refuse_date_to" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6">
+                                        <label class="col-form-label" for="refuse_duration">Duration</label>
+                                        <input type="text" id="refuse_duration" class="form-control" readonly="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-xl-6 d-flex align-items-center">
+                                        <label class="col-form-label me-2" for="refuse_half_day">Half Day</label>
+                                        <input type="checkbox" id="refuse_half_day" class="form-check-input"
+                                               disabled="1"/>
+                                    </div>
+
+                                    <div class="mb-3 col-12">
+                                        <label class="col-form-label" for="refuse_reason">Reason (required)</label>
+                                        <textarea id="refuse_reason" class="form-control" required="1"
+                                                  placeholder="Enter reason for refusal/withdrawal"></textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="button" id="btn_refuse_leave" class="btn btn-danger">
+                                Refuse / Withdraw
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="leaves_table">
+        <t t-if="error_message">
+            <div class="alert alert-danger" role="alert">
+                <t t-esc="error_message"/>
+            </div>
+        </t>
+        <t t-call="portal.portal_table">
+            <t t-if="leaves">
+                <thead>
+                    <tr class="active">
+                        <t t-if="approval_button">
+                            <th class="text-center">
+                                <input type="checkbox" id="select-all-leaves"/>
+                            </th>
+                        </t>
+                        <th>Name</th>
+                        <th>Time Off Type</th>
+                        <th>Description</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Duration</th>
+                        <th class="text-right">Status</th>
+                        <th class="text-right"/>
+                        <t t-if="approval_button">
+                            <th class="text-right"/>
+                        </t>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="grouped_leaves">
+                        <t t-foreach="grouped_leaves.items()" t-as="group">
+                            <tr class="bg-light">
+                                <td t-att-colspan="approval_button and 10 or 9">
+                                    <button class="btn btn-link btn-sm leave-expand-btn" t-att-data-group-id="group[0]">
+                                        <i class="fa fa-plus leave-expand-icon"/>
+                                    </button>
+                                    <strong>
+                                        <t t-if="group_by == 'month'">
+                                            Month:
+                                            <t t-out="group[0]"/>
+                                            (<t t-out="len(group[1])"/>)
+                                        </t>
+                                        <t t-elif="group_by == 'year'">
+                                            Year:
+                                            <t t-out="group[0]"/>
+                                            (<t t-out="len(group[1])"/>)
+                                        </t>
+                                        <t t-elif="group_by == 'type'">
+                                            <t t-out="group[0]"/>
+                                            (<t t-out="len(group[1])"/>)
+                                        </t>
+                                        <t t-elif="group_by == 'subordinate'">
+                                            <t t-out="group[0]"/>
+                                            (<t t-out="len(group[1])"/>)
+                                        </t>
+                                    </strong>
+                                </td>
+                            </tr>
+                            <t t-foreach="group[1]" t-as="leave">
+                                <tr t-attf-data-group-id="{{group[0]}}" class="leave-group-row" style="display: none;">
+                                    <t t-if="approval_button">
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                   class="leave-select-checkbox"
+                                                   t-att-data-leave-id="leave.id"/>
+                                        </td>
+                                    </t>
+                                    <td style="padding-left: 25px;">
+                                        <button class="btn btn-link btn-sm row-expand-btn"
+                                                t-att-data-leave-id="leave.id">
+                                            <i class="fa fa-plus row-expand-icon"/>
+                                        </button>
+                                        <img t-if="leave.employee_id.image_1920"
+                                             t-att-src="image_data_uri(leave.employee_id.image_1920)"
+                                             class="rounded img-fluid mx-2"
+                                             style="width: 24px;" alt="Profile"/>
+                                        <img t-else=""
+                                             src="/hr/static/src/img/default_image.png"
+                                             class="rounded img-fluid mx-2"
+                                             style="width: 24px;" alt="Default Avatar"/>
+                                        <t t-out="leave.employee_id.name"/>
+                                    </td>
+                                    <td>
+                                        <t t-out="leave.holiday_status_id.name"/>
+                                    </td>
+                                    <td>
+                                        <t t-out="leave.private_name"/>
+                                    </td>
+                                    <td>
+                                        <t t-esc="leave.request_date_from.strftime(date_format)"/>
+                                    </td>
+                                    <td>
+                                        <t t-esc="leave.request_date_to.strftime(date_format)"/>
+                                    </td>
+                                    <td>
+                                        <t t-out="leave.duration_display"/>
+                                    </td>
+                                    <td class="text-right leave-states">
+                                        <t>
+                                            <span t-if="leave.state == 'validate'"
+                                                  class="badge rounded-pill text-bg-success">
+                                                <i class="fa fa-fw fa-check" aria-label="Approved" title="Approved"
+                                                   role="img"/>
+                                                <span class="d-none d-md-inline">Approved</span>
+                                            </span>
+                                            <span t-if="leave.state == 'validate1'"
+                                                  class="badge rounded-pill text-bg-warning">
+                                                <i class="fa fa-fw fa-clock-o" aria-label="Second Approval"
+                                                   title="Second Approval"
+                                                   role="img"/>
+                                                <span class="d-none d-md-inline">Second Approval</span>
+                                            </span>
+                                            <span t-if="leave.state == 'confirm'"
+                                                  class="badge rounded-pill text-bg-warning">
+                                                <i class="fa fa-fw fa-clock-o" aria-label="To Approve"
+                                                   title="To Approve"
+                                                   role="img"/>
+                                                <span class="d-none d-md-inline">To Approve</span>
+                                            </span>
+                                            <span t-if="leave.state == 'draft'" class="badge rounded-pill text-bg-info">
+                                                <i class="fa fa-fw fa-arrow-circle-right" aria-label="To Submit"
+                                                   title="To Submit"
+                                                   role="img"/>
+                                                <span class="d-none d-md-inline">To Submit</span>
+                                            </span>
+                                            <span t-if="leave.state == 'refuse'"
+                                                  class="badge rounded-pill text-bg-light">
+                                                <i class="fa fa-fw fa-remove" aria-label="Refused" title="Refused"
+                                                   role="img"/>
+                                                <span class="d-none d-md-inline">Refused</span>
+                                            </span>
+                                        </t>
+                                    </td>
+                                    <td class="text-right">
+                                        <t t-if="(request.httprequest.path == '/my/leaves/manage') or (leave.state != 'refuse' and (not payslip_cutoff or (leave.request_date_from and leave.request_date_from &gt; payslip_cutoff)))">
+                                            <t t-if="leave.state == 'confirm'">
+                                                <button
+                                                        type="button"
+                                                        class="btn-close cancel-leave"
+                                                        t-att-data-leave-id="leave.id"
+                                                        t-att-data-leave-type="leave.holiday_status_id.name"
+                                                        t-att-data-leave-desc="leave.private_name"
+                                                        t-att-data-date-from="(leave.request_date_from and leave.request_date_from.strftime('%Y-%m-%d')) or ''"
+                                                        t-att-data-date-to="(leave.request_date_to and leave.request_date_to.strftime('%Y-%m-%d')) or ''"
+                                                        t-att-data-duration="leave.duration_display"
+                                                        t-att-data-half-day="leave.request_unit_half"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#leaveRefuseModal"
+                                                        style="background-color: transparent; opacity: 1;
+                                                           filter: invert(12%) sepia(100%) saturate(7500%) hue-rotate(0deg);">
+                                                    <i class="fa"/>
+                                                </button>
+                                            </t>
+                                            <t t-else=""></t>
+                                        </t>
+                                    </td>
+                                    <td class="text-center">
+                                        <t t-if="leave.state == 'confirm' and approval_button">
+                                            <button t-attf-id="{{leave.id}}" class="btn-approve approve-leave"
+                                                    style="background-color: transparent; opacity: 1;"/>
+                                        </t>
+                                        <t t-else=""></t>
+                                    </td>
+                                </tr>
+                                <t t-set="colspan" t-value="approval_button and 10 or 9"/>
+                                <tr t-attf-id="details-row-{{leave.id}}" class="details-row" style="display: none;">
+                                    <td style="padding-left: 100px;" t-att-colspan="colspan">
+                                        <div class="px-2 py-1">
+                                            <table class="table table-sm table-borderless align-middle mb-0">
+                                                <thead class="text-muted small">
+                                                    <tr>
+                                                        <th>Leave Type</th>
+                                                        <th>Entitled</th>
+                                                        <th>Availed</th>
+                                                        <th>Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="small">
+                                                    <t t-set="leave_lines" t-value="leave_lines_map.get(leave.id, [])"/>
+                                                    <t t-foreach="leave_lines" t-as="line">
+                                                        <tr>
+                                                            <td>
+                                                                <t t-out="line['leave_type']"/>
+                                                            </td>
+                                                            <td>
+                                                                <t t-out="round(line['available_leave'],2)"/>
+                                                            </td>
+                                                            <td>
+                                                                <t t-out="round(line['availed_leave'],2)"/>
+                                                            </td>
+                                                            <td>
+                                                                <t t-out="round(line['balance_leave'],2)"/>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                    <tr>
+                                                        <th>Refuse Reason:</th>
+                                                        <td t-att-colspan="3">
+                                                            <t t-out="leave.refuse_reason or ''"/>
+                                                        </td>
+                                                    </tr>
+                                                    <t t-if="leave.request_unit_half">
+                                                        <tr>
+                                                            <th>Check In:</th>
+                                                            <td t-att-colspan="3">
+                                                                <t t-if="leave.check_in">
+                                                                    <t t-esc="leave.check_in.astimezone(timezone).strftime(datetime_format)"/>
+                                                                </t>
+                                                                <t t-else="">-</t>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Check Out:</th>
+                                                            <td t-att-colspan="3">
+                                                                <t t-if="leave.check_out">
+                                                                    <t t-esc="leave.check_out.astimezone(timezone).strftime(datetime_format)"/>
+                                                                </t>
+                                                                <t t-else="">-</t>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </t>
+                    </t>
+
+                    <t t-foreach="leaves" t-as="leave" t-if="leaves and not grouped_leaves">
+                        <tr>
+                            <t t-if="approval_button">
+                                <td class="text-center">
+                                    <input type="checkbox"
+                                           class="leave-select-checkbox"
+                                           t-att-data-leave-id="leave.id"/>
+                                </td>
+                            </t>
+                            <td>
+                                <button class="btn btn-link btn-sm row-expand-btn" t-att-data-leave-id="leave.id">
+                                    <i class="fa fa-plus row-expand-icon"/>
+                                </button>
+                                <img t-if="leave.employee_id.image_1920"
+                                     t-att-src="image_data_uri(leave.employee_id.image_1920)"
+                                     class="rounded img-fluid mx-2"
+                                     style="width: 24px;" alt="Profile"/>
+                                <img t-else=""
+                                     src="/hr/static/src/img/default_image.png"
+                                     class="rounded img-fluid mx-2"
+                                     style="width: 24px;" alt="Default Avatar"/>
+                                <t t-out="leave.employee_id.name"/>
+                            </td>
+                            <td>
+                                <t t-out="leave.holiday_status_id.name"/>
+                            </td>
+                            <td>
+                                <t t-out="leave.private_name"/>
+                            </td>
+                            <td>
+                                <t t-esc="leave.request_date_from.strftime(date_format)"/>
+                            </td>
+                            <td>
+                                <t t-esc="leave.request_date_to.strftime(date_format)"/>
+                            </td>
+                            <td>
+                                <t t-out="leave.duration_display"/>
+                            </td>
+                            <td class="text-right leave-states">
+                                <t>
+                                    <span t-if="leave.state == 'validate'" class="badge rounded-pill text-bg-success">
+                                        <i class="fa fa-fw fa-check" aria-label="Approved" title="Approved" role="img"/>
+                                        <span class="d-none d-md-inline">Approved</span>
+                                    </span>
+                                    <span t-if="leave.state == 'validate1'" class="badge rounded-pill text-bg-warning">
+                                        <i class="fa fa-fw fa-clock-o" aria-label="Second Approval"
+                                           title="Second Approval"
+                                           role="img"/>
+                                        <span class="d-none d-md-inline">Second Approval</span>
+                                    </span>
+                                    <span t-if="leave.state == 'confirm'" class="badge rounded-pill text-bg-warning">
+                                        <i class="fa fa-fw fa-clock-o" aria-label="To Approve" title="To Approve"
+                                           role="img"/>
+                                        <span class="d-none d-md-inline">To Approve</span>
+                                    </span>
+                                    <span t-if="leave.state == 'draft'" class="badge rounded-pill text-bg-info">
+                                        <i class="fa fa-fw fa-arrow-circle-right" aria-label="To Submit"
+                                           title="To Submit"
+                                           role="img"/>
+                                        <span class="d-none d-md-inline">To Submit</span>
+                                    </span>
+                                    <span t-if="leave.state == 'refuse'" class="badge rounded-pill text-bg-light">
+                                        <i class="fa fa-fw fa-remove" aria-label="Refused" title="Refused" role="img"/>
+                                        <span class="d-none d-md-inline">Refused</span>
+                                    </span>
+                                </t>
+                            </td>
+                            <td class="text-right">
+                                <t t-if="(request.httprequest.path == '/my/leaves/manage') or (leave.state != 'refuse' and (not payslip_cutoff or (leave.request_date_from and leave.request_date_from &gt; payslip_cutoff)))">
+                                    <t t-if="leave.state == 'confirm'">
+                                        <button
+                                                type="button"
+                                                class="btn-close cancel-leave"
+                                                t-att-data-leave-id="leave.id"
+                                                t-att-data-leave-type="leave.holiday_status_id.name"
+                                                t-att-data-leave-desc="leave.private_name"
+                                                t-att-data-date-from="(leave.request_date_from and leave.request_date_from.strftime('%Y-%m-%d')) or ''"
+                                                t-att-data-date-to="(leave.request_date_to and leave.request_date_to.strftime('%Y-%m-%d')) or ''"
+                                                t-att-data-duration="leave.duration_display"
+                                                t-att-data-half-day="leave.request_unit_half"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#leaveRefuseModal"
+                                                style="background-color: transparent; opacity: 1;
+                                               filter: invert(12%) sepia(100%) saturate(7500%) hue-rotate(0deg);">
+                                            <i class="fa"/>
+                                        </button>
+                                    </t>
+                                    <t t-else=""></t>
+                                </t>
+                            </td>
+                            <td class="text-center">
+                                <t t-if="leave.state == 'confirm' and approval_button">
+                                    <button t-attf-id="{{leave.id}}" class="btn-approve approve-leave"
+                                            style="background-color: transparent; opacity: 1;"/>
+                                </t>
+                                <t t-else=""></t>
+                            </td>
+                        </tr>
+                        <t t-set="colspan" t-value="approval_button and 10 or 9"/>
+                        <tr t-attf-id="details-row-{{leave.id}}" class="details-row" style="display: none;">
+                            <td style="padding-left: 100px;" t-att-colspan="colspan">
+                                <div class="px-2 py-1">
+                                    <table class="table table-sm table-borderless align-middle mb-0">
+                                        <thead class="text-muted small">
+                                            <tr>
+                                                <th>Leave Type</th>
+                                                <th>Entitled</th>
+                                                <th>Availed</th>
+                                                <th>Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="small">
+                                            <t t-set="leave_lines" t-value="leave_lines_map.get(leave.id, [])"/>
+                                            <t t-foreach="leave_lines" t-as="line">
+                                                <tr>
+                                                    <td>
+                                                        <t t-out="line['leave_type']"/>
+                                                    </td>
+                                                    <td>
+                                                        <t t-out="round(line['available_leave'],2)"/>
+                                                    </td>
+                                                    <td>
+                                                        <t t-out="round(line['availed_leave'],2)"/>
+                                                    </td>
+                                                    <td>
+                                                        <t t-out="round(line['balance_leave'],2)"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                            <tr>
+                                                <th>Refuse Reason:</th>
+                                                <td t-att-colspan="3">
+                                                    <t t-out="leave.refuse_reason or ''"/>
+                                                </td>
+                                            </tr>
+                                            <t t-if="leave.request_unit_half">
+                                                <tr>
+                                                    <th>Check In:</th>
+                                                    <td t-att-colspan="3">
+                                                        <t t-if="leave.check_in">
+                                                            <t t-esc="leave.check_in.astimezone(timezone).strftime(datetime_format)"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Check Out:</th>
+                                                    <td t-att-colspan="3">
+                                                        <t t-if="leave.check_out">
+                                                            <t t-esc="leave.check_out.astimezone(timezone).strftime(datetime_format)"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+        </t>
+    </template>
+</odoo>

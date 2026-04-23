@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <template id="report_salarysheet">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.internal_layout">
+                    <div class="page">
+                        <h2>
+                            <center>Salary Sheet</center>
+                        </h2>
+                        <h2>
+                            <center><span
+                                    t-esc="datetime.datetime.strptime(str(o.get_batch_period()['date_from']),'%Y-%m-%d').strftime('%d %B')"/>&#160;to&#160;
+                                <span t-esc="datetime.datetime.strptime(str(o.get_batch_period()['date_to']),'%Y-%m-%d').strftime('%d %B , %Y')"/>
+                            </center>
+                        </h2>
+                        <div class="row">
+                            <table width="100%" style="border:1px solid black;">
+                                <tr style="background-color:#ddd;">
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Sr#
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Name
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        CNIC
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Bank
+                                        Account#
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Code
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Designation
+                                    </td>
+                                    <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;">
+                                        Department
+                                    </td>
+                                    <t t-foreach="rules" t-as="item">
+                                        <t t-if="item['code'] in ['BASIC','GROSS']">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;background-color:#90EE90;">
+                                                <span t-esc="item['name']"/>
+                                            </td>
+                                        </t>
+                                        <t t-if="item['code'] == 'DED'">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;background-color:#F00;">
+                                                <span t-esc="item['name']"/>
+                                            </td>
+                                        </t>
+                                        <t t-if="item['code'] == 'BALW'">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;background-color:#ADD8E6;">
+                                                <span t-esc="item['name']"/>
+                                            </td>
+                                        </t>
+                                        <t t-if="item['code'] == 'NET'">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;background-color:#ddd;">
+                                                <span t-esc="item['name']"/>
+                                            </td>
+                                        </t>
+                                        <t t-if="item['code'] not in ['BASIC','GROSS','DED','BALW','NET']">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;font-weight:bold;background-color:#ddd;">
+                                                <span t-esc="item['name']"/>
+                                            </td>
+                                        </t>
+                                    </t>
+                                </tr>
+                                <t t-set="serial_no" t-value="1"/>
+                                <tr t-foreach="result" t-as="obj">
+                                    <t t-foreach="obj" t-as="payslip_id">
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <span t-esc="serial_no"/>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <span t-esc="o.get_employee_details(payslip_id)[0]['employee_name']"/>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <t t-if="o.get_employee_details(payslip_id)[0]['cnic']">
+                                                <span t-esc="o.get_employee_details(payslip_id)[0]['cnic']"/>
+                                            </t>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <t t-if="o.get_employee_details(payslip_id)[0]['account_no']">
+                                                <span t-esc="o.get_employee_details(payslip_id)[0]['account_no']"/>
+                                            </t>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <span t-esc="o.get_employee_details(payslip_id)[0]['code']"/>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <t t-if="o.get_employee_details(payslip_id)[0]['designation']">
+                                                <span t-esc="o.get_employee_details(payslip_id)[0]['designation']"/>
+                                            </t>
+                                        </td>
+                                        <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                            <t t-if="o.get_employee_details(payslip_id)[0]['department']">
+                                                <span t-esc="o.get_employee_details(payslip_id)[0]['department']"/>
+                                            </t>
+                                        </td>
+                                        <t t-foreach="obj[payslip_id]" t-as="payslip">
+                                            <td style="border-right:1px solid black;border-bottom:1px solid black;padding:5px;">
+                                                <span t-esc="'{:,}'.format(payslip['amount'])"/>
+                                            </td>
+                                        </t>
+                                        <br/>
+                                        <t t-set="serial_no" t-value="serial_no+1"/>
+                                    </t>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!--    <template id="custom_layout_header">-->
+    <!--        <t t-call="ivis_payroll_functions.salaryreport_header"/>-->
+    <!--        <t t-raw="0"/>-->
+    <!--    </template>-->
+
+    <!--    <template id="salaryreport_header">-->
+    <!--        <div class="header">-->
+    <!--            <div class="row">-->
+    <!--                <div class="text-left col-xs-2">-->
+    <!--                    <img src="/ivis_payroll_functions/static/src/logo.png"-->
+    <!--                         style="height: 80px;"/>-->
+    <!--                </div>-->
+    <!--                <div class="col-xs-8 text-center"-->
+    <!--                     name="company_address">-->
+    <!--                    <h2>-->
+    <!--                        <span t-esc="res_company.name"/>-->
+    <!--                    </h2>-->
+    <!--                    <span t-field="res_company.street"/>-->
+    <!--                    &#160;-->
+    <!--                    <span t-field="res_company.street2"/>-->
+    <!--                    &#160;-->
+    <!--                    <span t-field="res_company.city"/>-->
+    <!--                    &#160;-->
+    <!--                    <span t-field="res_company.country_id.name"/>-->
+    <!--                </div>-->
+    <!--            </div>-->
+    <!--        </div>-->
+    <!--    </template>-->
+</odoo>

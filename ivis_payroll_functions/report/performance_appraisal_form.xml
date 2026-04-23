@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <template id="my_own_custom_layout_header">
+            <t t-call="ivis_payroll_functions.custom_header"/>
+            <t t-raw="0"/>
+        </template>
+
+        <template id="custom_header">
+            <div class="header">
+                <strong>
+                    <h3 class="text-center">
+                        <t t-esc="doc.current_company.name"/>
+                    </h3>
+                </strong>
+                <h5 class="text-center">Performance Appraisal Form (Confidential)</h5>
+            </div>
+        </template>
+
+        <template id="report_performance_appraisal_form">
+            <t t-call="web.basic_layout">
+                <t t-foreach="docs" t-as="doc">
+                    <t t-foreach="doc.performance_appraisal_report()" t-as="line">
+                        <t t-call="ivis_payroll_functions.my_own_custom_layout_header"/>
+                        <div class="page" style="page-break-before:always;">
+                            <table id="t1" class="table table-sm" width="100%"
+                                   style="font-size:15px;margin-top:-5px;height:-5px;padding:1px;">
+                                <style>
+                                    #t1 tr td {
+                                    border:none;
+                                    width:150px;
+                                    padding: 1px;
+                                    font-size: 12px;
+                                    }
+                                </style>
+
+                                <tr>
+                                    <td>
+                                        <strong>PERSONAL FILE NO.</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['personal_file_no']"/>
+                                    </td>
+                                    <td>
+                                        <strong>LOCATION</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['location']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>REG NO. / NAME</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['name']"/>
+                                    </td>
+                                    <td>
+                                        <strong>DATE OF BIRTH</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['birthday']" t-options='{"widget": "date"}'/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>QUALIFICATION</strong>
+                                    </td>
+<!--                                    <td>-->
+<!--                                        <span t-esc="line['degree']"/>-->
+<!--                                    </td>-->
+                                    <td>
+                                        <strong>DATE OF JOINING</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['joining_date']" t-options='{"widget": "date"}'/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>POSITION</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['position']"/>
+                                    </td>
+                                    <td>
+                                        <strong>GROSS SALARY</strong>
+                                    </td>
+                                    <td>
+                                        <t t-if="line['gross_salary']">
+                                            <span t-esc="'{:,}'.format(round(line['gross_salary']))"/>
+                                        </t>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>DEPARTMENT</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['department']"/>
+                                    </td>
+                                    <td>
+                                        <strong>CASUAL LEAVE AVAILED</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['casual_leave']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>SICK LEAVE AVAILED</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['sick_leave']"/>
+                                    </td>
+                                    <td>
+                                        <strong>GRADE</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['grade']"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>REVIEW PERIOD ENDING</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['year_end']" t-options='{"widget": "date"}'/>
+                                    </td>
+                                    <td>
+                                        <strong>EARNED LEAVE BALANCE</strong>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['earned_leave_balance']"
+                                              t-options='{"widget": "float", "precision": 2}'/>
+                                    </td>
+                                </tr>
+                            </table>
+                            <br/>
+                            <div class="row" style="font-size:13px;letter-spacing:1px;" width="100%">
+                                <div class="col-8" style="float:left;width:46%;">
+                                    <div class="a" style="margin-top:55px">
+                                        <p>Courtesy, Tact, Poise, Control and Temperament.</p>
+                                        <p>Ability to understand ideas facts and principles</p>
+                                        <p>Self starting energy and ability to plan.</p>
+                                        <p>Ability to perform assignments immediately.</p>
+                                        <p>Knowledge of all phases of his Job/Trade.</p>
+                                        <p>Does he get the job done.</p>
+                                    </div>
+                                </div>
+
+                                <style>
+                                    th, td{
+                                    border: 1px solid black;
+                                    padding: 16.5px;
+                                    padding-left: 5px;
+                                    font-size: 8.5px;
+                                    },
+                                    p {
+                                    font-size: 30px;
+                                    },
+                                    u {
+                                    margin-top: 20px;
+                                    padding-bottom: 30px;
+                                    }
+                                </style>
+
+                                <div class="col-6" style="float:left;width:60%;font-size: 12px;">
+                                    <table border="1" width="100%" style="margin-left:10px;">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center">OUT-STANDING</th>
+                                                <th class="text-center">ABOVE AVERAGE</th>
+                                                <th class="text-right">AVERAGE</th>
+                                                <th class="text-right">BELOW AVERAGE</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="row mt32 mb32">
+                                <div class="col-12" style="font-size: 13.5px;">
+                                    <p>GENERAL REMARKS:
+                                        __________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>FUTURE PROJECTS:
+                                        ___________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>EXPLAIN ONE ACCOMPLISHMENT DURING ENSUING YEAR:
+                                        ____________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>
+                                        ___________________________________________________________________________________________________________________________________________________
+                                    </p>
+                                    <p>To be Confirmed? (Y/N) _________________________________________</p>
+                                    <p>Increase Recommended? _______________________________________</p>
+                                    <!--                                    <pre>GENERAL REMARKS: _______________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--&lt;!&ndash;                                    <pre>________________________________________________________________________________________________________________</pre>&ndash;&gt;-->
+                                    <!--                                    <pre>FUTURE PROJECTS: _______________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--&lt;!&ndash;                                    <pre>________________________________________________________________________________________________________________</pre>&ndash;&gt;-->
+                                    <!--                                    <pre>EXPLAIN ONE ACCOMPLISHMENT DURING ENSUING YEAR: ________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>________________________________________________________________________________________________________________</pre>-->
+                                    <!--                                    <pre>To be Confirmed? (Y/N)  _______________________________________________</pre>-->
+                                    <!--                                    <pre>Increase Recommended    _______________________________________________</pre>-->
+
+                                </div>
+                            </div>
+                            <style>
+                                .city{
+                                display: flex;
+                                flex-direction: column;
+                                padding: 0px;
+                                font-size: 13.5px;
+                                }
+                                .line{
+                                margin-top: -3px;
+                                }
+                                .main{
+                                display: flex;
+                                text-align: left;
+                                flex-direction: row;
+                                margin-top:25px;
+                                }
+                                .lin{
+                                margin-top: -50px;
+                                margin-left: 570px;
+                                font-size: 13.5px;
+                                }
+                                .sign{
+                                text-align: :center;
+                                margin-top: -16px;
+                                margin-left: 140px;
+                                }
+                                .linn{
+                                margin-top: -50px;
+                                margin-left: 630px;
+                                font-size: 13.5px;
+                                }
+
+                            </style>
+                            <div class="main">
+                                <div class="city">
+                                    <u>____________________________________________</u>
+                                    <div class="line">
+                                        <p>SIGNATURE OF REPORTING OFFICER</p>
+                                    </div>
+                                </div>
+                                <div class="lin">
+                                    <p>Countersigned: _________________________</p>
+                                    <div class='sign'>
+                                        <p>(Signature)</p>
+                                    </div>
+                                </div>
+                                <div class="city">
+                                    <u>____________________________________________</u>
+                                    <div class="line">
+                                        <p>NAME OF REPORTING OFFICER</p>
+                                    </div>
+                                </div>
+                                <div class="linn">
+                                    <p>Date: _________________________</p>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
