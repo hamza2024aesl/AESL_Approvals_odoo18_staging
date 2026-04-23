@@ -1,7 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_appraisal_batches,access.appraisal_batches,model_appraisal_batches,,1,1,1,1
-access_appraisal_increment_line,access.appraisal_increment_line,model_increment_raise_lines,,1,1,1,1
-access_appraisal_remarks,access.appraisal_remarks,model_hr_appraisal_remarks,,1,1,1,1
-access_increment_raise_lines,access.increment.raise.lines,model_increment_raise_lines,base.group_portal,1,1,1,1
-access_appraisal_group_by,access.appraisal.group.by,model_appraisal_group_by,,1,1,1,1
-access_appraisal_future_prospect,access.appraisal.future.prospect,model_appraisal_future_prospect,,1,1,1,1
