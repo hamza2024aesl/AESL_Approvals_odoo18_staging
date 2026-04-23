@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="timeoff_inherited_request_form" model="ir.ui.view">
+            <field name="name">Time Off Inherited Request Form</field>
+            <field name="model">hr.leave</field>
+            <field name="inherit_id" ref="hr_holidays.hr_leave_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[1][1]" position="after">
+                    <field name="hr_leave_lines_id" options="{'no_create': True, 'no_open': True}" nolabel="1" required="1">
+                        <list class="o_list_view_table" delete="0" force_save="1" string="Family Mamber Lines">
+                            <field name="hr_leaves_id" invisible="1"/>
+                            <field name="leave_type" force_save="1"/>
+                            <field name="available_leave" force_save="1"/>
+                            <field name="availed_leave" force_save="1"/>
+                            <field name="balance_leave" force_save="1"/>
+                        </list>
+                    </field>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="timeoff_inherited_request_leave_balance_form" model="ir.ui.view">
+            <field name="name">Time Off Inherited Request leave balance Form</field>
+            <field name="model">hr.leave</field>
+            <field name="inherit_id" ref="ivis_leaves_enhancement.timeoff_request_inherit"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='remaining_leaves']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

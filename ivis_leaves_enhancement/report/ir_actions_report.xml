@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="action_employee_screen" model="ir.actions.report">
+            <field name="name">Employee Time Sheet</field>
+            <field name="model">hr.employee</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">ivis_leaves_enhancement.report_emp_time_sheet</field>
+            <field name="report_file">ivis_leaves_enhancement.report_emp_time_sheet</field>
+        </record>
+    </data>
+</odoo>

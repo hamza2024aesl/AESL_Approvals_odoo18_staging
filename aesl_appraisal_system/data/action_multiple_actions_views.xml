@@ -1,0 +1,74 @@
+<odoo>
+    <data>
+        <record model="ir.actions.server" id="action_hr_confirm_multiple">
+            <field name="name">HR Confirm</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_hr_confirm()
+            </field>
+        </record>
+        <record model="ir.actions.server" id="action_remove_anonymous_records_multiple">
+            <field name="name">Remove Vulnerable Records</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.check_anomynous_records_appraisal()
+            </field>
+        </record>
+        <record model="ir.actions.server" id="action_executive_multiple">
+            <field name="name">Executive Confirm</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="groups_id" eval="[(4,ref('aesl_appraisal_system.group_exec_appraisal_4'))]"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_confirm4()
+            </field>
+        </record>
+        <record model="ir.actions.server" id="action_md_multiple">
+            <field name="name">MD Confirm</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="groups_id" eval="[(4,ref('aesl_appraisal_system.group_md_appraisal_4'))]"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_done()
+            </field>
+        </record>
+
+        <record model="ir.actions.server" id="action_finalize_appraisal">
+            <field name="name">Publish Appraisal</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="groups_id" eval="[(4, ref('aesl_appraisal_system.group_hr_manager_appraisal_3'))]"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_approve_appraisal_to_employee()
+            </field>
+        </record>
+        <record model="ir.actions.server" id="action_appraisal_amount_to_contract">
+            <field name="name">Appriasl(Increment) to contract</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="groups_id" eval="[(4, ref('aesl_appraisal_system.group_hr_manager_appraisal_3'))]"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_appraisal_to_employee_contract()
+            </field>
+        </record>
+
+        <record model="ir.actions.server" id="action_appraisal_reset_back">
+            <field name="name">Revert Back</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="binding_model_id" ref="model_appraisal_system"/>
+            <field name="state">code</field>
+            <field name="code">
+                records.action_reset_back()
+            </field>
+        </record>
+
+    </data>
+</odoo>

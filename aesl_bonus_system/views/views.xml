@@ -1,0 +1,114 @@
+<odoo>
+    <data>
+
+        <record id="view_employee_bonus_form_inherited" model="ir.ui.view">
+            <field name="name">employee.bonus.form.inherited</field>
+            <field name="model">employee.bonus</field>
+            <field name="inherit_id" ref="ivis_payroll_functions.list_employee_new_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//form" position="attributes">
+                    <attribute name="create">1</attribute>
+                    <attribute name="delete">1</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='bonus_amount']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+
+
+                <xpath expr="//field[@name='employee_code']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='employee_id']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+
+                <xpath expr="//field[@name='date_effective']" position="attributes">
+                    <attribute name="readonly">1</attribute>
+                </xpath>
+
+
+                <xpath expr="//sheet/group" position="before">
+                    <group>
+                        <h2>
+                            <label for="appraisal_id"/>
+                            <field name="appraisal_id" readonly="1"/>
+                        </h2>
+                    </group>
+                </xpath>
+                <xpath expr="//field[@name='employee_id']" position="after">
+                    <field name="emp_name" invisible="employee_id != False" readonly="1"/>
+                    <field name="grade" readonly="1"/>
+                    <field name="department_id" readonly="1"/>
+                    <field name="region_id" readonly="1"/>
+                    <field name="prev_gross_salary" readonly="1"/>
+                    <div class="o_form_label">Formula:</div>
+                    <div class="oe_line">(Availed Points / Total Points) x Previous Gross Salary x 3 x Proportionate(If
+                        apply)
+                    </div>
+                </xpath>
+                <xpath expr="//field[@name='date_effective']" position="after">
+                    <field name="total_points" readonly="1"/>
+                    <field name="given_points" readonly="1"/>
+                    <field name="leave_points" readonly="1"/>
+                    <field name="proportional_points" invisible="0" readonly="1"/>
+                    <field name="availed_points" readonly="1"/>
+                    <field name="bonus_amount" readonly="1"/>
+                </xpath>
+<!--                <xpath expr="//sheet" position="after">-->
+                    <!-- <div class="oe_chatter">
+                      <field name="message_follower_ids" groups="base.group_user"/>
+                      <field name="message_ids" widget="mail_thread"/>
+                    </div> -->
+<!--                    <chatter/>-->
+<!--                </xpath>-->
+            </field>
+        </record>
+        <record id="view_employee_bonus_list_inherit" model="ir.ui.view">
+            <field name="name">employee.bonus.list.inherit</field>
+            <field name="model">employee.bonus</field>
+            <field name="inherit_id" ref="ivis_payroll_functions.list_employee_new"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='bonus_amount']" position="before">
+                    <field name="appraisal_id"/>
+                </xpath>
+                <xpath expr="//field[@name='bonus_amount']" position="before">
+                    <field name="grade" readonly="1"/>
+                    <field name="department_id"/>
+                    <field name="region_id"/>
+                    <field name="prev_gross_salary"/>
+                    <field name="total_points"/>
+                    <field name="given_points"/>
+                    <field name="leave_points"/>
+                    <field name="proportional_points" invisible="1"/>
+                    <field name="availed_points"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_employee_bonus_form_inherit_group" model="ir.ui.view">
+            <field name="name">employee.bonus.form.inherit.group</field>
+            <field name="model">employee.bonus</field>
+            <field name="inherit_id" ref="ivis_payroll_functions.list_employee_new_form"/>
+            <!-- <field name="groups_id" eval="[(6,0, [ref('aesl_appraisal_system.group_md_appraisal_4')])]"/> -->
+            <field name="arch" type="xml">
+                <field name="given_points" position="attributes">
+                    <attribute name="readonly">0</attribute>
+                </field>
+            </field>
+        </record>
+
+        <menuitem name="Bonus" id="menu_appraisal_system_employee_bonus_root"
+                  parent="aesl_appraisal_system.menu_appraisal_system_root"
+                  groups="aesl_appraisal_system.group_hr_manager_appraisal_3,aesl_appraisal_system.group_md_appraisal_4"
+        />
+        <menuitem name="Bonus" id="menu_appraisal_system_employee_bonus_sub"
+                  parent="aesl_bonus_system.menu_appraisal_system_employee_bonus_root"
+                  groups="aesl_appraisal_system.group_hr_manager_appraisal_3,aesl_appraisal_system.group_md_appraisal_4"
+                  action="ivis_payroll_functions.action_employee_new"/>
+
+    </data>
+</odoo>

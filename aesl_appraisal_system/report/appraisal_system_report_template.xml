@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <report id="appraisal_system_report_pdf_final"
+                model="appraisal.system"
+                name="aesl_appraisal_system.template_appraisal_system_report"
+                string="Appraisal Pdf Report"
+                report_type="qweb-pdf"
+        />
+
+        <template id="appraisal_system_custom_layout_header">
+            <t t-call="aesl_appraisal_system.appraisal_system_custom_header"/>
+        </template>
+
+        <template id="appraisal_system_custom_header">
+            <div class="header" style="padding: 0; margin: 0;">
+                <div style="text-align: right; padding-bottom: 5px; margin: 0;">
+                    <span t-field="line.company_id.logo" t-options='{"widget": "image"}' width="185" height="52"/>
+                </div>
+                <strong>
+                    <h3 class="text-center" style="margin: 0; padding: 0;">
+                        <t t-esc="line.company_id.name"/>
+                    </h3>
+                </strong>
+                <h4 class="text-center" style="margin: 0; padding: 0;">
+                    Performance Appraisal Form (Confidential)
+                </h4>
+            </div>
+        </template>
+
+        <template id="template_appraisal_system_report">
+            <t t-call="web.basic_layout">
+                <t t-foreach="docs" t-as="line">
+                    <t t-call="aesl_appraisal_system.appraisal_system_custom_layout_header"/>
+                    <div class="page" style="font-size: 12.5px; page-break-before: always; margin: 0; padding: 0;">
+                        <table id="t1" class="table table-sm" width="100%"
+                               style="margin: 0; padding: 0; margin-left:5px; border-collapse: collapse;">
+                            <style>
+                                #t1 tr td {
+                                border: none;
+                                padding: 1px;
+                                margin: 0;
+                                font-size: 12.5px;
+                                }
+                                table {
+                                border-spacing: 0;
+                                margin: 0;
+                                padding: 0;
+                                }
+                                th, td {
+                                padding: 4px;
+                                text-align: left;
+                                }
+                                .child {
+                                margin: 0;
+                                padding: 0;
+                                }
+                            </style>
+                            <tr>
+                                <td>
+                                    <strong>PERSONAL FILE NO.</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.personal_file_number"/>
+                                </td>
+                                <td>
+                                    <strong>LOCATION</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.location"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>REG NO. / NAME</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.registration_number"/>
+                                    -
+                                    <span t-esc="line.employee_id.sudo().name"/>
+                                </td>
+                                <td>
+                                    <strong>DATE OF BIRTH</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.birthday" t-options='{"widget": "date"}'/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>QUALIFICATION</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.education"/>
+                                </td>
+                                <td>
+                                    <strong>DATE OF JOINING</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.appointment_date" t-options='{"widget": "date"}'/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>POSITION</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.job_id.name"/>
+                                </td>
+                                <td>
+                                    <strong>GROSS SALARY</strong>
+                                </td>
+                                <td>
+                                    <t t-if="line.gross_salary">
+                                        <span t-esc="'{:,}'.format(round(line.gross_salary))"/>
+                                        <!--                                        <span t-esc="'{:,}'.format((line['gross_salary']))"/>-->
+                                    </t>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>DEPARTMENT</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.department_id.name"/>
+                                </td>
+                                <td>
+                                    <strong>CASUAL LEAVE AVAILED</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.cl_count"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>GRADE</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.grade"/>
+                                </td>
+                                <td>
+                                    <strong>SICK LEAVE AVAILED</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.sl_count"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>REVIEW PERIOD ENDING</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.date_close" t-options='{"widget": "date"}'/>
+                                </td>
+                                <td>
+                                    <strong>EARNED LEAVE BALANCE</strong>
+                                </td>
+                                <td>
+                                    <span t-esc="line.earned_leaves_balance"
+                                          t-options='{"widget": "float", "precision": 2}'/>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="remarks-section" style="margin-top: 5px; margin-left:5px; padding-top: 5px;">
+                            <h8>
+                                <strong>REMARKS:</strong>
+                                [Work Independently, Analytic, Troubleshooting, Motivation, Technical]
+                            </h8>
+                            <t t-if="line.remarks">
+                                <div class="child" style="width: 100%; border-bottom: 1px solid black;">
+                                    <t t-set="parts" t-value="line.remarks.split('By:')"/>
+                                    <p>
+                                        <span t-esc="parts[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="parts[-1]"/>
+                                    </p>
+                                </div>
+                            </t>
+                            <t t-if="line.remarks_2">
+                                <div class="child"
+                                     style="width:100%; display: flex; justify-content: flex-start; float:left; border-bottom:1px solid black; margin; 4px;">
+                                    <t t-set="parts2" t-value="line.remarks_2.split('By:')"/>
+                                    <p>
+                                        <span t-esc="parts2[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="parts2[-1]"/>
+                                        <br/>
+                                    </p>
+                                </div>
+                            </t>
+                            <t t-if="line.remarks_3">
+                                <div class="child"
+                                     style="width:100%; float:left; display: flex; justify-content: flex-start; border-bottom:1px solid black; margin; 4px;">
+                                    <t t-set="parts3" t-value="line.remarks_3.split('By:')"/>
+                                    <p>
+                                        <span t-esc="parts3[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="parts3[-1]"/>
+                                    </p>
+                                </div>
+                            </t>
+                            <t t-if="line.remarks_4">
+                                <div class="child"
+                                     style="width:100%; float:left; display: flex; justify-content: flex-start; border-bottom:1px solid black; margin; 4px;">
+                                    <t t-set="parts4" t-value="line.remarks_4.split('By:')"/>
+                                    <p>
+                                        <span t-esc="parts4[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="parts4[-1]"/>
+                                    </p>
+                                </div>
+                            </t>
+                            <t t-if="line.remarks_5">
+                                <div class="child"
+                                     style="width:100%; float:left; display: flex; justify-content: flex-start; border-bottom:1px solid black; margin; 4px;">
+                                    <t t-set="parts5" t-value="line.remarks_5.split('By:')"/>
+                                    <p>
+                                        <span t-esc="parts5[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="parts5[-1]"/>
+                                    </p>
+                                </div>
+                            </t>
+                            <br/>
+                            <t t-if="line.future_project">
+                                <strong>
+                                    <h8>FUTURE PROSPECT:</h8>
+                                </strong>
+                                <br/>
+                                <div class="child"
+                                     style="width:100%; float:left; display: flex; justify-content: flex-start; border-bottom:1px solid black; margin; 4px;">
+                                    <t t-set="proj" t-value="line.future_project.split('By:')"/>
+                                    <p>
+                                        <span t-esc="proj[0]"/>
+                                        <br/>
+                                        By:
+                                        <span t-esc="proj[-1]"/>
+                                    </p>
+                                </div>
+                            </t>
+                        </div>
+
+                        <div class="increment-section" style="margin: 0; padding: 0;">
+                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                                <tr>
+                                    <td style="border: 1px solid black; font-weight: bold; text-align: center;">
+                                        Increment
+                                    </td>
+                                    <td style="border: 1px solid black; font-weight: bold; text-align: center;">
+                                        Designation
+                                    </td>
+                                    <td style="border: 1px solid black; font-weight: bold; text-align: center;">Grade
+                                    </td>
+                                    <td style="border: 1px solid black; font-weight: bold; text-align: center;">
+                                        Recommended By
+                                    </td>
+                                    <td style="border: 1px solid black; font-weight: bold; text-align: center;">Date
+                                    </td>
+                                </tr>
+                                <tr t-foreach="line.recomm_increment_lines_id" t-as="incr_line">
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        <span t-esc="'{:,}'.format(int(incr_line.increment_raise_amount))"/>
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        <span t-esc="incr_line.recomm_desigantion_id.name"/>
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        <span t-esc="incr_line.recomm_grades if incr_line.recomm_grades != 0 else ''"/>
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        <span t-esc="incr_line.increment_raise_by.name"/>
+                                    </td>
+                                    <td style="border: 1px solid black; text-align: center;">
+                                        <span t-esc="incr_line.incremented_date"/>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p>Recommended Increment:
+                                <strong>
+                                    <u>
+                                        <span t-esc="'{:,}'.format(int(line.recomm_increment))"/>
+                                    </u>
+                                </strong>
+                            </p>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>

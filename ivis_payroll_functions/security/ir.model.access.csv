@@ -1,0 +1,5 @@
+id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_payslip_recurring,hr.payslip.recurring,model_hr_payslip_recurring,hr.group_hr_manager,1,1,1,1
+access_detail_tax,detail.tax,model_detail_tax,hr.group_hr_user,1,1,1,1
+access_employee_bonus,employee.bonus,model_employee_bonus,,1,1,1,1
+access_payroll_wizard,payroll.wizard,model_payroll_wizard,,1,1,1,1
