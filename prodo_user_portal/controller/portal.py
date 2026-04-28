@@ -321,3 +321,145 @@ class AppraisalPortal(CustomerPortal):
             # hr_appraisal.revert_remarks = revert_remarks
 
         return request.redirect("/my/appraisal")
+
+
+class ApprovalPortal(CustomerPortal):
+
+    @http.route(["/my/travel", "/my/travel/page/<int:page>"], type="http", auth="user", website=True)
+    def portal_my_travel_requests(self, page=1, **kw):
+        user = request.env.user
+        request_obj = request.env["approval.request"]
+        
+        # User is either the owner or one of the approvers
+        domain = ['|', ('request_owner_id', '=', user.id), ('approver_ids.user_id', '=', user.id)]
+        
+        total = request_obj.sudo().search_count(domain)
+        # Simple search for now, pager can be added later if needed
+        requests = request_obj.sudo().search(domain, order="create_date desc")
+        
+        vals = {
+            "page_name": "travel_request_list_page",
+            "requests": requests,
+        }
+        return request.render("prodo_user_portal.travel_request_list_view_portal", vals)
+
+    @http.route("/my/travel/new", type="http", auth="user", website=True)
+    def portal_travel_request_new(self, **kw):
+        user = request.env.user
+        employee = user.employee_id
+        # Find categories that are suitable for travel
+        categories = request.env['approval.category'].sudo().search([])
+        
+        vals = {
+            "page_name": "travel_request_new_page",
+            "categories": categories,
+            "employee_name": employee.name,
+            "employee_identification_id": employee.identification_id,
+            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
+            "employee_job_id": employee.job_id.name if employee.job_id else "",
+        }
+        return request.render("prodo_user_portal.travel_request_form_portal", vals)
+
+    @http.route("/my/travel/save", type="http", auth="user", website=True, methods=["POST"])
+    def portal_travel_request_save(self, **post):
+        user = request.env.user
+        employee = user.employee_id
+        
+        try:
+            # Prepare values, converting datetime-local format (T) to Odoo format
+            raw_start = post.get('date_start')
+            raw_end = post.get('date_end')
+            date_start = raw_start.replace('T', ' ') if raw_start else False
+            date_end = raw_end.replace('T', ' ') if raw_end else False
+
+            vals = {
+                'name': f"Travel Request - {employee.name}",
+                'request_owner_id': user.id,
+                'category_id': int(post.get('category_id')),
+                'date_start': date_start,
+                'date_end': date_end,
+                'travel_mode': post.get('travel_mode'),
+                'travel_request_type': post.get('travel_request_type'),
+                'tickets_required': post.get('tickets_required'),
+                'admin_remarks': post.get('admin_remarks'),
+                'employee_id': employee.id,
+            }
+            
+            travel_req = request.env['approval.request'].sudo().create(vals)
+            
+            # Create schedule lines from the form's grid
+            for i in range(1, 7):
+                dept = post.get(f'schedule_departure_from_{i}')
+                arr = post.get(f'schedule_arrival_destination_{i}')
+                date = post.get(f'schedule_arrival_date_{i}')
+                time = post.get(f'schedule_arrival_time_{i}')
+                
+                if dept and arr and date and time:
+                    request.env['approval.travel.schedule'].sudo().create({
+                        'request_id': travel_req.id,
+                        'departure_from': dept,
+                        'arrival_destination': arr,
+                        'arrival_date': date,
+                        'arrival_time': time,
+                    })
+            
+            # Confirm the request to trigger approver assignment
+            travel_req.action_confirm()
+            
+        except UserError as e:
+            # Store error in session to show on the form (if template supports it)
+            request.session['travel_error'] = str(e)
+            return request.redirect("/my/travel/new")
+        except Exception as e:
+            request.session['travel_error'] = _("An unexpected error occurred: %s") % str(e)
+            return request.redirect("/my/travel/new")
+            
+        return request.redirect("/my/travel")
+
+    @http.route("/my/travel/view/<int:request_id>", type="http", auth="user", website=True)
+    def portal_travel_request_detail(self, request_id):
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        if not request_rec.exists():
+            return request.redirect("/my/travel")
+            
+        user = request.env.user
+        employee = request_rec.employee_id
+        
+        is_owner = request_rec.request_owner_id == user
+        is_approver = user.id in request_rec.approver_ids.mapped('user_id.id')
+        is_editable = is_owner and request_rec.request_status == 'new'
+        
+        categories = request.env['approval.category'].sudo().search([])
+        
+        vals = {
+            "page_name": "travel_request_detail_page",
+            "request_rec": request_rec,
+            "employee_name": employee.name,
+            "employee_identification_id": employee.identification_id,
+            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
+            "employee_job_id": employee.job_id.name if employee.job_id else "",
+            "is_approver": is_approver,
+            "is_editable": is_editable,
+            "categories": categories,
+        }
+        return request.render("prodo_user_portal.travel_request_detail_template", vals)
+
+    @http.route("/my/travel/approve/<int:request_id>", type="http", auth="user", website=True)
+    def portal_travel_request_approve(self, request_id):
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        if request_rec.exists():
+            approver = request_rec.approver_ids.filtered(lambda a: a.user_id == request.env.user)
+            if approver:
+                request_rec.action_approve(approver=approver[0])
+        return request.redirect(f"/my/travel/view/{request_id}?message=approved")
+
+    @http.route("/my/travel/refuse/<int:request_id>", type="http", auth="user", website=True)
+    def portal_travel_request_refuse(self, request_id):
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        if request_rec.exists():
+            approver = request_rec.approver_ids.filtered(lambda a: a.user_id == request.env.user)
+            if approver:
+                request_rec.action_refuse(approver=approver[0])
+        return request.redirect(f"/my/travel/view/{request_id}?message=refused")

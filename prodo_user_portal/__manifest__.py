@@ -12,6 +12,7 @@
     "depends": ['portal','prodo_appraisal_ext'],
     "data": [
         'views/appraisal_template.xml',
+        'views/approval_template.xml',
         'views/portal_menus.xml',
     ],
     "assets": {

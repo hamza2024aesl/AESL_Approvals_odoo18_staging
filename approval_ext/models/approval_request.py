@@ -60,6 +60,13 @@ class ApprovalRequest(models.Model):
         2. Assign the specific Approver(s) from the configuration.
         3. Only these approvers will have Approve/Refuse access.
         """
+        # Auto-fill the standard 'location' field so Odoo's built-in
+        # required-field validation never blocks submission when 'location'
+        # is hidden in our custom form but marked required in the category.
+        for rec in self:
+            if not rec.location and rec.employee_id and rec.employee_id.work_location_id:
+                rec.location = rec.employee_id.work_location_id.name
+
         res = super(ApprovalRequest, self).action_confirm()
 
         for rec in self:
@@ -111,24 +118,7 @@ class ApprovalRequest(models.Model):
         approver_partners = approver_lines.mapped('employee_id.user_id.partner_id')
         if approver_partners:
             subject = _("Approval Required: %s") % request.name
-            body = _(
-                "<div style='font-family: Arial, sans-serif; font-size: 13px; color: #333;'>"
-                "  <h4 style='margin: 0; color: #714B67; font-size: 15px;'>Travel Request Approval Required</h4>"
-                "  <p style='margin: 10px 0;'>The following travel request has been submitted and requires your approval:</p>"
-                "  <table style='width: 100%%; border-collapse: collapse; margin: 10px 0; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #eee;'>"
-                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Request Reference:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
-                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Submitted By:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
-                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Region:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
-                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px;'>Department:</td><td style='padding: 8px 12px;'><b>%s</b></td></tr>"
-                "  </table>"
-                "  <p style='margin-top: 15px;'>Please log in to the portal and take necessary action.</p>"
-                "</div>"
-            ) % (
-                request.name,
-                request.employee_id.name,
-                request.employee_id.work_location_id.name,
-                request.employee_id.department_id.name
-            )
+            body = _("plz review the request and take action")
             request.message_post(
                 body=body,
                 subject=subject,
@@ -176,7 +166,7 @@ class ApprovalRequest(models.Model):
         """ Logic to find recipients from approval.config and send notification. """
         config_type = 'domestic' if request.travel_request_type == 'domestic' else 'international'
         
-        config_lines = self.env['approval.config.line'].search([
+        config_lines = self.env['approval.config.line'].sudo().search([
             ('config_id.config_type', '=', config_type),
             ('line_type', 'in', ['finance', 'hr']),
             ('work_location_id', '=', request.employee_id.work_location_id.id),
@@ -188,14 +178,22 @@ class ApprovalRequest(models.Model):
         if recipients:
             subject = f"Approved: {request.name} - {request.employee_id.name}"
             body = (
-                f"<div style='font-family: Arial, sans-serif; font-size: 13px; color: #333;'>"
-                f"  <h4 style='margin: 0; color: #28a745; font-size: 15px;'>Travel Request Approved</h4>"
-                f"  <p style='margin: 10px 0;'>The travel request for <b>{request.employee_id.name}</b> has been successfully approved.</p>"
-                f"  <table style='width: 100%; border-collapse: collapse; margin: 10px 0; background-color: #f8fff9; border-radius: 4px; border: 1px solid #d4edda;'>"
-                f"    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #d4edda;'>Reference:</td><td style='padding: 8px 12px; border-bottom: 1px solid #d4edda;'><b>{request.name}</b></td></tr>"
-                f"    <tr><td style='padding: 8px 12px; color: #666; width: 120px;'>Travel Dates:</td><td style='padding: 8px 12px;'><b>{request.date_start} to {request.date_end}</b></td></tr>"
-                f"  </table>"
-                f"  <p style='margin-top: 15px;'>Further processing can now be initiated.</p>"
+                f"<div style='font-family: Calibri, Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background-color: #ffffff;'>"
+                f"  <div style='background-color: #28a745; color: #ffffff; padding: 15px; border-radius: 6px 6px 0 0; text-align: center;'>"
+                f"    <h3 style='margin: 0; font-size: 18px;'>Travel Request Approved</h3>"
+                f"  </div>"
+                f"  <div style='padding: 20px; color: #444; line-height: 1.6;'>"
+                f"    <p>The travel request for <b>{request.employee_id.name}</b> has been successfully approved.</p>"
+                f"    <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'/>"
+                f"    <table style='width: 100%; font-size: 14px;'>"
+                f"      <tr><td style='color: #888; width: 140px; padding: 5px 0;'>Reference:</td><td style='color: #111; font-weight: bold;'>{request.name}</td></tr>"
+                f"      <tr><td style='color: #888; padding: 5px 0;'>Travel Dates:</td><td style='color: #111;'>{request.date_start} to {request.date_end}</td></tr>"
+                f"    </table>"
+                f"    <p style='margin-top: 25px; font-size: 14px;'>Further processing (Ticketing/Finance) can now be initiated as per regular workflow.</p>"
+                f"  </div>"
+                f"  <div style='background-color: #f9f9f9; padding: 10px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #999;'>"
+                f"    This is an automated notification from AESL Portal."
+                f"  </div>"
                 f"</div>"
             )
             

@@ -5,11 +5,18 @@
               customize_show="True">
         <xpath expr="//div[@id='portal_common_category']" position="after"  >
             <div class="o_portal_category row g-2 mt-3" id="portal_custom_category">
-                 <t t-call="portal.portal_docs_entry">
+                <t t-call="portal.portal_docs_entry">
                     <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/icons8-performance-64.png'"/>
                     <t t-set="title">Appraisal</t>
                     <t t-set="text">Manage your Appraisal</t>
                     <t t-set="url" t-value="'/my/appraisal'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-assets-64.png'"/>
+                    <t t-set="title">Approval</t>
+                    <t t-set="text">Manage your Travel Requests</t>
+                    <t t-set="url" t-value="'/my/travel'"/>
                     <t t-set="config_card" t-value="True"/>
                 </t>
             </div>
