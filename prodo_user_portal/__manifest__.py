@@ -9,11 +9,10 @@
     "summary": "User Portal",
     "description": """User Portal""",
     "version": "18.0",
-    "depends": ['portal', 'prodo_appraisal_ext', 'approval_ext'],
+    "depends": ['portal','prodo_appraisal_ext'],
     "data": [
         'views/appraisal_template.xml',
         'views/portal_menus.xml',
-        'views/approval_template.xml',
     ],
     "assets": {
         "web.assets_frontend": [

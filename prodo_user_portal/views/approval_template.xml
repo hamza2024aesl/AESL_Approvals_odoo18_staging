@@ -140,7 +140,7 @@
                                     <label class="form-check-label" for="mode_bus">Bus</label>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="fw-bold d-block">Travel Request Type</label>
                                 <div class="form-check form-check-inline mt-2">
                                     <input class="form-check-input" type="radio" name="travel_request_type" id="type_domestic" value="domestic" required="1"/>
@@ -149,6 +149,66 @@
                                 <div class="form-check form-check-inline mt-2">
                                     <input class="form-check-input" type="radio" name="travel_request_type" id="type_international" value="international"/>
                                     <label class="form-check-label" for="type_international">International</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold d-block">Tickets Required?</label>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="tickets_required" id="tickets_yes" value="yes" required="1"/>
+                                    <label class="form-check-label" for="tickets_yes">Yes</label>
+                                </div>
+                                <div class="form-check form-check-inline mt-2">
+                                    <input class="form-check-input" type="radio" name="tickets_required" id="tickets_no" value="no" checked="1"/>
+                                    <label class="form-check-label" for="tickets_no">No</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Traveling Schedule -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered text-center align-middle" style="min-width: 800px;">
+                                        <thead style="background-color: #8D0000; color: white;">
+                                            <tr>
+                                                <th colspan="7" class="py-2">Traveling Schedule (give date &amp; time of departure / arrival)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light" style="width: 180px;">Departure From * :</td>
+                                                <t t-foreach="range(1, 7)" t-as="i">
+                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{i}}" 
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                               t-att-required="i == 1"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival (Destination) * :</td>
+                                                <t t-foreach="range(1, 7)" t-as="i">
+                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{i}}" 
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                               t-att-required="i == 1"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival Date * :</td>
+                                                <t t-foreach="range(1, 7)" t-as="i">
+                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{i}}" 
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                               t-att-required="i == 1"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival Time * :</td>
+                                                <t t-foreach="range(1, 7)" t-as="i">
+                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{i}}" 
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                               t-att-required="i == 1"/></td>
+                                                </t>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -294,7 +354,7 @@
                                     </div>
                                 </t>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="fw-bold d-block">Travel Request Type</label>
                                 <t t-foreach="request_rec.fields_get(['travel_request_type'])['travel_request_type']['selection']" t-as="type_">
                                     <div class="form-check form-check-inline mt-2">
@@ -305,6 +365,81 @@
                                         <label class="form-check-label" t-attf-for="type_{{type_[0]}}"><t t-esc="type_[1]"/></label>
                                     </div>
                                 </t>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold d-block">Tickets Required?</label>
+                                <t t-set="tickets_selection" t-value="[('yes', 'Yes'), ('no', 'No')]"/>
+                                <t t-foreach="tickets_selection" t-as="t_sel">
+                                    <div class="form-check form-check-inline mt-2">
+                                        <input class="form-check-input" type="radio" name="tickets_required" 
+                                               t-attf-id="tickets_{{t_sel[0]}}" t-att-value="t_sel[0]" 
+                                               t-att-checked="request_rec.tickets_required == t_sel[0]"
+                                               t-att-disabled="not is_editable"/>
+                                        <label class="form-check-label" t-attf-for="tickets_{{t_sel[0]}}"><t t-esc="t_sel[1]"/></label>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Traveling Schedule -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="table-responsive">
+                                    <t t-set="schedule_lines" t-value="request_rec.travel_schedule_ids"/>
+                                    <table class="table table-bordered text-center align-middle" style="min-width: 800px;">
+                                        <thead style="background-color: #8D0000; color: white;">
+                                            <tr>
+                                                <th colspan="7" class="py-2">Traveling Schedule (give date &amp; time of departure / arrival)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light" style="width: 180px;">Departure From * :</td>
+                                                <t t-foreach="range(0, 6)" t-as="idx">
+                                                    <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
+                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{idx+1}}" 
+                                                               t-att-value="line.departure_from if line else ''"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
+                                                               t-att-readonly="not is_editable"
+                                                               t-att-required="is_editable and idx == 0"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival (Destination) * :</td>
+                                                <t t-foreach="range(0, 6)" t-as="idx">
+                                                    <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
+                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{idx+1}}" 
+                                                               t-att-value="line.arrival_destination if line else ''"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
+                                                               t-att-readonly="not is_editable"
+                                                               t-att-required="is_editable and idx == 0"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival Date * :</td>
+                                                <t t-foreach="range(0, 6)" t-as="idx">
+                                                    <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
+                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{idx+1}}" 
+                                                               t-att-value="line.arrival_date if line else ''"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
+                                                               t-att-readonly="not is_editable"
+                                                               t-att-required="is_editable and idx == 0"/></td>
+                                                </t>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-start bg-light">Arrival Time * :</td>
+                                                <t t-foreach="range(0, 6)" t-as="idx">
+                                                    <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
+                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{idx+1}}" 
+                                                               t-att-value="line.arrival_time if line else ''"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
+                                                               t-att-readonly="not is_editable"
+                                                               t-att-required="is_editable and idx == 0"/></td>
+                                                </t>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
 

@@ -30,6 +30,13 @@ class ApprovalRequest(models.Model):
         ('domestic', 'Domestic'),
         ('international', 'International')
     ], string='Travel Request Type')
+    
+    tickets_required = fields.Selection([
+        ('yes', 'Yes'),
+        ('no', 'No')
+    ], string='Tickets Required?', required=True, default='no')
+
+    travel_schedule_ids = fields.One2many('approval.travel.schedule', 'request_id', string='Traveling Schedule')
 
     # Administration Section
     admin_remarks = fields.Text(string='Admin Remarks')
@@ -53,6 +60,13 @@ class ApprovalRequest(models.Model):
         2. Assign the specific Approver(s) from the configuration.
         3. Only these approvers will have Approve/Refuse access.
         """
+        # Auto-fill the standard 'location' field so Odoo's built-in
+        # required-field validation never blocks submission when 'location'
+        # is hidden in our custom form but marked required in the category.
+        for rec in self:
+            if not rec.location and rec.employee_id and rec.employee_id.work_location_id:
+                rec.location = rec.employee_id.work_location_id.name
+
         res = super(ApprovalRequest, self).action_confirm()
 
         for rec in self:
@@ -105,11 +119,17 @@ class ApprovalRequest(models.Model):
         if approver_partners:
             subject = _("Approval Required: %s") % request.name
             body = _(
-                "<p>Hello,</p>"
-                "<p>A new travel request <b>%s</b> has been submitted by <b>%s</b> and requires your approval.</p>"
-                "<p><b>Region:</b> %s<br/>"
-                "<b>Department:</b> %s</p>"
-                "<p>Please review and take action.</p>"
+                "<div style='font-family: Arial, sans-serif; font-size: 13px; color: #333;'>"
+                "  <h4 style='margin: 0; color: #714B67; font-size: 15px;'>Travel Request Approval Required</h4>"
+                "  <p style='margin: 10px 0;'>The following travel request has been submitted and requires your approval:</p>"
+                "  <table style='width: 100%%; border-collapse: collapse; margin: 10px 0; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #eee;'>"
+                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Request Reference:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
+                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Submitted By:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
+                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #eee;'>Region:</td><td style='padding: 8px 12px; border-bottom: 1px solid #eee;'><b>%s</b></td></tr>"
+                "    <tr><td style='padding: 8px 12px; color: #666; width: 120px;'>Department:</td><td style='padding: 8px 12px;'><b>%s</b></td></tr>"
+                "  </table>"
+                "  <p style='margin-top: 15px;'>Please log in to the portal and take necessary action.</p>"
+                "</div>"
             ) % (
                 request.name,
                 request.employee_id.name,
@@ -174,8 +194,17 @@ class ApprovalRequest(models.Model):
         
         if recipients:
             subject = f"Approved: {request.name} - {request.employee_id.name}"
-            body = f"<p>The travel request for <b>{request.employee_id.name}</b> has been approved.</p>"
-            body += f"<p>Dates: {request.date_start} to {request.date_end}</p>"
+            body = (
+                f"<div style='font-family: Arial, sans-serif; font-size: 13px; color: #333;'>"
+                f"  <h4 style='margin: 0; color: #28a745; font-size: 15px;'>Travel Request Approved</h4>"
+                f"  <p style='margin: 10px 0;'>The travel request for <b>{request.employee_id.name}</b> has been successfully approved.</p>"
+                f"  <table style='width: 100%; border-collapse: collapse; margin: 10px 0; background-color: #f8fff9; border-radius: 4px; border: 1px solid #d4edda;'>"
+                f"    <tr><td style='padding: 8px 12px; color: #666; width: 120px; border-bottom: 1px solid #d4edda;'>Reference:</td><td style='padding: 8px 12px; border-bottom: 1px solid #d4edda;'><b>{request.name}</b></td></tr>"
+                f"    <tr><td style='padding: 8px 12px; color: #666; width: 120px;'>Travel Dates:</td><td style='padding: 8px 12px;'><b>{request.date_start} to {request.date_end}</b></td></tr>"
+                f"  </table>"
+                f"  <p style='margin-top: 15px;'>Further processing can now be initiated.</p>"
+                f"</div>"
+            )
             
             request.message_post(
                 body=body,
@@ -183,3 +212,14 @@ class ApprovalRequest(models.Model):
                 partner_ids=recipients.ids,
                 subtype_xmlid='mail.mt_comment'
             )
+
+
+class ApprovalTravelSchedule(models.Model):
+    _name = 'approval.travel.schedule'
+    _description = 'Travel Schedule'
+
+    request_id = fields.Many2one('approval.request', string='Request', ondelete='cascade')
+    departure_from = fields.Char(string='Departure From', required=True)
+    arrival_destination = fields.Char(string='Arrival (Destination)', required=True)
+    arrival_date = fields.Date(string='Arrival Date', required=True)
+    arrival_time = fields.Char(string='Arrival Time', required=True)
