@@ -417,6 +417,57 @@ class ApprovalPortal(CustomerPortal):
             
         return request.redirect("/my/travel")
 
+    @http.route("/my/travel/update", type="http", auth="user", website=True, methods=["POST"])
+    def portal_travel_request_update(self, **post):
+        request_id = int(post.get('request_id'))
+        travel_req = request.env['approval.request'].sudo().browse(request_id)
+        if not travel_req.exists():
+            return request.redirect("/my/travel")
+
+        try:
+            raw_start = post.get('date_start')
+            raw_end = post.get('date_end')
+            date_start = raw_start.replace('T', ' ') if raw_start else False
+            date_end = raw_end.replace('T', ' ') if raw_end else False
+
+            vals = {
+                'category_id': int(post.get('category_id')),
+                'date_start': date_start,
+                'date_end': date_end,
+                'travel_mode': post.get('travel_mode'),
+                'travel_request_type': post.get('travel_request_type'),
+                'tickets_required': post.get('tickets_required'),
+                'admin_remarks': post.get('admin_remarks'),
+            }
+            travel_req.write(vals)
+
+            # Update schedule lines (Clear and Re-create for simplicity)
+            travel_req.travel_schedule_ids.unlink()
+            for i in range(1, 7):
+                dept = post.get(f'schedule_departure_from_{i}')
+                arr = post.get(f'schedule_arrival_destination_{i}')
+                date = post.get(f'schedule_arrival_date_{i}')
+                time = post.get(f'schedule_arrival_time_{i}')
+                
+                if dept and arr and date and time:
+                    request.env['approval.travel.schedule'].sudo().create({
+                        'request_id': travel_req.id,
+                        'departure_from': dept,
+                        'arrival_destination': arr,
+                        'arrival_date': date,
+                        'arrival_time': time,
+                    })
+            
+            # Re-confirm to trigger workflow again (reset status to pending)
+            travel_req.action_confirm()
+
+        except Exception as e:
+            request.session['travel_error'] = str(e)
+            return request.redirect(f"/my/travel/view/{request_id}")
+
+        return request.redirect(f"/my/travel/view/{request_id}")
+
+
     @http.route("/my/travel/view/<int:request_id>", type="http", auth="user", website=True)
     def portal_travel_request_detail(self, request_id):
         request_rec = request.env["approval.request"].sudo().browse(request_id)
@@ -428,7 +479,8 @@ class ApprovalPortal(CustomerPortal):
         
         is_owner = request_rec.request_owner_id == user
         is_approver = user.id in request_rec.approver_ids.mapped('user_id.id')
-        is_editable = is_owner and request_rec.request_status == 'new'
+        # Refused requests should also be editable so they can be fixed and re-submitted
+        is_editable = is_owner and request_rec.request_status in ['new', 'refused']
         
         categories = request.env['approval.category'].sudo().search([])
         

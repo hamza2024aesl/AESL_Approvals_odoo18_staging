@@ -127,9 +127,13 @@ class ApprovalRequest(models.Model):
             )
 
     def _create_travel_time_off(self, request):
-        """ Create a pending time off record linked to this travel request. """
+        """ Create or update a pending time off record linked to this travel request. """
         if request.date_start and request.date_end:
-            leave_type = self.env['hr.leave.type'].search([], limit=1)
+            # Search for 'Official Visit (AESL)' leave type specifically
+            leave_type = self.env['hr.leave.type'].sudo().search([('name', 'ilike', 'Official Visit (AESL)')], limit=1)
+            if not leave_type:
+                leave_type = self.env['hr.leave.type'].sudo().search([], limit=1)
+            
             if leave_type:
                 leave_vals = {
                     'name': f"Travel Approval: {request.name}",
@@ -141,8 +145,21 @@ class ApprovalRequest(models.Model):
                     'date_to': request.date_end,
                     'number_of_days': (request.date_end - request.date_start).days + 1,
                 }
-                leave = self.env['hr.leave'].sudo().create(leave_vals)
-                request.sudo().write({'time_off_id': leave.id})
+                
+                if request.time_off_id:
+                    # Update existing record if it was refused or still pending
+                    request.time_off_id.sudo().write(leave_vals)
+                    leave = request.time_off_id
+                else:
+                    leave = self.env['hr.leave'].sudo().create(leave_vals)
+                    request.sudo().write({'time_off_id': leave.id})
+                
+                # Ensure it's in 'To Approve' (confirm) state, not draft or approved yet
+                if leave.state == 'draft':
+                    leave.sudo().action_confirm()
+                elif leave.state == 'refuse':
+                    leave.sudo().action_draft()
+                    leave.sudo().action_confirm()
 
     def action_approve(self, approver=None):
         """ When approved, approve Time Off and send emails to Finance & HR. """
