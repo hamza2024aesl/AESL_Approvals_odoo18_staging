@@ -478,7 +478,8 @@ class ApprovalPortal(CustomerPortal):
         employee = request_rec.employee_id
         
         is_owner = request_rec.request_owner_id == user
-        is_approver = user.id in request_rec.approver_ids.mapped('user_id.id')
+        # Buttons should only show if the current user is an approver AND their status is 'pending' (To Approve)
+        is_approver = request_rec.user_status == 'pending'
         # Refused requests should also be editable so they can be fixed and re-submitted
         is_editable = is_owner and request_rec.request_status in ['new', 'refused']
         
