@@ -35,7 +35,7 @@
 
                     <field name="first_approver_line_ids" context="{'default_line_type': 'first_approver'}">
                         <list editable="bottom">
-                            <field name="work_location_id" string="Region"/>
+                            <field name="work_location_ids" widget="many2many_tags" string="Regions"/>
                             <field name="department_id" string="Department"/>
                             <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
                             <field name="line_type" column_invisible="True"/>
@@ -48,7 +48,7 @@
                            context="{'default_line_type': 'second_approver'}" 
                            invisible="config_type != 'international'">
                         <list editable="bottom">
-                            <field name="work_location_id" string="Region"/>
+                            <field name="work_location_ids" widget="many2many_tags" string="Regions"/>
                             <field name="department_id" string="Department"/>
                             <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
                             <field name="line_type" column_invisible="True"/>
@@ -58,7 +58,7 @@
                     <separator string="Finance &amp; Admin" class="mt-4 mb-2"/>
                     <field name="finance_line_ids" context="{'default_line_type': 'finance'}">
                         <list editable="bottom">
-                            <field name="work_location_id" string="Region"/>
+                            <field name="work_location_ids" widget="many2many_tags" string="Regions"/>
                             <field name="department_id" string="Department"/>
                             <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
                             <field name="line_type" column_invisible="True"/>
@@ -68,7 +68,7 @@
                     <separator string="HR" class="mt-4 mb-2"/>
                     <field name="hr_line_ids" context="{'default_line_type': 'hr'}">
                         <list editable="bottom">
-                            <field name="work_location_id" string="Region"/>
+                            <field name="work_location_ids" widget="many2many_tags" string="Regions"/>
                             <field name="department_id" string="Department"/>
                             <field name="employee_id" string="Approver" options="{'no_create': True, 'no_open': True}"/>
                             <field name="line_type" column_invisible="True"/>

@@ -365,7 +365,7 @@ class ApprovalPortal(CustomerPortal):
     def portal_travel_request_save(self, **post):
         user = request.env.user
         employee = user.employee_id
-        
+
         try:
             # Prepare values, converting datetime-local format (T) to Odoo format
             raw_start = post.get('date_start')
@@ -516,3 +516,24 @@ class ApprovalPortal(CustomerPortal):
             if approver:
                 request_rec.action_refuse(approver=approver[0])
         return request.redirect(f"/my/travel/view/{request_id}?message=refused")
+
+    @http.route("/my/travel/bulk_action", type="json", auth="user", methods=["POST"])
+    def portal_travel_request_bulk_action(self, request_ids, action):
+        user = request.env.user
+        request_objs = request.env["approval.request"].sudo().browse(request_ids)
+        
+        count = 0
+        for req in request_objs:
+            # Only process if the user is a pending approver for this request
+            approver = req.approver_ids.filtered(lambda a: a.user_id == user and a.status == 'pending')
+            if approver:
+                try:
+                    if action == 'approve':
+                        req.action_approve(approver=approver[0])
+                    elif action == 'refuse':
+                        req.action_refuse(approver=approver[0])
+                    count += 1
+                except Exception:
+                    continue
+        
+        return {"success": True, "count": count}

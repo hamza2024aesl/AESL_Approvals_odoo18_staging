@@ -28,6 +28,6 @@ class ApprovalConfigLine(models.Model):
         ('hr', 'HR')
     ], string='Line Type', required=True)
     
-    work_location_id = fields.Many2one('hr.work.location', string='Region')
+    work_location_ids = fields.Many2many('hr.work.location', string='Regions')
     department_id = fields.Many2one('hr.department', string='Department')
     employee_id = fields.Many2one('hr.employee', string='Approver Employee')

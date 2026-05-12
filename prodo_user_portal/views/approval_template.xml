@@ -3,17 +3,32 @@
     <template id="travel_request_list_view_portal">
         <t t-call="portal.portal_layout" t-if="page_name == 'travel_request_list_page'">
             <t t-set="no_breadcrumbs" t-value="1"/>
-            <div class="d-flex align-items-center my-3">
-                <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
-                    <i class="oi oi-chevron-left"/>
-                </a>
-                <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
-                <h3 class="my-0">Travel Requests</h3>
+            <div class="d-flex align-items-center my-3 justify-content-between">
+                <div class="d-flex align-items-center">
+                    <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
+                        <i class="oi oi-chevron-left"/>
+                    </a>
+                    <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
+                    <h3 class="my-0">Travel Requests</h3>
+                </div>
+                
+                <!-- Bulk Actions -->
+                <div id="bulk_actions_container" class="d-none animate__animated animate__fadeIn">
+                    <button id="btn_bulk_approve" class="btn btn-success me-2">
+                        <i class="fa fa-check me-1"/> Bulk Approve (<span class="selected_count">0</span>)
+                    </button>
+                    <button id="btn_bulk_refuse" class="btn btn-danger">
+                        <i class="fa fa-times me-1"/> Bulk Refuse (<span class="selected_count">0</span>)
+                    </button>
+                </div>
             </div>
 
             <t t-call="portal.portal_table">
                 <thead>
                     <tr class="active">
+                        <th class="text-center" style="width: 40px;">
+                            <input type="checkbox" id="select_all_requests" class="form-check-input"/>
+                        </th>
                         <th>Description</th>
                         <th>Requester</th>
                         <th>Category</th>
@@ -26,7 +41,15 @@
                 </thead>
                 <tbody>
                     <t t-foreach="requests" t-as="req">
-                        <tr>
+                        <tr t-att-data-id="req.id">
+                            <td class="text-center">
+                                <t t-if="req.user_status == 'pending'">
+                                    <input type="checkbox" class="request_checkbox form-check-input" t-att-value="req.id"/>
+                                </t>
+                                <t t-else="">
+                                    <input type="checkbox" class="form-check-input" disabled="1"/>
+                                </t>
+                            </td>
                             <td><t t-esc="req.name"/></td>
                             <td><t t-esc="req.employee_id.name"/></td>
                             <td><t t-esc="req.category_id.name"/></td>
@@ -48,6 +71,86 @@
             <t t-if="not requests">
                 <p class="alert alert-warning">There are currently no Travel Requests.</p>
             </t>
+
+            <!-- Inline Script for Bulk Actions -->
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    const selectAll = document.getElementById('select_all_requests');
+                    const checkboxes = document.querySelectorAll('.request_checkbox');
+                    const bulkContainer = document.getElementById('bulk_actions_container');
+                    const countSpans = document.querySelectorAll('.selected_count');
+                    const btnApprove = document.getElementById('btn_bulk_approve');
+                    const btnRefuse = document.getElementById('btn_bulk_refuse');
+
+                    function updateUI() {
+                        const selected = document.querySelectorAll('.request_checkbox:checked');
+                        const count = selected.length;
+                        
+                        if (count > 0) {
+                            bulkContainer.classList.remove('d-none');
+                            countSpans.forEach(s => s.innerText = count);
+                        } else {
+                            bulkContainer.classList.add('d-none');
+                        }
+                    }
+
+                    if (selectAll) {
+                        selectAll.addEventListener('change', function() {
+                            checkboxes.forEach(cb => {
+                                if (!cb.disabled) cb.checked = selectAll.checked;
+                            });
+                            updateUI();
+                        });
+                    }
+
+                    checkboxes.forEach(cb => {
+                        cb.addEventListener('change', updateUI);
+                    });
+
+                    async function performBulkAction(action) {
+                        const selectedIds = Array.from(document.querySelectorAll('.request_checkbox:checked')).map(cb => parseInt(cb.value));
+                        if (selectedIds.length === 0) return;
+
+                        if (!confirm('Are you sure you want to ' + action + ' ' + selectedIds.length + ' request(s)?')) return;
+
+                        // Disable buttons
+                        btnApprove.disabled = true;
+                        btnRefuse.disabled = true;
+
+                        try {
+                            const response = await fetch('/my/travel/bulk_action', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': odoo.csrf_token,
+                                },
+                                body: JSON.stringify({
+                                    jsonrpc: "2.0",
+                                    params: {
+                                        request_ids: selectedIds,
+                                        action: action
+                                    }
+                                })
+                            });
+                            const result = await response.json();
+                            if (result.result &amp;&amp; result.result.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Error processing requests');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert('An unexpected error occurred');
+                        } finally {
+                            btnApprove.disabled = false;
+                            btnRefuse.disabled = false;
+                        }
+                    }
+
+                    if (btnApprove) btnApprove.addEventListener('click', () => performBulkAction('approve'));
+                    if (btnRefuse) btnRefuse.addEventListener('click', () => performBulkAction('refuse'));
+                });
+            </script>
         </t>
     </template>
 

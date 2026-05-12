@@ -79,7 +79,7 @@ class ApprovalRequest(models.Model):
             # Find matching approver lines (1st and 2nd approvers)
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
-                ('work_location_id', '=', rec.employee_id.work_location_id.id),
+                ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
                 ('department_id', '=', rec.employee_id.department_id.id),
                 ('line_type', 'in', ['first_approver', 'second_approver']),
             ])
@@ -144,6 +144,7 @@ class ApprovalRequest(models.Model):
                     'date_from': request.date_start,
                     'date_to': request.date_end,
                     'number_of_days': (request.date_end - request.date_start).days + 1,
+                    'state': 'confirm', # Force 'To Approve' state on creation
                 }
                 
                 if request.time_off_id:
@@ -154,19 +155,35 @@ class ApprovalRequest(models.Model):
                     leave = self.env['hr.leave'].sudo().create(leave_vals)
                     request.sudo().write({'time_off_id': leave.id})
                 
-                # Ensure it's in 'To Approve' (confirm) state, not draft or approved yet
-                if leave.state == 'draft':
-                    leave.sudo().action_confirm()
-                elif leave.state == 'refuse':
-                    leave.sudo().action_draft()
-                    leave.sudo().action_confirm()
+                # Double check it stays in 'To Approve' (confirm) state
+                if leave.state in ['refuse', 'cancel']:
+                    leave.sudo().action_reset_confirm()
+                elif leave.state == 'draft':
+                    if hasattr(leave, 'action_confirm'):
+                        leave.sudo().action_confirm()
+                    else:
+                        leave.sudo().write({'state': 'confirm'})
+                elif leave.state == 'validate':
+                    # If it somehow auto-approved, move it back to confirm
+                    leave.sudo().write({'state': 'confirm'})
 
     def action_approve(self, approver=None):
         """ When approved, approve Time Off and send emails to Finance & HR. """
         res = super(ApprovalRequest, self).action_approve(approver=approver)
         for request in self:
             if request.request_status == 'approved' and request.time_off_id:
-                request.time_off_id.sudo().action_approve()
+                leave = request.time_off_id.sudo()
+                if leave.state in ['refuse', 'cancel']:
+                    leave.action_reset_confirm()
+                elif leave.state == 'draft':
+                    if hasattr(leave, 'action_confirm'):
+                        leave.action_confirm()
+                    else:
+                        leave.write({'state': 'confirm'})
+                
+                # Only approve if it's in the correct state to be approved
+                if leave.state == 'confirm':
+                    leave.action_approve()
                 self._send_workflow_notification_emails(request)
         return res
 
@@ -186,7 +203,7 @@ class ApprovalRequest(models.Model):
         config_lines = self.env['approval.config.line'].sudo().search([
             ('config_id.config_type', '=', config_type),
             ('line_type', 'in', ['finance', 'hr']),
-            ('work_location_id', '=', request.employee_id.work_location_id.id),
+            ('work_location_ids', 'in', request.employee_id.work_location_id.id),
             ('department_id', '=', request.employee_id.department_id.id),
         ])
         
