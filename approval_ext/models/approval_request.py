@@ -66,6 +66,8 @@ class ApprovalRequest(models.Model):
         for rec in self:
             if not rec.location and rec.employee_id and rec.employee_id.work_location_id:
                 rec.location = rec.employee_id.work_location_id.name
+            if rec.request_status == 'refused':
+                rec.sudo().write({'request_status': 'draft'})
 
         res = super(ApprovalRequest, self).action_confirm()
 
@@ -76,16 +78,16 @@ class ApprovalRequest(models.Model):
             # Determine Config Type
             c_type = rec.travel_request_type or 'domestic'
             
-            # Find matching approver lines (1st and 2nd approvers)
+            # Find matching approver lines (1st approver only)
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
                 ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
                 ('department_id', '=', rec.employee_id.department_id.id),
-                ('line_type', 'in', ['first_approver', 'second_approver']),
+                ('line_type', '=', 'first_approver'),
             ])
 
             if not approver_lines:
-                raise UserError(_("No approver found in %s configuration for Region '%s' and Department '%s'.") % (
+                raise UserError(_("No 1st approver found in %s configuration for Region '%s' and Department '%s'.") % (
                     dict(self._fields['travel_request_type'].selection).get(c_type, c_type).capitalize(),
                     rec.employee_id.work_location_id.name,
                     rec.employee_id.department_id.name
@@ -129,8 +131,8 @@ class ApprovalRequest(models.Model):
     def _create_travel_time_off(self, request):
         """ Create or update a pending time off record linked to this travel request. """
         if request.date_start and request.date_end:
-            # Search for 'Official Visit (AESL)' leave type specifically
-            leave_type = self.env['hr.leave.type'].sudo().search([('name', 'ilike', 'Official Visit (AESL)')], limit=1)
+            # Search for 'Official Visit' leave type
+            leave_type = self.env['hr.leave.type'].sudo().search([('name', 'ilike', 'Official Visit')], limit=1)
             if not leave_type:
                 leave_type = self.env['hr.leave.type'].sudo().search([], limit=1)
             
@@ -168,11 +170,48 @@ class ApprovalRequest(models.Model):
                     leave.sudo().write({'state': 'confirm'})
 
     def action_approve(self, approver=None):
-        """ When approved, approve Time Off and send emails to Finance & HR. """
-        res = super(ApprovalRequest, self).action_approve(approver=approver)
-        for request in self:
-            if request.request_status == 'approved' and request.time_off_id:
-                leave = request.time_off_id.sudo()
+        """ When approved, handle sequential approver for international, approve Time Off, and send notifications. """
+        for rec in self:
+            if rec.travel_request_type == 'international':
+                # Search for the second approver in the config
+                second_approver_line = self.env['approval.config.line'].sudo().search([
+                    ('config_id.config_type', '=', 'international'),
+                    ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
+                    ('department_id', '=', rec.employee_id.department_id.id),
+                    ('line_type', '=', 'second_approver'),
+                ], limit=1)
+                
+                if second_approver_line:
+                    # Check if second approver record is already created
+                    second_approver = rec.approver_ids.filtered(lambda a: a.user_id.id == second_approver_line.employee_id.user_id.id)
+                    if not second_approver:
+                        # 1st approver approved. Write status for current approver line.
+                        curr_approver = approver or rec.approver_ids.filtered(lambda a: a.user_id == self.env.user and a.status == 'pending')
+                        if curr_approver:
+                            curr_approver.sudo().write({'status': 'approved'})
+                        
+                        # Create the 2nd approver record
+                        self.env['approval.approver'].sudo().create({
+                            'request_id': rec.id,
+                            'user_id': second_approver_line.employee_id.user_id.id,
+                            'status': 'pending',
+                            'required': True
+                        })
+                        
+                        # Force request status back to 'pending'
+                        rec.sudo().write({'request_status': 'pending'})
+                        
+                        # Notify the 2nd approver
+                        rec._notify_matched_approvers(rec, second_approver_line)
+                        
+                        # Skip final approval logic for now
+                        continue
+            
+            # Default approve logic for domestic or for final international approval
+            super(ApprovalRequest, rec).action_approve(approver=approver)
+            
+            if rec.request_status == 'approved' and rec.time_off_id:
+                leave = rec.time_off_id.sudo()
                 if leave.state in ['refuse', 'cancel']:
                     leave.action_reset_confirm()
                 elif leave.state == 'draft':
@@ -181,11 +220,11 @@ class ApprovalRequest(models.Model):
                     else:
                         leave.write({'state': 'confirm'})
                 
-                # Only approve if it's in the correct state to be approved
                 if leave.state == 'confirm':
                     leave.action_approve()
-                self._send_workflow_notification_emails(request)
-        return res
+                
+                rec._send_workflow_notification_emails(rec)
+        return True
 
     def action_refuse(self, approver=None):
         """ When refused, refuse/unlink Time Off. """
@@ -211,25 +250,10 @@ class ApprovalRequest(models.Model):
         
         if recipients:
             subject = f"Approved: {request.name} - {request.employee_id.name}"
-            body = (
-                f"<div style='font-family: Calibri, Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background-color: #ffffff;'>"
-                f"  <div style='background-color: #28a745; color: #ffffff; padding: 15px; border-radius: 6px 6px 0 0; text-align: center;'>"
-                f"    <h3 style='margin: 0; font-size: 18px;'>Travel Request Approved</h3>"
-                f"  </div>"
-                f"  <div style='padding: 20px; color: #444; line-height: 1.6;'>"
-                f"    <p>The travel request for <b>{request.employee_id.name}</b> has been successfully approved.</p>"
-                f"    <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'/>"
-                f"    <table style='width: 100%; font-size: 14px;'>"
-                f"      <tr><td style='color: #888; width: 140px; padding: 5px 0;'>Reference:</td><td style='color: #111; font-weight: bold;'>{request.name}</td></tr>"
-                f"      <tr><td style='color: #888; padding: 5px 0;'>Travel Dates:</td><td style='color: #111;'>{request.date_start} to {request.date_end}</td></tr>"
-                f"    </table>"
-                f"    <p style='margin-top: 25px; font-size: 14px;'>Further processing (Ticketing/Finance) can now be initiated as per regular workflow.</p>"
-                f"  </div>"
-                f"  <div style='background-color: #f9f9f9; padding: 10px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; color: #999;'>"
-                f"    This is an automated notification from AESL Portal."
-                f"  </div>"
-                f"</div>"
-            )
+            if request.travel_request_type == 'international':
+                body = _("The request is approved by both approver.")
+            else:
+                body = _("The request is approved by approver.")
             
             request.message_post(
                 body=body,
@@ -237,6 +261,54 @@ class ApprovalRequest(models.Model):
                 partner_ids=recipients.ids,
                 subtype_xmlid='mail.mt_comment'
             )
+
+    def _send_admin_remarks_notification(self):
+        for request in self:
+            if request.travel_request_type != 'international':
+                continue
+            
+            # Find the configuration lines for 1st, 2nd approver and HR
+            config_lines = self.env['approval.config.line'].sudo().search([
+                ('config_id.config_type', '=', 'international'),
+                ('line_type', 'in', ['first_approver', 'second_approver', 'hr']),
+                ('work_location_ids', 'in', request.employee_id.work_location_id.id),
+                ('department_id', '=', request.employee_id.department_id.id),
+            ])
+            
+            # Get partners for approvers and HR
+            recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped('employee_id.user_id.partner_id')
+            
+            # Add the requester partner
+            requester_partner = request.employee_id.work_contact_id or request.request_owner_id.partner_id
+            
+            all_recipients = recipients + requester_partner
+            # Filter out duplicates and empty values
+            all_recipients = all_recipients.filtered(lambda r: r)
+            
+            if all_recipients:
+                subject = f"Admin Approved: {request.name} - {request.employee_id.name}"
+                body = _("admin also approved the request")
+                
+                request.message_post(
+                    body=body,
+                    subject=subject,
+                    partner_ids=all_recipients.ids,
+                    subtype_xmlid='mail.mt_comment'
+                )
+
+    def write(self, vals):
+        notified_requests = self.env['approval.request']
+        if 'admin_remarks' in vals and vals.get('admin_remarks'):
+            for rec in self:
+                if rec.request_status == 'approved' and rec.travel_request_type == 'international' and not rec.admin_remarks:
+                    notified_requests |= rec
+        
+        res = super(ApprovalRequest, self).write(vals)
+        
+        if notified_requests:
+            notified_requests._send_admin_remarks_notification()
+            
+        return res
 
 
 class ApprovalTravelSchedule(models.Model):
