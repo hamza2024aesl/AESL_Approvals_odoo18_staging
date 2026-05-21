@@ -437,7 +437,7 @@ class ApprovalPortal(CustomerPortal):
                 'travel_mode': post.get('travel_mode'),
                 'travel_request_type': post.get('travel_request_type'),
                 'tickets_required': post.get('tickets_required'),
-                'admin_remarks': post.get('admin_remarks'),
+                # admin_remarks yahan nahi — sirf Finance&Admin apni route se save karta hai
             }
             travel_req.write(vals)
 
@@ -482,9 +482,23 @@ class ApprovalPortal(CustomerPortal):
         is_approver = request_rec.user_status == 'pending'
         # Refused requests should also be editable so they can be fixed and re-submitted
         is_editable = is_owner and request_rec.request_status in ['new', 'refused']
-        
+
+        # Check if current user is Finance&Admin for this request (config se)
+        is_finance_admin = False
+        if request_rec.employee_id and request_rec.employee_id.work_location_id and request_rec.employee_id.department_id:
+            c_type = request_rec.travel_request_type or 'domestic'
+            finance_lines = request.env['approval.config.line'].sudo().search([
+                ('config_id.config_type', '=', c_type),
+                ('line_type', '=', 'finance'),
+                ('work_location_ids', 'in', request_rec.employee_id.work_location_id.id),
+                ('department_id', '=', request_rec.employee_id.department_id.id),
+            ])
+            finance_users = finance_lines.mapped('employee_id.user_id')
+            if user in finance_users:
+                is_finance_admin = True
+
         categories = request.env['approval.category'].sudo().search([])
-        
+
         vals = {
             "page_name": "travel_request_detail_page",
             "request_rec": request_rec,
@@ -495,6 +509,7 @@ class ApprovalPortal(CustomerPortal):
             "employee_job_id": employee.job_id.name if employee.job_id else "",
             "is_approver": is_approver,
             "is_editable": is_editable,
+            "is_finance_admin": is_finance_admin,
             "categories": categories,
         }
         return request.render("prodo_user_portal.travel_request_detail_template", vals)
@@ -516,6 +531,38 @@ class ApprovalPortal(CustomerPortal):
             if approver:
                 request_rec.action_refuse(approver=approver[0])
         return request.redirect(f"/my/travel/view/{request_id}?message=refused")
+
+    @http.route("/my/travel/save_remarks/<int:request_id>", type="http", auth="user", website=True, methods=["POST"])
+    def portal_travel_save_remarks(self, request_id, **post):
+        """ Finance&Admin sirf admin_remarks save karta hai — koi notification nahi jaati. """
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        if not request_rec.exists():
+            return request.redirect("/my/travel")
+
+        user = request.env.user
+
+        # Verify current user is Finance&Admin in config
+        is_finance_admin = False
+        if request_rec.employee_id and request_rec.employee_id.work_location_id and request_rec.employee_id.department_id:
+            c_type = request_rec.travel_request_type or 'domestic'
+            finance_lines = request.env['approval.config.line'].sudo().search([
+                ('config_id.config_type', '=', c_type),
+                ('line_type', '=', 'finance'),
+                ('work_location_ids', 'in', request_rec.employee_id.work_location_id.id),
+                ('department_id', '=', request_rec.employee_id.department_id.id),
+            ])
+            finance_users = finance_lines.mapped('employee_id.user_id')
+            if user in finance_users:
+                is_finance_admin = True
+
+        if not is_finance_admin:
+            return request.redirect(f"/my/travel/view/{request_id}")
+
+        # Silently save remarks — no notification triggered
+        admin_remarks = post.get('admin_remarks') or ''
+        request_rec.write({'admin_remarks': admin_remarks})
+
+        return request.redirect(f"/my/travel/view/{request_id}?message=remarks_saved")
 
     @http.route("/my/travel/bulk_action", type="json", auth="user", methods=["POST"])
     def portal_travel_request_bulk_action(self, request_ids, action):

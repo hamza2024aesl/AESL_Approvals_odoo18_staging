@@ -262,53 +262,9 @@ class ApprovalRequest(models.Model):
                 subtype_xmlid='mail.mt_comment'
             )
 
-    def _send_admin_remarks_notification(self):
-        for request in self:
-            if request.travel_request_type != 'international':
-                continue
-            
-            # Find the configuration lines for 1st, 2nd approver and HR
-            config_lines = self.env['approval.config.line'].sudo().search([
-                ('config_id.config_type', '=', 'international'),
-                ('line_type', 'in', ['first_approver', 'second_approver', 'hr']),
-                ('work_location_ids', 'in', request.employee_id.work_location_id.id),
-                ('department_id', '=', request.employee_id.department_id.id),
-            ])
-            
-            # Get partners for approvers and HR
-            recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped('employee_id.user_id.partner_id')
-            
-            # Add the requester partner
-            requester_partner = request.employee_id.work_contact_id or request.request_owner_id.partner_id
-            
-            all_recipients = recipients + requester_partner
-            # Filter out duplicates and empty values
-            all_recipients = all_recipients.filtered(lambda r: r)
-            
-            if all_recipients:
-                subject = f"Admin Approved: {request.name} - {request.employee_id.name}"
-                body = _("admin also approved the request")
-                
-                request.message_post(
-                    body=body,
-                    subject=subject,
-                    partner_ids=all_recipients.ids,
-                    subtype_xmlid='mail.mt_comment'
-                )
-
     def write(self, vals):
-        notified_requests = self.env['approval.request']
-        if 'admin_remarks' in vals and vals.get('admin_remarks'):
-            for rec in self:
-                if rec.request_status == 'approved' and rec.travel_request_type == 'international' and not rec.admin_remarks:
-                    notified_requests |= rec
-        
-        res = super(ApprovalRequest, self).write(vals)
-        
-        if notified_requests:
-            notified_requests._send_admin_remarks_notification()
-            
-        return res
+        """ Override write: admin_remarks save karo silently, koi notification nahi jati. """
+        return super(ApprovalRequest, self).write(vals)
 
 
 class ApprovalTravelSchedule(models.Model):
