@@ -68,10 +68,10 @@ class ApprovalRequest(models.Model):
                 rec.location = rec.employee_id.work_location_id.name
             if rec.request_status == 'refused':
                 rec.sudo().write({'request_status': 'draft'})
+            
+            # Unlink default approvers BEFORE super() to prevent default notifications to line managers
+            rec.sudo().approver_ids.unlink()
 
-        res = super(ApprovalRequest, self).action_confirm()
-
-        for rec in self:
             if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
                 continue
             
@@ -93,8 +93,7 @@ class ApprovalRequest(models.Model):
                     rec.employee_id.department_id.name
                 ))
 
-            # 1. Clear default approvers and set custom ones
-            rec.sudo().approver_ids.unlink()
+            # Set custom ones so super().action_confirm() sees them
             for line in approver_lines:
                 if line.employee_id.user_id:
                     self.env['approval.approver'].sudo().create({
@@ -103,6 +102,22 @@ class ApprovalRequest(models.Model):
                         'status': 'pending',
                         'required': True
                     })
+
+        # Call super with context to suppress standard approval notifications
+        ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
+        res = super(ApprovalRequest, self.with_context(ctx)).action_confirm()
+
+        for rec in self:
+            if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
+                continue
+            
+            c_type = rec.travel_request_type or 'domestic'
+            approver_lines = self.env['approval.config.line'].sudo().search([
+                ('config_id.config_type', '=', c_type),
+                ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
+                ('department_id', '=', rec.employee_id.department_id.id),
+                ('line_type', '=', 'first_approver'),
+            ])
 
             # 2. Force status to 'pending' to activate workflow for approvers
             rec.sudo().write({'request_status': 'pending'})
@@ -131,6 +146,9 @@ class ApprovalRequest(models.Model):
     def _create_travel_time_off(self, request):
         """ Create or update a pending time off record linked to this travel request. """
         if request.date_start and request.date_end:
+            # Context to prevent automatic notifications/activities to Line Manager
+            ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
+            
             # Search for 'Official Visit' leave type
             leave_type = self.env['hr.leave.type'].sudo().search([('name', 'ilike', 'Official Visit')], limit=1)
             if not leave_type:
@@ -151,23 +169,23 @@ class ApprovalRequest(models.Model):
                 
                 if request.time_off_id:
                     # Update existing record if it was refused or still pending
-                    request.time_off_id.sudo().write(leave_vals)
+                    request.time_off_id.sudo().with_context(ctx).write(leave_vals)
                     leave = request.time_off_id
                 else:
-                    leave = self.env['hr.leave'].sudo().create(leave_vals)
+                    leave = self.env['hr.leave'].sudo().with_context(ctx).create(leave_vals)
                     request.sudo().write({'time_off_id': leave.id})
                 
                 # Double check it stays in 'To Approve' (confirm) state
                 if leave.state in ['refuse', 'cancel']:
-                    leave.sudo().action_reset_confirm()
+                    leave.sudo().with_context(ctx).action_reset_confirm()
                 elif leave.state == 'draft':
                     if hasattr(leave, 'action_confirm'):
-                        leave.sudo().action_confirm()
+                        leave.sudo().with_context(ctx).action_confirm()
                     else:
-                        leave.sudo().write({'state': 'confirm'})
+                        leave.sudo().with_context(ctx).write({'state': 'confirm'})
                 elif leave.state == 'validate':
                     # If it somehow auto-approved, move it back to confirm
-                    leave.sudo().write({'state': 'confirm'})
+                    leave.sudo().with_context(ctx).write({'state': 'confirm'})
 
     def action_approve(self, approver=None):
         """ When approved, handle sequential approver for international, approve Time Off, and send notifications. """
@@ -211,7 +229,8 @@ class ApprovalRequest(models.Model):
             super(ApprovalRequest, rec).action_approve(approver=approver)
             
             if rec.request_status == 'approved' and rec.time_off_id:
-                leave = rec.time_off_id.sudo()
+                ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
+                leave = rec.time_off_id.sudo().with_context(ctx)
                 if leave.state in ['refuse', 'cancel']:
                     leave.action_reset_confirm()
                 elif leave.state == 'draft':
@@ -236,7 +255,7 @@ class ApprovalRequest(models.Model):
         return res
 
     def _send_workflow_notification_emails(self, request):
-        """ Logic to find recipients from approval.config and send notification. """
+        """ Send direct email to Finance & HR without creating Odoo Inbox notifications. """
         config_type = 'domestic' if request.travel_request_type == 'domestic' else 'international'
         
         config_lines = self.env['approval.config.line'].sudo().search([
@@ -249,18 +268,34 @@ class ApprovalRequest(models.Model):
         recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped('employee_id.user_id.partner_id')
         
         if recipients:
-            subject = f"Approved: {request.name} - {request.employee_id.name}"
-            if request.travel_request_type == 'international':
-                body = _("The request is approved by both approver.")
-            else:
-                body = _("The request is approved by approver.")
+            subject = f"Travel Request Approval: {request.name}"
+            # Formatting email content similar to the image provided
+            days = (request.date_end - request.date_start).days + 1 if request.date_start and request.date_end else 1
+            date_start_str = request.date_start.strftime('%d-%b-%Y') if request.date_start else ''
             
-            request.message_post(
-                body=body,
-                subject=subject,
-                partner_ids=recipients.ids,
-                subtype_xmlid='mail.mt_comment'
-            )
+            base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            travel_url = f"{base_url}/my/travel/view/{request.id}"
+            
+            for recipient in recipients:
+                if recipient.email:
+                    body_html = f"""
+                    <p>Dear {recipient.name},</p>
+                    <p>{request.employee_id.name} assigned you an activity Travel Request Approval on {request.employee_id.name} on {request.travel_request_type.capitalize()} Travel: {days} days to close for {date_start_str}</p>
+                    <br>
+                    <p>To view or process, you can use the following link:</p>
+                    <div style="margin-top: 10px; margin-bottom: 20px;">
+                        <a href="{travel_url}" style="background-color: #875A7B; padding: 8px 16px; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold;">View Travel Request</a>
+                    </div>
+                    <p>Thanks</p>
+                    """
+                    
+                    mail_values = {
+                        'subject': subject,
+                        'body_html': body_html,
+                        'email_to': recipient.email,
+                        'auto_delete': True,
+                    }
+                    self.env['mail.mail'].sudo().create(mail_values).send()
 
     def write(self, vals):
         """ Override write: admin_remarks save karo silently, koi notification nahi jati. """

@@ -494,7 +494,7 @@ class ApprovalPortal(CustomerPortal):
                 ('department_id', '=', request_rec.employee_id.department_id.id),
             ])
             finance_users = finance_lines.mapped('employee_id.user_id')
-            if user in finance_users:
+            if user in finance_users or user.has_group('base.group_system'):
                 is_finance_admin = True
 
         categories = request.env['approval.category'].sudo().search([])
@@ -552,7 +552,7 @@ class ApprovalPortal(CustomerPortal):
                 ('department_id', '=', request_rec.employee_id.department_id.id),
             ])
             finance_users = finance_lines.mapped('employee_id.user_id')
-            if user in finance_users:
+            if user in finance_users or user.has_group('base.group_system'):
                 is_finance_admin = True
 
         if not is_finance_admin:
