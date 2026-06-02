@@ -567,6 +567,45 @@
                             </ul>
                         </div>
 
+                        <!-- First Approver Section -->
+                        <t t-if="request_rec.first_approver_id">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2" style="color: #8D0000;">First Approver's Section</h5>
+                                </div>
+                                <div class="col-12 mb-2 d-flex border-bottom pb-1">
+                                    <div class="fw-bold" style="width: 250px;">Approver</div>
+                                    <div><t t-esc="request_rec.first_approver_id.name"/></div>
+                                </div>
+                                <div class="col-12 mb-2 d-flex border-bottom pb-1">
+                                    <div class="fw-bold" style="width: 250px;">Approver Remarks</div>
+                                    <div class="text-muted"><t t-if="request_rec.first_approver_date"><t t-esc="request_rec.first_approver_remarks or ''"/></t></div>
+                                </div>
+                                <div class="col-12 mt-3" t-if="request_rec.first_approver_date">
+                                    <b>Approved by <t t-esc="request_rec.first_approver_id.name"/> at <t t-esc="request_rec.first_approver_date.strftime('%d/%m/%Y %I:%M %p')"/></b>
+                                </div>
+                            </div>
+                        </t>
+
+                        <!-- Second Approver Section -->
+                        <t t-if="request_rec.travel_request_type == 'international' and request_rec.second_approver_id">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2" style="color: #8D0000;">Second Approver's Section</h5>
+                                </div>
+                                <div class="col-12 mb-2 d-flex border-bottom pb-1">
+                                    <div class="fw-bold" style="width: 250px;">Approver</div>
+                                    <div><t t-esc="request_rec.second_approver_id.name"/></div>
+                                </div>
+                                <div class="col-12 mb-2 d-flex border-bottom pb-1">
+                                    <div class="fw-bold" style="width: 250px;">Second Approver Remarks</div>
+                                    <div class="text-muted"><t t-if="request_rec.second_approver_date"><t t-esc="request_rec.second_approver_remarks or ''"/></t></div>
+                                </div>
+                                <div class="col-12 mt-3" t-if="request_rec.second_approver_date">
+                                    <b>Approved by <t t-esc="request_rec.second_approver_id.name"/> at <t t-esc="request_rec.second_approver_date.strftime('%d/%m/%Y %I:%M %p')"/></b>
+                                </div>
+                            </div>
+                        </t>
 
                         <div class="d-flex justify-content-end gap-2 mt-4" t-if="is_editable">
                             <a href="/my/travel" class="btn btn-secondary">Discard</a>

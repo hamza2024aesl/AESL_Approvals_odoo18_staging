@@ -41,6 +41,15 @@ class ApprovalRequest(models.Model):
     # Administration Section
     admin_remarks = fields.Text(string='Admin Remarks')
 
+    # Approver Sections
+    first_approver_id = fields.Many2one('res.users', string="First Approver", readonly=True)
+    first_approver_remarks = fields.Text(string="First Approver Remarks")
+    first_approver_date = fields.Datetime(string="First Approval Date", readonly=True)
+
+    second_approver_id = fields.Many2one('res.users', string="Second Approver", readonly=True)
+    second_approver_remarks = fields.Text(string="Second Approver Remarks")
+    second_approver_date = fields.Datetime(string="Second Approval Date", readonly=True)
+
     @api.onchange('request_owner_id')
     def _onchange_request_owner_id_set_employee(self):
         if self.request_owner_id:
@@ -102,6 +111,7 @@ class ApprovalRequest(models.Model):
                         'status': 'pending',
                         'required': True
                     })
+                    rec.sudo().write({'first_approver_id': line.employee_id.user_id.id})
 
         # Call super with context to suppress standard approval notifications
         ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
@@ -150,7 +160,7 @@ class ApprovalRequest(models.Model):
             ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
             
             # Search for 'Official Visit' leave type
-            leave_type = self.env['hr.leave.type'].sudo().search([('name', 'ilike', 'Official Visit')], limit=1)
+            leave_type = self.env['hr.leave.type'].sudo().search([('name', '=', 'Official Visit (AESL)')], limit=1)
             if not leave_type:
                 leave_type = self.env['hr.leave.type'].sudo().search([], limit=1)
             
@@ -190,6 +200,12 @@ class ApprovalRequest(models.Model):
     def action_approve(self, approver=None):
         """ When approved, handle sequential approver for international, approve Time Off, and send notifications. """
         for rec in self:
+            curr_approver = approver or rec.approver_ids.filtered(lambda a: a.user_id == self.env.user and a.status == 'pending')
+            if curr_approver and rec.first_approver_id and curr_approver.user_id.id == rec.first_approver_id.id:
+                rec.sudo().write({'first_approver_date': fields.Datetime.now()})
+            elif curr_approver and rec.second_approver_id and curr_approver.user_id.id == rec.second_approver_id.id:
+                rec.sudo().write({'second_approver_date': fields.Datetime.now()})
+
             if rec.travel_request_type == 'international':
                 # Search for the second approver in the config
                 second_approver_line = self.env['approval.config.line'].sudo().search([
@@ -215,6 +231,7 @@ class ApprovalRequest(models.Model):
                             'status': 'pending',
                             'required': True
                         })
+                        rec.sudo().write({'second_approver_id': second_approver_line.employee_id.user_id.id})
                         
                         # Force request status back to 'pending'
                         rec.sudo().write({'request_status': 'pending'})
