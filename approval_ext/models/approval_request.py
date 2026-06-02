@@ -135,7 +135,7 @@ class ApprovalRequest(models.Model):
         approver_partners = approver_lines.mapped('employee_id.user_id.partner_id')
         if approver_partners:
             subject = _("Approval Required: %s") % request.name
-            body = _("plz review the request and take action")
+            body = _("please review the request and take action")
             request.message_post(
                 body=body,
                 subject=subject,
