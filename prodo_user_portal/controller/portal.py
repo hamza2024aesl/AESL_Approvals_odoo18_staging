@@ -384,6 +384,7 @@ class ApprovalPortal(CustomerPortal):
                 'tickets_required': post.get('tickets_required'),
                 'admin_remarks': post.get('admin_remarks'),
                 'employee_id': employee.id,
+                'company_id': employee.company_id.id or user.company_id.id,
             }
             
             travel_req = request.env['approval.request'].sudo().create(vals)

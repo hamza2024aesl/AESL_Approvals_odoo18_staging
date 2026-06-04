@@ -90,7 +90,7 @@ class ApprovalRequest(models.Model):
             # Find matching approver lines (1st approver only)
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
-                ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
+                ('work_location_ids', '=', rec.employee_id.work_location_id.id),
                 ('department_id', '=', rec.employee_id.department_id.id),
                 ('line_type', '=', 'first_approver'),
             ])
@@ -124,7 +124,7 @@ class ApprovalRequest(models.Model):
             c_type = rec.travel_request_type or 'domestic'
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
-                ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
+                ('work_location_ids', '=', rec.employee_id.work_location_id.id),
                 ('department_id', '=', rec.employee_id.department_id.id),
                 ('line_type', '=', 'first_approver'),
             ])
@@ -159,10 +159,16 @@ class ApprovalRequest(models.Model):
             # Context to prevent automatic notifications/activities to Line Manager
             ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
             
-            # Search for 'Official Visit' leave type
-            leave_type = self.env['hr.leave.type'].sudo().search([('name', '=', 'Official Visit (AESL)')], limit=1)
+            # Search for 'Official Visit' leave type dynamically based on employee's company
+            leave_type = self.env['hr.leave.type'].sudo().search([
+                ('name', 'ilike', 'Official Visit'),
+                '|', ('company_id', '=', False), ('company_id', '=', request.employee_id.company_id.id)
+            ], limit=1)
+            
             if not leave_type:
-                leave_type = self.env['hr.leave.type'].sudo().search([], limit=1)
+                leave_type = self.env['hr.leave.type'].sudo().search([
+                    '|', ('company_id', '=', False), ('company_id', '=', request.employee_id.company_id.id)
+                ], limit=1)
             
             if leave_type:
                 leave_vals = {
@@ -210,7 +216,7 @@ class ApprovalRequest(models.Model):
                 # Search for the second approver in the config
                 second_approver_line = self.env['approval.config.line'].sudo().search([
                     ('config_id.config_type', '=', 'international'),
-                    ('work_location_ids', 'in', rec.employee_id.work_location_id.id),
+                    ('work_location_ids', '=', rec.employee_id.work_location_id.id),
                     ('department_id', '=', rec.employee_id.department_id.id),
                     ('line_type', '=', 'second_approver'),
                 ], limit=1)
@@ -278,7 +284,7 @@ class ApprovalRequest(models.Model):
         config_lines = self.env['approval.config.line'].sudo().search([
             ('config_id.config_type', '=', config_type),
             ('line_type', 'in', ['finance', 'hr']),
-            ('work_location_ids', 'in', request.employee_id.work_location_id.id),
+            ('work_location_ids', '=', request.employee_id.work_location_id.id),
             ('department_id', '=', request.employee_id.department_id.id),
         ])
         
