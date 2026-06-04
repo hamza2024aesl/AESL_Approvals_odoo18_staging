@@ -469,8 +469,11 @@ class ApprovalPortal(CustomerPortal):
         return request.redirect(f"/my/travel/view/{request_id}")
 
 
-    @http.route("/my/travel/view/<int:request_id>", type="http", auth="user", website=True)
+    @http.route("/my/travel/view/<int:request_id>", type="http", auth="public", website=True)
     def portal_travel_request_detail(self, request_id):
+        if request.env.user._is_public():
+            return request.redirect('/web/login?redirect=/my/travel/view/%s' % request_id)
+            
         request_rec = request.env["approval.request"].sudo().browse(request_id)
         if not request_rec.exists():
             return request.redirect("/my/travel")

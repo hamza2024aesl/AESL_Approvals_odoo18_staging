@@ -297,6 +297,9 @@ class ApprovalRequest(models.Model):
             date_start_str = request.date_start.strftime('%d-%b-%Y') if request.date_start else ''
             
             base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+                base_url = 'http://odoo.aesl.com.pk:8018'
+            
             travel_url = f"{base_url}/my/travel/view/{request.id}"
             
             for recipient in recipients:
