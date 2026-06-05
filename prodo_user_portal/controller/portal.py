@@ -330,16 +330,32 @@ class ApprovalPortal(CustomerPortal):
         user = request.env.user
         request_obj = request.env["approval.request"]
         
-        # User is either the owner or one of the approvers
+        # Find all requests the user is owner or approver of
         domain = ['|', ('request_owner_id', '=', user.id), ('approver_ids.user_id', '=', user.id)]
+        requests = request_obj.sudo().search(domain)
         
-        total = request_obj.sudo().search_count(domain)
-        # Simple search for now, pager can be added later if needed
-        requests = request_obj.sudo().search(domain, order="create_date desc")
+        # Now find requests where user is Finance
+        user_finance_lines = request.env['approval.config.line'].sudo().search([
+            ('employee_id.user_id', '=', user.id),
+            ('line_type', '=', 'finance')
+        ])
+        
+        finance_requests = request.env["approval.request"].sudo()
+        if user_finance_lines:
+            for line in user_finance_lines:
+                finance_domain = [
+                    ('travel_request_type', '=', line.config_id.config_type),
+                    ('employee_location_id', 'in', line.work_location_ids.ids),
+                    ('employee_department_id', '=', line.department_id.id)
+                ]
+                finance_requests |= request_obj.sudo().search(finance_domain)
+        
+        # Combine and sort all visible requests
+        all_requests = (requests | finance_requests).sorted(key=lambda r: r.create_date, reverse=True)
         
         vals = {
             "page_name": "travel_request_list_page",
-            "requests": requests,
+            "requests": all_requests,
         }
         return request.render("prodo_user_portal.travel_request_list_view_portal", vals)
 
