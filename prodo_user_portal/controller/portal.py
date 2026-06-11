@@ -326,15 +326,21 @@ class AppraisalPortal(CustomerPortal):
 class ApprovalPortal(CustomerPortal):
 
     @http.route(["/my/travel", "/my/travel/page/<int:page>"], type="http", auth="user", website=True)
-    def portal_my_travel_requests(self, page=1, **kw):
+    def portal_my_travel_requests(self, page=1, group_by=None, **kw):
         user = request.env.user
         request_obj = request.env["approval.request"]
         
-        # Find all requests the user is owner or approver of
-        domain = ['|', ('request_owner_id', '=', user.id), ('approver_ids.user_id', '=', user.id)]
-        requests = request_obj.sudo().search(domain)
+        # 1. My Own Requests
+        my_requests = request_obj.sudo().search([('request_owner_id', '=', user.id)], order="create_date desc")
         
-        # Now find requests where user is Finance
+        # 2. Requests to Approve (where user is approver AND it's pending for them)
+        approver_requests = request_obj.sudo().search([
+            ('approver_ids.user_id', '=', user.id),
+            ('user_status', '=', 'pending'),
+            ('request_owner_id', '!=', user.id)
+        ], order="create_date desc")
+        
+        # 3. Finance/Admin Tasks (only approved requests)
         user_finance_lines = request.env['approval.config.line'].sudo().search([
             ('employee_id.user_id', '=', user.id),
             ('line_type', '=', 'finance')
@@ -346,16 +352,34 @@ class ApprovalPortal(CustomerPortal):
                 finance_domain = [
                     ('travel_request_type', '=', line.config_id.config_type),
                     ('employee_location_id', 'in', line.work_location_ids.ids),
-                    ('employee_department_id', '=', line.department_id.id)
+                    ('employee_department_id', '=', line.department_id.id),
+                    ('request_status', '=', 'approved'),
+                    ('request_owner_id', '!=', user.id)
                 ]
                 finance_requests |= request_obj.sudo().search(finance_domain)
         
-        # Combine and sort all visible requests
-        all_requests = (requests | finance_requests).sorted(key=lambda r: r.create_date, reverse=True)
+        finance_requests = finance_requests.sorted(key=lambda r: r.create_date, reverse=True)
         
+        # Combine all for default list view
+        all_requests = (my_requests | approver_requests | finance_requests).sorted(key=lambda r: r.create_date, reverse=True)
+        
+        grouped_requests = {}
+        if group_by:
+            if group_by == 'my_requests':
+                if my_requests:
+                    grouped_requests['My Requests'] = my_requests
+            elif group_by == 'approved_requests':
+                if finance_requests:
+                    grouped_requests['Approved Requests'] = finance_requests
+            elif group_by == 'to_approve_requests':
+                if approver_requests:
+                    grouped_requests['Requests To Approve'] = approver_requests
+
         vals = {
             "page_name": "travel_request_list_page",
             "requests": all_requests,
+            "grouped_requests": grouped_requests,
+            "group_by": group_by,
         }
         return request.render("prodo_user_portal.travel_request_list_view_portal", vals)
 

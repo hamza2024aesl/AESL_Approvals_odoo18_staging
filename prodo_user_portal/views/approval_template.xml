@@ -8,18 +8,43 @@
                     <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
                         <i class="oi oi-chevron-left"/>
                     </a>
-                    <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
-                    <h3 class="my-0">Travel Requests</h3>
+                    <h3 class="my-0 mt-1">Travel Requests</h3>
+                    
+                    <div class="btn-group appraisal-groupby-container ms-3">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Group By
+                        </button>
+                        <div class="dropdown-menu p-3">
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-appraisal" type="checkbox"
+                                       value="my_requests" id="groupByMyReqs"/>
+                                <label class="form-check-label" for="groupByMyReqs">My Requests</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-appraisal" type="checkbox"
+                                       value="approved_requests" id="groupByApproved"/>
+                                <label class="form-check-label" for="groupByApproved">Approved Requests</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input group-by-checkbox-appraisal" type="checkbox"
+                                       value="to_approve_requests" id="groupByToApprove"/>
+                                <label class="form-check-label" for="groupByToApprove">Requests To Approve</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Bulk Actions -->
-                <div id="bulk_actions_container" class="d-none animate__animated animate__fadeIn">
-                    <button id="btn_bulk_approve" class="btn btn-success me-2">
-                        <i class="fa fa-check me-1"/> Bulk Approve (<span class="selected_count">0</span>)
-                    </button>
-                    <button id="btn_bulk_refuse" class="btn btn-danger">
-                        <i class="fa fa-times me-1"/> Bulk Refuse (<span class="selected_count">0</span>)
-                    </button>
+                <div class="d-flex align-items-center">
+                    <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
+                    <div id="bulk_actions_container" class="d-none animate__animated animate__fadeIn">
+                        <button id="btn_bulk_approve" class="btn btn-success me-2">
+                            <i class="fa fa-check me-1"/> Bulk Approve (<span class="selected_count">0</span>)
+                        </button>
+                        <button id="btn_bulk_refuse" class="btn btn-danger">
+                            <i class="fa fa-times me-1"/> Bulk Refuse (<span class="selected_count">0</span>)
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -40,36 +65,93 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <t t-foreach="requests" t-as="req">
-                        <tr t-att-data-id="req.id">
-                            <td class="text-center">
-                                <t t-if="req.user_status == 'pending'">
-                                    <input type="checkbox" class="request_checkbox form-check-input" t-att-value="req.id"/>
-                                </t>
-                                <t t-else="">
-                                    <input type="checkbox" class="form-check-input" disabled="1"/>
-                                </t>
-                            </td>
-                            <td><t t-esc="req.name"/></td>
-                            <td><t t-esc="req.employee_id.name"/></td>
-                            <td><t t-esc="req.category_id.name"/></td>
-                            <td><t t-esc="req.date_start"/></td>
-                            <td><t t-esc="req.date_end"/></td>
-                            <td><t t-esc="dict(req.fields_get(['travel_mode'])['travel_mode']['selection']).get(req.travel_mode, '')"/></td>
-                            <td>
-                                <span t-attf-class="badge rounded-pill {{ 'bg-success' if req.request_status == 'approved' else 'bg-danger' if req.request_status == 'refused' else 'bg-warning text-dark' }}">
-                                    <t t-esc="dict(req.fields_get(['request_status'])['request_status']['selection']).get(req.request_status, '')"/>
-                                </span>
-                            </td>
-                            <td>
-                                <a t-attf-href="/my/travel/view/{{req.id}}" class="btn btn-sm btn-outline-primary">View</a>
-                            </td>
-                        </tr>
+                    <t t-if="grouped_requests">
+                        <t t-foreach="grouped_requests.items()" t-as="group">
+                            <!-- Group Header -->
+                            <tr class="bg-light">
+                                <td colspan="9">
+                                    <button class="btn btn-link btn-sm appraisal-expand-btn"
+                                            t-att-data-group-id="group[0]">
+                                        <i class="fa fa-plus appraisal-expand-icon"/>
+                                    </button>
+                                    <strong>
+                                        <t t-if="group_by == 'my_requests'">
+                                            Role:
+                                            <t t-out="group[0]"/>
+                                        </t>
+                                        <t t-elif="group_by == 'approved_requests'">
+                                            Role:
+                                            <t t-out="group[0]"/>
+                                        </t>
+                                        <t t-elif="group_by == 'to_approve_requests'">
+                                            Role:
+                                            <t t-out="group[0]"/>
+                                        </t>
+                                    </strong>
+                                </td>
+                            </tr>
+                            <t t-foreach="group[1]" t-as="req">
+                                <tr t-attf-data-group-id="{{group[0]}}" class="appraisal-group-row" style="display: none;">
+                                    <td class="text-center">
+                                        <t t-if="req.user_status == 'pending'">
+                                            <input type="checkbox" class="request_checkbox form-check-input" t-att-value="req.id"/>
+                                        </t>
+                                        <t t-else="">
+                                            <input type="checkbox" class="form-check-input" disabled="1"/>
+                                        </t>
+                                    </td>
+                                    <td style="padding-left: 25px;"><t t-esc="req.name"/></td>
+                                    <td><t t-esc="req.employee_id.name"/></td>
+                                    <td><t t-esc="req.category_id.name"/></td>
+                                    <td><t t-esc="req.date_start"/></td>
+                                    <td><t t-esc="req.date_end"/></td>
+                                    <td><t t-esc="dict(req.fields_get(['travel_mode'])['travel_mode']['selection']).get(req.travel_mode, '')"/></td>
+                                    <td>
+                                        <span t-attf-class="badge rounded-pill {{ 'bg-success' if req.request_status == 'approved' else 'bg-danger' if req.request_status == 'refused' else 'bg-warning text-dark' }}">
+                                            <t t-esc="dict(req.fields_get(['request_status'])['request_status']['selection']).get(req.request_status, '')"/>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a t-attf-href="/my/travel/view/{{req.id}}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                            </t>
+                        </t>
+                    </t>
+                    
+                    <t t-if="not grouped_requests">
+                        <t t-foreach="requests" t-as="req">
+                            <tr t-att-data-id="req.id">
+                                <td class="text-center">
+                                    <t t-if="req.user_status == 'pending'">
+                                        <input type="checkbox" class="request_checkbox form-check-input" t-att-value="req.id"/>
+                                    </t>
+                                    <t t-else="">
+                                        <input type="checkbox" class="form-check-input" disabled="1"/>
+                                    </t>
+                                </td>
+                                <td><t t-esc="req.name"/></td>
+                                <td><t t-esc="req.employee_id.name"/></td>
+                                <td><t t-esc="req.category_id.name"/></td>
+                                <td><t t-esc="req.date_start"/></td>
+                                <td><t t-esc="req.date_end"/></td>
+                                <td><t t-esc="dict(req.fields_get(['travel_mode'])['travel_mode']['selection']).get(req.travel_mode, '')"/></td>
+                                <td>
+                                    <span t-attf-class="badge rounded-pill {{ 'bg-success' if req.request_status == 'approved' else 'bg-danger' if req.request_status == 'refused' else 'bg-warning text-dark' }}">
+                                        <t t-esc="dict(req.fields_get(['request_status'])['request_status']['selection']).get(req.request_status, '')"/>
+                                    </span>
+                                </td>
+                                <td>
+                                    <a t-attf-href="/my/travel/view/{{req.id}}" class="btn btn-sm btn-outline-primary">View</a>
+                                </td>
+                            </tr>
+                        </t>
                     </t>
                 </tbody>
             </t>
+
             <t t-if="not requests">
-                <p class="alert alert-warning">There are currently no Travel Requests.</p>
+                <p class="alert alert-warning mt-4">There are currently no Travel Requests.</p>
             </t>
 
             <!-- Inline Script for Bulk Actions -->
