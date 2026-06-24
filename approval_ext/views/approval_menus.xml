@@ -15,4 +15,20 @@
         parent="approvals.approvals_menu_config"
         action="action_approval_config_domestic"
         sequence="60"/>
+
+    <!-- Travel Expense Config Menu -->
+    <menuitem
+        id="menu_approval_expense_config"
+        name="Travel Expense Configuration"
+        parent="approvals.approvals_menu_config"
+        action="action_approval_expense_config"
+        sequence="70"/>
+
+    <!-- Travel Expenses Main Menu -->
+    <menuitem
+        id="menu_approval_travel_expense"
+        name="Travel Expenses"
+        parent="approvals.approvals_menu_root"
+        action="action_approval_travel_expense"
+        sequence="50"/>
 </odoo>

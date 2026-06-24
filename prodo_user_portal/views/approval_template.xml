@@ -470,6 +470,16 @@
                 <a t-attf-href="/my/travel/refuse/{{request_rec.id}}" class="btn btn-danger px-4">Refuse</a>
             </div>
 
+            <div class="d-flex justify-content-start gap-2 mb-3" t-if="request_rec.request_status == 'approved' and request_rec.request_owner_id == request.env.user">
+                <t t-set="existing_expense" t-value="request.env['approval.travel.expense'].sudo().search([('request_id', '=', request_rec.id)], limit=1)"/>
+                <t t-if="not existing_expense">
+                    <a t-attf-href="/my/travel/expense/new/{{request_rec.id}}" class="btn btn-primary px-4">Create Travel Expense</a>
+                </t>
+                <t t-else="">
+                    <a t-attf-href="/my/travel/expense/view/{{existing_expense.id}}" class="btn btn-info px-4">View Travel Expense</a>
+                </t>
+            </div>
+
             <div class="card shadow-sm mt-3">
                 <div class="card-body">
                     <form action="/my/travel/update" method="post">
@@ -717,6 +727,206 @@
                     </t>
                 </div>
             </div>
+        </t>
+    </template>
+    <template id="travel_expense_form_portal">
+        <t t-call="portal.portal_layout" t-if="page_name == 'travel_expense_page'">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a t-attf-href="/my/travel/view/{{request_rec.id}}" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1">Travel Expense Report</h3>
+            </div>
+
+            <t t-if="request.session.get('expense_error')">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <t t-esc="request.session.pop('expense_error')"/>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </t>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <form action="/my/travel/expense/save" method="post" id="expense_form">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="request_id" t-att-value="request_rec.id"/>
+                        <input type="hidden" name="total_expense" id="total_expense_input" value="0.0"/>
+
+                        <div class="bg-primary text-white p-2 text-center fw-bold mb-3">Allied Engineering &amp; Services Ltd.<br/>TRAVEL EXPENSE REPORT</div>
+                        <div class="bg-light p-2 mb-3 fw-bold border">Please enter the following details :</div>
+
+                        <!-- Header Info -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-2">
+                                <strong>Ref No :</strong> <span class="ms-2"><t t-esc="request_rec.name"/></span>
+                            </div>
+                            <div class="col-md-6 mb-2"></div>
+
+                            <div class="col-md-6 mb-2">
+                                <strong>Emp No. :</strong> <span class="ms-2"><t t-esc="employee_reg_no"/></span>
+                            </div>
+                            <div class="col-md-6 mb-2 d-flex align-items-center">
+                                <strong class="me-2" style="min-width:100px;">Date :</strong> 
+                                <input type="date" name="expense_date" class="form-control form-control-sm w-50" required="1" t-att-readonly="is_readonly"/>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <strong>Name :</strong> <span class="ms-2"><t t-esc="employee_name"/></span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>Designation :</strong> <span class="ms-2"><t t-esc="designation_name"/></span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <strong>Trip To :</strong> <span class="ms-2"><t t-esc="trip_to"/></span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>Department :</strong> <span class="ms-2"><t t-esc="department_name"/></span>
+                            </div>
+
+                            <div class="col-md-6 mb-2">
+                                <strong>Purpose of Trip :</strong> <span class="ms-2"><t t-esc="purpose_of_trip"/></span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>Period From :</strong> <span class="ms-2"><t t-esc="period_from"/></span>
+                                <strong class="ms-3">To :</strong> <span class="ms-2"><t t-esc="period_to"/></span>
+                            </div>
+                        </div>
+
+                        <!-- Items Table -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle text-center" style="font-size: 0.85rem;" id="expense_table">
+                                <thead class="bg-dark text-white">
+                                    <tr>
+                                        <th colspan="12" class="py-1">ITEMS</th>
+                                    </tr>
+                                    <tr class="bg-light text-dark">
+                                        <th style="width: 15%;">STATION</th>
+                                        <th class="bg-primary text-white" style="width: 8%;">Total</th>
+                                        <th>Fare<br/><span class="text-muted fw-normal" style="font-size:0.7rem;">Amount</span></th>
+                                        <th>Hotel<br/>Room</th>
+                                        <th>Meals</th>
+                                        <th>Taxi</th>
+                                        <th>Laundry</th>
+                                        <th>Telephone</th>
+                                        <th>Other<br/>Expense</th>
+                                        <th class="bg-secondary text-white">DAILY<br/>ALLOWANCE<br/><span class="fw-normal" style="font-size:0.7rem;">Amount</span></th>
+                                        <th style="width: 5%;" t-if="not is_readonly">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="cols" t-value="['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']"/>
+                                    <t t-foreach="range(1, 8)" t-as="i">
+                                        <tr class="expense-row">
+                                            <td class="text-start p-0">
+                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end">From :</span> <input type="text" t-attf-name="station_from_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
+                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end" style="padding-left:14px !important;">To :</span> <input type="text" t-attf-name="station_to_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
+                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end">Date :</span> <input type="text" t-attf-name="date_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
+                                                <div class="d-flex"><span class="bg-light px-1 border-end">Time :</span> <input type="text" t-attf-name="time_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
+                                            </td>
+                                            <td class="bg-light align-middle fw-bold row-total" t-attf-id="row_total_{{i}}">0.00</td>
+                                            <t t-foreach="cols" t-as="col">
+                                                <td class="align-middle"><input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly"/></td>
+                                            </t>
+                                            <td class="align-middle" t-if="not is_readonly">
+                                                <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row" title="Calculate Row">Calc</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-light fw-bold text-primary">
+                                        <td class="text-end pe-3">TOTAL</td>
+                                        <td id="grand_total_col">0.00</td>
+                                        <t t-foreach="cols" t-as="col">
+                                            <td t-attf-id="col_total_{{col}}">0.00</td>
+                                        </t>
+                                        <td t-if="not is_readonly"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end align-items-center mt-3">
+                            
+                            <div class="text-end" style="width: 350px;">
+                                <div class="d-flex justify-content-between mb-1 fw-bold">
+                                    <span>Total Expense :</span>
+                                    <span id="summary_total_expense">0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1 fw-bold">
+                                    <span>Less : Advance by Company :</span>
+                                    <input type="number" step="0.01" name="advance_by_company" id="input_advance" class="form-control form-control-sm w-25 text-end calc-input-summary" value="0" t-att-readonly="is_readonly"/>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1 fw-bold">
+                                    <span>Items to be paid direct by the Company :</span>
+                                    <input type="number" step="0.01" name="items_paid_direct" id="input_items_direct" class="form-control form-control-sm w-25 text-end calc-input-summary" value="0" t-att-readonly="is_readonly"/>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2 fw-bold border-top pt-2">
+                                    <span>Balance Due to Company/Me :</span>
+                                    <span id="summary_balance_due">0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">
+                            <a t-attf-href="/my/travel/view/{{request_rec.id}}" class="btn btn-secondary">Discard</a>
+                            <button type="submit" class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- JavaScript for Calculation -->
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    const cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily'];
+                    const rowCount = 7;
+
+                    function performCalculation() {
+                        let grandTotal = 0.0;
+                        let colTotals = { fare:0, hotel:0, meals:0, taxi:0, laundry:0, telephone:0, other:0, daily:0 };
+
+                        for(let i=1; i&lt;=rowCount; i++) {
+                            let rowTotal = 0.0;
+                            cols.forEach(col => {
+                                let input = document.querySelector(`input[name="${col}_${i}"]`);
+                                let val = parseFloat(input.value) || 0;
+                                rowTotal += val;
+                                colTotals[col] += val;
+                            });
+                            document.getElementById(`row_total_${i}`).innerText = rowTotal.toFixed(2);
+                            grandTotal += rowTotal;
+                        }
+
+                        cols.forEach(col => {
+                            document.getElementById(`col_total_${col}`).innerText = colTotals[col].toFixed(2);
+                        });
+
+                        document.getElementById('grand_total_col').innerText = grandTotal.toFixed(2);
+                        document.getElementById('summary_total_expense').innerText = grandTotal.toFixed(2);
+                        document.getElementById('total_expense_input').value = grandTotal.toFixed(2);
+
+                        let adv = parseFloat(document.getElementById('input_advance').value) || 0;
+                        let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
+                        
+                        let balance = grandTotal - adv - direct;
+                        document.getElementById('summary_balance_due').innerText = balance.toFixed(2);
+                    }
+
+                    // Trigger initial calculation
+                    performCalculation();
+                    
+                    document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
+                        inp.addEventListener('change', performCalculation);
+                    });
+
+                    document.querySelectorAll('.calc-btn-row').forEach(btn => {
+                        btn.addEventListener('click', performCalculation);
+                    });
+                });
+            </script>
         </t>
     </template>
 </odoo>

@@ -12,6 +12,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/approval_domestic_views.xml',
+        'views/approval_expense_views.xml',
         'views/approval_menus.xml',
         'views/approval_request_views.xml',
     ],

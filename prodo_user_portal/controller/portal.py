@@ -628,3 +628,164 @@ class ApprovalPortal(CustomerPortal):
                     continue
         
         return {"success": True, "count": count}
+
+    @http.route("/my/travel/expense/new/<int:request_id>", type="http", auth="user", website=True)
+    def portal_travel_expense_new(self, request_id):
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        if not request_rec.exists() or request_rec.request_status != 'approved':
+            return request.redirect("/my/travel")
+            
+        employee = request_rec.employee_id
+        
+        trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
+        
+        vals = {
+            "page_name": "travel_expense_page",
+            "request_rec": request_rec,
+            "employee_name": employee.name if employee else "",
+            "employee_reg_no": employee.identification_id if employee else "",
+            "department_name": employee.department_id.name if employee and employee.department_id else "",
+            "designation_name": employee.job_id.name if employee and employee.job_id else "",
+            "trip_to": trip_to,
+            "purpose_of_trip": request_rec.category_id.name or "",
+            "period_from": request_rec.date_start.strftime("%Y-%m-%d %H:%M") if request_rec.date_start else "",
+            "period_to": request_rec.date_end.strftime("%Y-%m-%d %H:%M") if request_rec.date_end else "",
+            "is_readonly": False,
+        }
+        return request.render("prodo_user_portal.travel_expense_form_portal", vals)
+
+    @http.route("/my/travel/expense/view/<int:expense_id>", type="http", auth="user", website=True)
+    def portal_travel_expense_view(self, expense_id):
+        expense = request.env["approval.travel.expense"].sudo().browse(expense_id)
+        if not expense.exists():
+            return request.redirect("/my/travel")
+            
+        vals = {
+            "page_name": "travel_expense_page",
+            "request_rec": expense.request_id,
+            "expense": expense,
+            "employee_name": expense.employee_name,
+            "employee_reg_no": expense.employee_reg_no,
+            "department_name": expense.department_name,
+            "designation_name": expense.designation_name,
+            "trip_to": expense.trip_to,
+            "purpose_of_trip": expense.purpose_of_trip,
+            "period_from": expense.period_from.strftime("%Y-%m-%d %H:%M") if expense.period_from else "",
+            "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
+            "is_readonly": True,
+        }
+        return request.render("prodo_user_portal.travel_expense_form_portal", vals)
+
+    @http.route("/my/travel/expense/save", type="http", auth="user", website=True, methods=["POST"])
+    def portal_travel_expense_save(self, **post):
+        request_id = int(post.get('request_id', 0))
+        request_rec = request.env["approval.request"].sudo().browse(request_id)
+        
+        if not request_rec.exists():
+            return request.redirect("/my/travel")
+            
+        employee = request_rec.employee_id
+        
+        try:
+            trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
+            
+            # Main Expense Record
+            expense_vals = {
+                'request_id': request_rec.id,
+                'employee_id': employee.id if employee else False,
+                'employee_name': employee.name if employee else "",
+                'employee_reg_no': employee.identification_id if employee else "",
+                'department_name': employee.department_id.name if employee and employee.department_id else "",
+                'designation_name': employee.job_id.name if employee and employee.job_id else "",
+                'trip_to': trip_to,
+                'purpose_of_trip': request_rec.category_id.name or "",
+                'period_from': request_rec.date_start,
+                'period_to': request_rec.date_end,
+                'date': post.get('expense_date'),
+                'advance_by_company': float(post.get('advance_by_company', 0.0)),
+                'items_paid_direct': float(post.get('items_paid_direct', 0.0)),
+                'state': 'submitted',
+            }
+            expense = request.env['approval.travel.expense'].sudo().create(expense_vals)
+            
+            # Lines
+            cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']
+            for i in range(1, 8):
+                station_from = post.get(f'station_from_{i}')
+                station_to = post.get(f'station_to_{i}')
+                date_str = post.get(f'date_{i}')
+                time_str = post.get(f'time_{i}')
+                
+                # Check if row has any data
+                has_data = any([
+                    station_from, station_to, date_str, time_str,
+                    float(post.get(f'fare_{i}', 0.0) or 0.0), float(post.get(f'hotel_{i}', 0.0) or 0.0),
+                    float(post.get(f'meals_{i}', 0.0) or 0.0), float(post.get(f'taxi_{i}', 0.0) or 0.0),
+                    float(post.get(f'laundry_{i}', 0.0) or 0.0), float(post.get(f'telephone_{i}', 0.0) or 0.0),
+                    float(post.get(f'other_{i}', 0.0) or 0.0), float(post.get(f'daily_{i}', 0.0) or 0.0)
+                ])
+                
+                if has_data:
+                    request.env['approval.travel.expense.line'].sudo().create({
+                        'expense_id': expense.id,
+                        'station_from': station_from,
+                        'station_to': station_to,
+                        'date_str': date_str,
+                        'time_str': time_str,
+                        'fare': float(post.get(f'fare_{i}', 0.0) or 0.0),
+                        'hotel_room': float(post.get(f'hotel_{i}', 0.0) or 0.0),
+                        'meals': float(post.get(f'meals_{i}', 0.0) or 0.0),
+                        'taxi': float(post.get(f'taxi_{i}', 0.0) or 0.0),
+                        'laundry': float(post.get(f'laundry_{i}', 0.0) or 0.0),
+                        'telephone': float(post.get(f'telephone_{i}', 0.0) or 0.0),
+                        'other_expense': float(post.get(f'other_{i}', 0.0) or 0.0),
+                        'daily_allowance': float(post.get(f'daily_{i}', 0.0) or 0.0),
+                    })
+            
+            # Trigger Email
+            self._send_expense_notification(expense)
+
+        except Exception as e:
+            request.session['expense_error'] = str(e)
+            return request.redirect(f"/my/travel/expense/new/{request_id}")
+            
+        return request.redirect(f"/my/travel/expense/view/{expense.id}")
+
+    def _send_expense_notification(self, expense):
+        config = request.env['approval.expense.config'].sudo().search([], limit=1)
+        if not config:
+            return
+            
+        recipients = []
+        if config.expense_payable_id and config.expense_payable_id.work_email:
+            recipients.append(config.expense_payable_id.work_email)
+        if config.hr_id and config.hr_id.work_email:
+            recipients.append(config.hr_id.work_email)
+            
+        if not recipients:
+            return
+            
+        subject = f"Travel Expense Submitted: {expense.ref_no}"
+        body = f"""
+        <div style="font-family: Arial, sans-serif; font-size: 14px;">
+            <h2 style="color: #8D0000;">Travel Expense Report Submitted</h2>
+            <p>Dear Team,</p>
+            <p>A new Travel Expense report has been submitted by <strong>{expense.employee_name}</strong> for Travel Request: <strong>{expense.ref_no}</strong>.</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+                <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
+                <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
+                <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
+            </table>
+            <p>Please check the backend system to view the full details.</p>
+            <p>Best Regards,<br/>AESL System</p>
+        </div>
+        """
+        
+        mail_values = {
+            'subject': subject,
+            'body_html': body,
+            'email_to': ','.join(recipients),
+            'email_from': request.env.company.email or request.env.user.email_formatted,
+            'state': 'outgoing',
+        }
+        request.env['mail.mail'].sudo().create(mail_values).send()

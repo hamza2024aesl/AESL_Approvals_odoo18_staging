@@ -2,3 +2,6 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_approval_config,approval.config,model_approval_config,approvals.group_approval_manager,1,1,1,1
 access_approval_config_line,approval.config.line,model_approval_config_line,approvals.group_approval_manager,1,1,1,1
 access_approval_travel_schedule,approval.travel.schedule,model_approval_travel_schedule,base.group_user,1,1,1,1
+access_approval_expense_config,approval.expense.config,model_approval_expense_config,approvals.group_approval_manager,1,1,1,1
+access_approval_travel_expense,approval.travel.expense,model_approval_travel_expense,base.group_user,1,1,1,1
+access_approval_travel_expense_line,approval.travel.expense.line,model_approval_travel_expense_line,base.group_user,1,1,1,1

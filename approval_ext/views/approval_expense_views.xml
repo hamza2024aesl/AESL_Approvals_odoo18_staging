@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Expense Config View -->
+    <record id="view_approval_expense_config_form" model="ir.ui.view">
+        <field name="name">approval.expense.config.form</field>
+        <field name="model">approval.expense.config</field>
+        <field name="arch" type="xml">
+            <form string="Expense Configuration">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" default_focus="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="expense_payable_id"/>
+                            <field name="hr_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_approval_expense_config_tree" model="ir.ui.view">
+        <field name="name">approval.expense.config.tree</field>
+        <field name="model">approval.expense.config</field>
+        <field name="arch" type="xml">
+            <list string="Expense Configuration">
+                <field name="name"/>
+                <field name="expense_payable_id"/>
+                <field name="hr_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_approval_expense_config" model="ir.actions.act_window">
+        <field name="name">Travel Expense Configuration</field>
+        <field name="res_model">approval.expense.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Travel Expense View -->
+    <record id="view_approval_travel_expense_form" model="ir.ui.view">
+        <field name="name">approval.travel.expense.form</field>
+        <field name="model">approval.travel.expense</field>
+        <field name="arch" type="xml">
+            <form string="Travel Expense" create="false" edit="false">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="ref_no"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Employee Details">
+                            <field name="employee_id"/>
+                            <field name="employee_name"/>
+                            <field name="employee_reg_no"/>
+                            <field name="department_name"/>
+                            <field name="designation_name"/>
+                        </group>
+                        <group string="Trip Details">
+                            <field name="date"/>
+                            <field name="request_id"/>
+                            <field name="trip_to"/>
+                            <field name="purpose_of_trip"/>
+                            <field name="period_from"/>
+                            <field name="period_to"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Expense Lines">
+                            <field name="expense_line_ids">
+                                <list editable="bottom">
+                                    <field name="station_from"/>
+                                    <field name="station_to"/>
+                                    <field name="date_str"/>
+                                    <field name="time_str"/>
+                                    <field name="fare"/>
+                                    <field name="hotel_room"/>
+                                    <field name="meals"/>
+                                    <field name="taxi"/>
+                                    <field name="laundry"/>
+                                    <field name="telephone"/>
+                                    <field name="other_expense"/>
+                                    <field name="daily_allowance"/>
+                                    <field name="total_amount" sum="Total"/>
+                                </list>
+                            </field>
+                            <group class="oe_subtotal_footer oe_right">
+                                <field name="total_expense"/>
+                                <field name="advance_by_company"/>
+                                <field name="items_paid_direct"/>
+                                <field name="balance_due" class="oe_subtotal_footer_separator"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_approval_travel_expense_tree" model="ir.ui.view">
+        <field name="name">approval.travel.expense.tree</field>
+        <field name="model">approval.travel.expense</field>
+        <field name="arch" type="xml">
+            <list string="Travel Expenses" create="false" edit="false">
+                <field name="ref_no"/>
+                <field name="employee_name"/>
+                <field name="date"/>
+                <field name="total_expense"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_approval_travel_expense" model="ir.actions.act_window">
+        <field name="name">Travel Expenses</field>
+        <field name="res_model">approval.travel.expense</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
