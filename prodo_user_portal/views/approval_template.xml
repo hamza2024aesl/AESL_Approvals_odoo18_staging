@@ -9,7 +9,7 @@
                         <i class="oi oi-chevron-left"/>
                     </a>
                     <h3 class="my-0 mt-1">Travel Requests</h3>
-                    
+
                     <div class="btn-group appraisal-groupby-container ms-3">
                         <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             Group By
@@ -33,7 +33,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Bulk Actions -->
                 <div class="d-flex align-items-center">
                     <a href="/my/travel/new" class="btn btn-primary me-3">New Request</a>
@@ -118,7 +118,7 @@
                             </t>
                         </t>
                     </t>
-                    
+
                     <t t-if="not grouped_requests">
                         <t t-foreach="requests" t-as="req">
                             <tr t-att-data-id="req.id">
@@ -167,7 +167,7 @@
                     function updateUI() {
                         const selected = document.querySelectorAll('.request_checkbox:checked');
                         const count = selected.length;
-                        
+
                         if (count > 0) {
                             bulkContainer.classList.remove('d-none');
                             countSpans.forEach(s => s.innerText = count);
@@ -370,32 +370,32 @@
                                             <tr>
                                                 <td class="fw-bold text-start bg-light" style="width: 180px;">Departure From * :</td>
                                                 <t t-foreach="range(1, 7)" t-as="i">
-                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{i}}" 
-                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{i}}"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-required="i == 1"/></td>
                                                 </t>
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold text-start bg-light">Arrival (Destination) * :</td>
                                                 <t t-foreach="range(1, 7)" t-as="i">
-                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{i}}" 
-                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{i}}"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-required="i == 1"/></td>
                                                 </t>
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold text-start bg-light">Arrival Date * :</td>
                                                 <t t-foreach="range(1, 7)" t-as="i">
-                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{i}}" 
-                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{i}}"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-required="i == 1"/></td>
                                                 </t>
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold text-start bg-light">Arrival Time * :</td>
                                                 <t t-foreach="range(1, 7)" t-as="i">
-                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{i}}" 
-                                                               class="form-control form-control-sm border-0 bg-transparent text-center" 
+                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{i}}"
+                                                               class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-required="i == 1"/></td>
                                                 </t>
                                             </tr>
@@ -533,14 +533,14 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Date From</label>
-                                <input type="datetime-local" name="date_start" class="form-control" 
-                                       t-att-value="request_rec.date_start.strftime('%Y-%m-%dT%H:%M') if request_rec.date_start else ''" 
+                                <input type="datetime-local" name="date_start" class="form-control"
+                                       t-att-value="request_rec.date_start.strftime('%Y-%m-%dT%H:%M') if request_rec.date_start else ''"
                                        t-att-readonly="not is_editable"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Date To</label>
-                                <input type="datetime-local" name="date_end" class="form-control" 
-                                       t-att-value="request_rec.date_end.strftime('%Y-%m-%dT%H:%M') if request_rec.date_end else ''" 
+                                <input type="datetime-local" name="date_end" class="form-control"
+                                       t-att-value="request_rec.date_end.strftime('%Y-%m-%dT%H:%M') if request_rec.date_end else ''"
                                        t-att-readonly="not is_editable"/>
                             </div>
                         </div>
@@ -554,8 +554,8 @@
                                 <label class="fw-bold d-block">Travel Mode</label>
                                 <t t-foreach="request_rec.fields_get(['travel_mode'])['travel_mode']['selection']" t-as="mode">
                                     <div class="form-check form-check-inline mt-2">
-                                        <input class="form-check-input" type="radio" name="travel_mode" 
-                                               t-attf-id="mode_{{mode[0]}}" t-att-value="mode[0]" 
+                                        <input class="form-check-input" type="radio" name="travel_mode"
+                                               t-attf-id="mode_{{mode[0]}}" t-att-value="mode[0]"
                                                t-att-checked="request_rec.travel_mode == mode[0]"
                                                t-att-disabled="not is_editable"/>
                                         <label class="form-check-label" t-attf-for="mode_{{mode[0]}}"><t t-esc="mode[1]"/></label>
@@ -566,8 +566,8 @@
                                 <label class="fw-bold d-block">Travel Request Type</label>
                                 <t t-foreach="request_rec.fields_get(['travel_request_type'])['travel_request_type']['selection']" t-as="type_">
                                     <div class="form-check form-check-inline mt-2">
-                                        <input class="form-check-input" type="radio" name="travel_request_type" 
-                                               t-attf-id="type_{{type_[0]}}" t-att-value="type_[0]" 
+                                        <input class="form-check-input" type="radio" name="travel_request_type"
+                                               t-attf-id="type_{{type_[0]}}" t-att-value="type_[0]"
                                                t-att-checked="request_rec.travel_request_type == type_[0]"
                                                t-att-disabled="not is_editable"/>
                                         <label class="form-check-label" t-attf-for="type_{{type_[0]}}"><t t-esc="type_[1]"/></label>
@@ -579,8 +579,8 @@
                                 <t t-set="tickets_selection" t-value="[('yes', 'Yes'), ('no', 'No')]"/>
                                 <t t-foreach="tickets_selection" t-as="t_sel">
                                     <div class="form-check form-check-inline mt-2">
-                                        <input class="form-check-input" type="radio" name="tickets_required" 
-                                               t-attf-id="tickets_{{t_sel[0]}}" t-att-value="t_sel[0]" 
+                                        <input class="form-check-input" type="radio" name="tickets_required"
+                                               t-attf-id="tickets_{{t_sel[0]}}" t-att-value="t_sel[0]"
                                                t-att-checked="request_rec.tickets_required == t_sel[0]"
                                                t-att-disabled="not is_editable"/>
                                         <label class="form-check-label" t-attf-for="tickets_{{t_sel[0]}}"><t t-esc="t_sel[1]"/></label>
@@ -605,7 +605,7 @@
                                                 <td class="fw-bold text-start bg-light" style="width: 180px;">Departure From * :</td>
                                                 <t t-foreach="range(0, 6)" t-as="idx">
                                                     <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
-                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{idx+1}}" 
+                                                    <td><input type="text" t-attf-name="schedule_departure_from_{{idx+1}}"
                                                                t-att-value="line.departure_from if line else ''"
                                                                class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-readonly="not is_editable"
@@ -616,7 +616,7 @@
                                                 <td class="fw-bold text-start bg-light">Arrival (Destination) * :</td>
                                                 <t t-foreach="range(0, 6)" t-as="idx">
                                                     <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
-                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{idx+1}}" 
+                                                    <td><input type="text" t-attf-name="schedule_arrival_destination_{{idx+1}}"
                                                                t-att-value="line.arrival_destination if line else ''"
                                                                class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-readonly="not is_editable"
@@ -627,7 +627,7 @@
                                                 <td class="fw-bold text-start bg-light">Arrival Date * :</td>
                                                 <t t-foreach="range(0, 6)" t-as="idx">
                                                     <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
-                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{idx+1}}" 
+                                                    <td><input type="date" t-attf-name="schedule_arrival_date_{{idx+1}}"
                                                                t-att-value="line.arrival_date if line else ''"
                                                                class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-readonly="not is_editable"
@@ -638,7 +638,7 @@
                                                 <td class="fw-bold text-start bg-light">Arrival Time * :</td>
                                                 <t t-foreach="range(0, 6)" t-as="idx">
                                                     <t t-set="line" t-value="schedule_lines[idx] if len(schedule_lines) &gt; idx else False"/>
-                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{idx+1}}" 
+                                                    <td><input type="time" t-attf-name="schedule_arrival_time_{{idx+1}}"
                                                                t-att-value="line.arrival_time if line else ''"
                                                                class="form-control form-control-sm border-0 bg-transparent text-center"
                                                                t-att-readonly="not is_editable"
@@ -767,8 +767,8 @@
                                 <strong>Emp No. :</strong> <span class="ms-2"><t t-esc="employee_reg_no"/></span>
                             </div>
                             <div class="col-md-6 mb-2 d-flex align-items-center">
-                                <strong class="me-2" style="min-width:100px;">Date :</strong> 
-                                <input type="date" name="expense_date" class="form-control form-control-sm w-50" required="1" t-att-readonly="is_readonly"/>
+                                <strong class="me-2" style="min-width:100px;">Date :</strong>
+                                <input type="date" name="expense_date" class="form-control form-control-sm w-50" required="1" t-att-readonly="is_readonly" t-att-value="expense.date.strftime('%Y-%m-%d') if expense and expense.date else ''"/>
                             </div>
 
                             <div class="col-md-6 mb-2">
@@ -796,14 +796,14 @@
 
                         <!-- Items Table -->
                         <div class="table-responsive">
-                            <table class="table table-bordered table-sm align-middle text-center" style="font-size: 0.85rem;" id="expense_table">
+                            <table class="table table-bordered table-sm align-middle text-center" style="font-size: 0.85rem; min-width: 1500px;" id="expense_table">
                                 <thead class="bg-dark text-white">
                                     <tr>
                                         <th colspan="12" class="py-1">ITEMS</th>
                                     </tr>
                                     <tr class="bg-light text-dark">
-                                        <th style="width: 15%;">STATION</th>
-                                        <th class="bg-primary text-white" style="width: 8%;">Total</th>
+                                        <th style="width: 18%; min-width: 220px;">STATION</th>
+                                        <th class="bg-primary text-white" style="width: 14%; min-width: 170px;">Total</th>
                                         <th>Fare<br/><span class="text-muted fw-normal" style="font-size:0.7rem;">Amount</span></th>
                                         <th>Hotel<br/>Room</th>
                                         <th>Meals</th>
@@ -819,15 +819,50 @@
                                     <t t-set="cols" t-value="['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']"/>
                                     <t t-foreach="range(1, 8)" t-as="i">
                                         <tr class="expense-row">
+                                            <t t-set="line" t-value="expense.expense_line_ids[i-1] if expense and len(expense.expense_line_ids) >= i else False"/>
                                             <td class="text-start p-0">
-                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end">From :</span> <input type="text" t-attf-name="station_from_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
-                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end" style="padding-left:14px !important;">To :</span> <input type="text" t-attf-name="station_to_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
-                                                <div class="d-flex border-bottom"><span class="bg-light px-1 border-end">Date :</span> <input type="text" t-attf-name="date_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
-                                                <div class="d-flex"><span class="bg-light px-1 border-end">Time :</span> <input type="text" t-attf-name="time_{{i}}" class="form-control form-control-sm border-0 rounded-0" t-att-readonly="is_readonly"/></div>
+                                                <div class="input-group input-group-sm border-bottom">
+                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">From :</span>
+                                                    <input type="text" t-attf-name="station_from_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.station_from if line else ''"/>
+                                                </div>
+                                                <div class="input-group input-group-sm border-bottom">
+                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">To :</span>
+                                                    <input type="text" t-attf-name="station_to_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.station_to if line else ''"/>
+                                                </div>
+                                                <div class="input-group input-group-sm border-bottom">
+                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">Date :</span>
+                                                    <input type="date" t-attf-name="date_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.date_str if line else ''"/>
+                                                </div>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">Time :</span>
+                                                    <input type="time" t-attf-name="time_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.time_str if line else ''"/>
+                                                </div>
                                             </td>
-                                            <td class="bg-light align-middle fw-bold row-total" t-attf-id="row_total_{{i}}">0.00</td>
+                                            <td class="bg-light text-center p-0" style="min-width: 130px;">
+                                                <div class="border-bottom py-1">
+                                                    <span class="fw-bold row-total" t-attf-id="row_total_{{i}}">0.00</span>
+                                                    <span class="fw-bold ms-1 row-currency-label" t-attf-id="row_currency_label_{{i}}"></span>
+                                                </div>
+                                                <div class="border-bottom">
+                                                    <input type="text" t-attf-name="description_{{i}}" placeholder="Description" class="form-control form-control-sm border-0 rounded-0 text-center w-100" style="font-size: 0.75rem; background-color: #f8f9fa;" t-att-readonly="is_readonly" t-att-value="line.description if line else ''"/>
+                                                </div>
+                                                <div class="border-bottom">
+                                                    <input type="text" t-attf-name="currency_{{i}}" placeholder="Currency" class="form-control form-control-sm border-0 rounded-0 text-center row-currency-select w-100" style="font-size: 0.75rem; background-color: #f8f9fa;" t-att-readonly="is_readonly" t-att-value="line.currency if line else ''"/>
+                                                </div>
+                                            </td>
                                             <t t-foreach="cols" t-as="col">
-                                                <td class="align-middle"><input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly"/></td>
+                                                <t t-set="col_val" t-value="0.00"/>
+                                                <t t-if="line">
+                                                    <t t-if="col == 'fare'" t-set="col_val" t-value="line.fare"/>
+                                                    <t t-if="col == 'hotel'" t-set="col_val" t-value="line.hotel_room"/>
+                                                    <t t-if="col == 'meals'" t-set="col_val" t-value="line.meals"/>
+                                                    <t t-if="col == 'taxi'" t-set="col_val" t-value="line.taxi"/>
+                                                    <t t-if="col == 'laundry'" t-set="col_val" t-value="line.laundry"/>
+                                                    <t t-if="col == 'telephone'" t-set="col_val" t-value="line.telephone"/>
+                                                    <t t-if="col == 'other'" t-set="col_val" t-value="line.other_expense"/>
+                                                    <t t-if="col == 'daily'" t-set="col_val" t-value="line.daily_allowance"/>
+                                                </t>
+                                                <td class="align-middle"><input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/></td>
                                             </t>
                                             <td class="align-middle" t-if="not is_readonly">
                                                 <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row" title="Calculate Row">Calc</button>
@@ -849,23 +884,23 @@
                         </div>
 
                         <div class="d-flex justify-content-end align-items-center mt-3">
-                            
-                            <div class="text-end" style="width: 350px;">
-                                <div class="d-flex justify-content-between mb-1 fw-bold">
+
+                            <div class="text-end" style="width: 450px;">
+                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">
                                     <span>Total Expense :</span>
-                                    <span id="summary_total_expense">0.00</span>
+                                    <span id="summary_total_expense" class="pe-2">0.00</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1 fw-bold">
+                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">
                                     <span>Less : Advance by Company :</span>
-                                    <input type="number" step="0.01" name="advance_by_company" id="input_advance" class="form-control form-control-sm w-25 text-end calc-input-summary" value="0" t-att-readonly="is_readonly"/>
+                                    <input type="number" step="0.01" name="advance_by_company" id="input_advance" class="form-control form-control-sm w-25 text-end calc-input-summary" t-att-readonly="is_readonly" t-att-value="expense.advance_by_company if expense else 0"/>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1 fw-bold">
+                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">
                                     <span>Items to be paid direct by the Company :</span>
-                                    <input type="number" step="0.01" name="items_paid_direct" id="input_items_direct" class="form-control form-control-sm w-25 text-end calc-input-summary" value="0" t-att-readonly="is_readonly"/>
+                                    <input type="number" step="0.01" name="items_paid_direct" id="input_items_direct" class="form-control form-control-sm w-25 text-end calc-input-summary" t-att-readonly="is_readonly" t-att-value="expense.items_paid_direct if expense else 0"/>
                                 </div>
-                                <div class="d-flex justify-content-between mt-2 fw-bold border-top pt-2">
+                                <div class="d-flex justify-content-between mt-2 fw-bold border-top pt-2 align-items-center">
                                     <span>Balance Due to Company/Me :</span>
-                                    <span id="summary_balance_due">0.00</span>
+                                    <span id="summary_balance_due" class="pe-2">0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -910,14 +945,21 @@
 
                         let adv = parseFloat(document.getElementById('input_advance').value) || 0;
                         let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
-                        
+
                         let balance = grandTotal - adv - direct;
                         document.getElementById('summary_balance_due').innerText = balance.toFixed(2);
                     }
 
                     // Trigger initial calculation
                     performCalculation();
-                    
+
+                    document.querySelectorAll('.row-currency-select').forEach(sel => {
+                        sel.addEventListener('input', function() {
+                            const rowId = this.name.split('_')[1];
+                            document.getElementById('row_currency_label_' + rowId).innerText = this.value;
+                        });
+                    });
+
                     document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
                         inp.addEventListener('change', performCalculation);
                     });

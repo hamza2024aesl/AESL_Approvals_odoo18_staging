@@ -6,6 +6,7 @@ class ApprovalExpenseConfig(models.Model):
     _description = 'Global Travel Expense Configuration'
 
     name = fields.Char(string='Name', default='Global Expense Configuration', required=True)
+    region_id = fields.Many2one('hr.work.location', string='Region')
     expense_payable_id = fields.Many2one('hr.employee', string='Expense Payable Employee', required=True)
     hr_id = fields.Many2one('hr.employee', string='HR Employee', required=True)
 
@@ -73,6 +74,9 @@ class ApprovalTravelExpenseLine(models.Model):
     telephone = fields.Float(string='Telephone')
     other_expense = fields.Float(string='Other Expense')
     daily_allowance = fields.Float(string='Daily Allowance')
+    
+    description = fields.Char(string='Description')
+    currency = fields.Char(string='Currency')
     
     total_amount = fields.Float(string='Total', compute='_compute_total', store=True)
 

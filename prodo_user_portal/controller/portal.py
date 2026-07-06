@@ -651,6 +651,7 @@ class ApprovalPortal(CustomerPortal):
             "period_from": request_rec.date_start.strftime("%Y-%m-%d %H:%M") if request_rec.date_start else "",
             "period_to": request_rec.date_end.strftime("%Y-%m-%d %H:%M") if request_rec.date_end else "",
             "is_readonly": False,
+            "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
 
@@ -673,6 +674,7 @@ class ApprovalPortal(CustomerPortal):
             "period_from": expense.period_from.strftime("%Y-%m-%d %H:%M") if expense.period_from else "",
             "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
             "is_readonly": True,
+            "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
 
@@ -715,10 +717,12 @@ class ApprovalPortal(CustomerPortal):
                 station_to = post.get(f'station_to_{i}')
                 date_str = post.get(f'date_{i}')
                 time_str = post.get(f'time_{i}')
+                description = post.get(f'description_{i}', '')
+                currency = post.get(f'currency_{i}', '')
                 
                 # Check if row has any data
                 has_data = any([
-                    station_from, station_to, date_str, time_str,
+                    station_from, station_to, date_str, time_str, description, currency,
                     float(post.get(f'fare_{i}', 0.0) or 0.0), float(post.get(f'hotel_{i}', 0.0) or 0.0),
                     float(post.get(f'meals_{i}', 0.0) or 0.0), float(post.get(f'taxi_{i}', 0.0) or 0.0),
                     float(post.get(f'laundry_{i}', 0.0) or 0.0), float(post.get(f'telephone_{i}', 0.0) or 0.0),
@@ -732,6 +736,8 @@ class ApprovalPortal(CustomerPortal):
                         'station_to': station_to,
                         'date_str': date_str,
                         'time_str': time_str,
+                        'description': description,
+                        'currency': currency,
                         'fare': float(post.get(f'fare_{i}', 0.0) or 0.0),
                         'hotel_room': float(post.get(f'hotel_{i}', 0.0) or 0.0),
                         'meals': float(post.get(f'meals_{i}', 0.0) or 0.0),
@@ -752,7 +758,13 @@ class ApprovalPortal(CustomerPortal):
         return request.redirect(f"/my/travel/expense/view/{expense.id}")
 
     def _send_expense_notification(self, expense):
-        config = request.env['approval.expense.config'].sudo().search([], limit=1)
+        # Find region specific config, fallback to first config if none matches exactly
+        region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
+        domain = [('region_id', '=', region_id)] if region_id else []
+        config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
+        if not config:
+            config = request.env['approval.expense.config'].sudo().search([], limit=1)
+            
         if not config:
             return
             
