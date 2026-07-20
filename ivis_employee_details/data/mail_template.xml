@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data noupdate="1">
+        <record id="email_alert_mail" model="mail.template">
+            <field name="name">Alert Changes</field>
+            <field name="email_from"></field>
+            <field name="subject">Changes in the profile</field>
+            <field name="email_to">${object.work_email}</field>
+            <field name="model_id" ref="hr.model_hr_employee"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="lang">"${object.lang}"</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px;">
+                    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+                        Dear HR
+                        <br/>
+                        <br/>
+                        This ${object.name} Employee made some changes.
+                        <br/>
+                        <br/>
+                        Do not hesitate to contact us if you have any question or query as such.
+                    </p>
+                    <p>
+                        Regards
+                        <br/>
+                    </p>
+                </div>
+            </field>
+        </record>
+
+        <record id="retire_alert" model="mail.template">
+            <field name="name">Retirenment Notification</field>
+            <field name="email_from"></field>
+            <field name="subject">Retire Notification</field>
+            <field name="email_to">${object.work_email}</field>
+            <field name="model_id" ref="hr.model_hr_employee"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="lang">"${object.lang}"</field>
+            <field name="body_html" type="html">
+                <div style="margin: 0px; padding: 0px;">
+                    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+                        Dear ${object.name}
+                        <br/>
+                        <br/>
+                        It is inform you that according to your DOB your age is 60. From now and onward you are retire
+                        from your services
+                        <br/>
+                        <br/>
+                        Do not hesitate to contact us if you have any question or query as such.
+                    </p>
+                    <p>
+                        Regards
+                        <br/>
+                    </p>
+                </div>
+            </field>
+        </record>
+
+        <record id="alert_changes_mail" model="mail.template">
+            <field name="name">Alert Changes</field>
+            <field name="email_from">hira.shyk123@gmail.com</field>
+            <field name="subject">Changes in the profile</field>
+            <field name="email_to">{object.department_id.manager_id.private_email}</field>
+            <field name="model_id" ref="hr.model_hr_employee"/>
+            <field name="auto_delete" eval="True"/>
+            <field name="lang">"${object.lang}"</field>
+        </record>
+    </data>
+</odoo>

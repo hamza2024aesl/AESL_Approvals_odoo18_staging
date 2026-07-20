@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="salary_serial" model="ir.sequence">
+        <field name="name">Salary Serial</field>
+        <field name="code">salary.serial</field>
+        <field name="padding">4</field>
+        <field name="prefix">SALARY/%(month)s/%(year)s/</field>
+    </record>
+</odoo>

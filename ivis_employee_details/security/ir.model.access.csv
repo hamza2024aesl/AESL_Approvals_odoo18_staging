@@ -1,0 +1,15 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_account_salary,account.salary,model_account_salary,,1,1,1,1
+access_employee_eobi,employee.eobi,model_employee_eobi,,1,1,1,1
+access_certification_record,certification.record,model_certification_record,hr.group_hr_user,1,1,1,1
+access_institute_institute,institute.institute,model_institute_institute,base.group_user,1,1,1,1
+access_letter_letter,letter.letter,model_letter_letter,hr.group_hr_user,1,1,1,1
+access_other_document,other.document,model_other_document,hr.group_hr_user,1,1,1,1
+access_insurance_rec,insurance.record,model_insurance_record,hr.group_hr_user,1,1,1,1
+access_family_record,family.record,model_family_record,hr.group_hr_user,1,1,1,1
+access_insurance_policy,insurance.policy,model_insurance_policy,hr.group_hr_user,1,1,1,1
+access_employee_clearance,employee.clearance,model_employee_clearance,hr.group_hr_user,1,1,1,1
+access_employee_resignation,employee.resignation,model_employee_resignation,hr.group_hr_user,1,1,1,1
+access_clearance_reject,clearance.reject,model_clearance_reject,hr.group_hr_user,1,1,1,1
+access_employee_cl,name_employee_cl,model_employee_cl,,1,1,1,1
+access_resign_employee_payroll,name_hr_payslip_run,model_hr_payslip_run,,1,1,1,1

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="timesheets_report_view" model="ir.ui.view">
+        <field name="name">Timesheets Wizard</field>
+        <field name="model">monthly.timesheet.report</field>
+        <field name="arch" type="xml">
+            <form>
+                <group col="4">
+                    <field name="from_date"/>
+                    <field name="to_date"/>
+                </group>
+                <footer>
+                    <button type="object" name="monthly_time_sheet_report" string="Print" class="oe_highlight"/>
+                    OR
+                    <button string="Cancel" class="oe_link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <act_window id="action_report_print_timesheets"
+                res_model="monthly.timesheet.report"
+                binding_model="hr.employee"
+                target="new"
+                name="Monthly Timesheet"
+                view_mode="form"
+    />
+
+    <record id="action_print_timesheet_wizard" model="ir.actions.act_window">
+        <field name="name">Monthly Timesheet Report</field>
+        <field name="res_model">monthly.timesheet.report</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="timesheets_report_view"/>
+    </record>
+</odoo>

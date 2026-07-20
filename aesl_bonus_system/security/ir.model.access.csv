@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_employee_bonus,employee.bonus,model_employee_bonus,base.group_user,1,1,1,1
+access_employee_bonus_wizard,employee.bonus.wizard,model_employee_bonus_wizard,base.group_user,1,1,1,1
+access_employee_bonus_wizard_line,employee.bonus.wizard.line,model_employee_bonus_wizard_line,base.group_user,1,1,1,1

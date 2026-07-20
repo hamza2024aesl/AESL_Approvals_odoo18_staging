@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_my_profile_details">
+        <div t-attf-class="mb-3 col-xl-6">
+            <label class="col-form-label" for="name">Name</label>
+            <input type="text" name="name" class="form-control" placeholder="Enter your name"/>
+        </div>
+    </template>
+
+    <template id="profile_edit_portal">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+            <div class="d-flex gap-2 my-3">
+                <a href="/my/profile" title="Go Back" class="btn btn-light px-2 mx-2">
+                    <i class="oi oi-chevron-left"/>
+                </a>
+                <h3 class="my-0 mt-1">Edit Profile</h3>
+            </div>
+            <br/>
+            <t t-set="additional_title">Edit your Profile</t>
+            <form method="post">
+                <div class="row o_portal_details">
+                    <div class="col-lg-8">
+                        <div class="row">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="name">Full Name</label>
+                                <input type="char" name="name" class="form-control" placeholder="Enter your name"/>
+                            </div>
+                            <div t-attf-class="mb-3 col-xl-6">
+                                <label class="col-form-label" for="name">Email</label>
+                                <input type="text" name="email" class="form-control" placeholder="Enter your email"/>
+                            </div>
+                        </div>
+                        <div class="clearfix text-end mb-5">
+                            <a href="/my/" class="btn btn-secondary me-2">
+                                Discard
+                            </a>
+                            <button type="submit" class="btn btn-primary float-end">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </t>
+    </template>
+</odoo>

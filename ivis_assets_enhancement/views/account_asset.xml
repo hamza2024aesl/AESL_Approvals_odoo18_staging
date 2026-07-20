@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="change_analytic_account_form" model="ir.ui.view">
+            <field name="name">Change Analytic Account</field>
+            <field name="model">account_asset_change_analytic_account</field>
+            <field name="arch" type="xml">
+                <form string="Change Analytic Account">
+                    <group>
+                        <field name="analytic_id" options="{'no_create':True,'no_open':True}" domain="[('group_id.name', '=', 'Fixed Asset')]"/>
+                    </group>
+                    <footer>
+                        <button name="change_analytic_account" string="Change" type="object" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="change_analytic_account" model="ir.actions.act_window">
+            <field name="name">Change Analytic Account</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">account_asset_change_analytic_account</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="change_analytic_account_form"/>
+            <field name="target">new</field>
+        </record>
+
+        <record id="view_account_asset_form_inherit" model="ir.ui.view">
+            <field name="name">view_account_asset_form_inherit</field>
+            <field name="model">account.asset</field>
+            <field name="inherit_id" ref="account_asset.view_account_asset_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//button[@name='validate']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <xpath expr="//button[@name='compute_depreciation_board']" position="after">
+                    <button type="action" name="%(change_analytic_account)d" string="Change Analytic Account" attrs="{'invisible':[('state', '!=', 'open')]}"/>
+                    <button type="action" name="%(ivis_assets_enhancement.account_asset_compute_action)d" class="oe_highlight" string="AUTO POST" attrs="{'invisible':[('state', 'not in', ['draft', 'open'])]}"/>
+                </xpath>
+                <xpath expr="//field[@name='acquisition_date']" position="after">
+                    <field name="asset_number"/>
+                </xpath>
+                <xpath expr="//page[@name='depreciation_board']//field[@name='state']" position="after">
+                    <field name="analytic_account_id" force_save="1"/>
+                </xpath>
+                <field name="account_analytic_id" position="attributes">
+                    <attribute name="domain">[('group_id.name', '=', 'Fixed Asset')]</attribute>
+                </field>
+            </field>
+        </record>
+    </data>
+</odoo>

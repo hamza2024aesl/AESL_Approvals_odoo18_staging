@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="loan_employee_categ_form" model="ir.ui.view">
+        <field name="name">loan.employee.loan.form</field>
+        <field name="model">hr.employee.category</field>
+        <field name="inherit_id" ref="hr.view_employee_category_form"/>
+        <field name="arch" type="xml">
+            <data>
+                <xpath expr="//field[@name='name']" position="replace">
+                    <group string="Tags" cols="4">
+                        <field name="name"/>
+                        <field name="allow_multiple_loan"/>
+                    </group>
+                    <group>
+                        <separator string="Loan Policies" colspan="4"/>
+                        <field name="loan_policy" nolabel="1" colspan="4"/>
+                    </group>
+                </xpath>
+            </data>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <record id="hr_contract_inherit_form" model="ir.ui.view">
+        <field name="name">Contract Inherit</field>
+        <field name="model">hr.contract</field>
+        <field name="inherit_id" ref="hr_contract.hr_contract_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='information']//group[@name='salary_info']" position="inside">
+                <group>
+                    <field name="tax_rebate" groups="hr.group_hr_manager"/>
+                    <field name="car_cost"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="hr_contract_form_inherit_add_field" model="ir.ui.view">
+        <field name="name">hr.contract.view.form.inherit.add.field</field>
+        <field name="model">hr.contract</field>
+        <field name="inherit_id" ref="hr_payroll.hr_contract_form_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='contract_details_2']" position="inside">
+                <separator string="Contract Details"/>
+                <field name="sessi_calculation" string="Apply Social Security"/>
+                <field name="eobi" string="Apply EOBI"/>
+                <field name="car_entitlement"/>
+                <field name="gratuity"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

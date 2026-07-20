@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data noupdate="1">
+        <record id="loan_see_own_subordinates" model="ir.rule">
+            <field name="name">loan_see_own_subordinates</field>
+            <field name="model_id" ref="model_employee_loan_details"/>
+            <field name="groups"
+                   eval="[(4,ref('base.group_user')),(4, ref('hr.group_hr_manager')),(4, ref('hr.group_hr_user'))]"/>
+            <field name="domain_force">
+                ['|',('employee_id.parent_id.user_id','=',user.id),('employee_id.user_id','=',user.id)]
+            </field>
+        </record>
+
+        <record id="loan_see_all_subordinates" model="ir.rule">
+            <field name="name">loan_see_all</field>
+            <field name="model_id" ref="model_employee_loan_details"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups"
+                   eval="[(4,ref('ivis_hr_employee_loan.hr_loan_approval_group')),(4, ref('ivis_hr_employee_loan.top_management_loan_approval_group'))]"/>
+        </record>
+
+        <!--        <record id="rule_writeoff_loan_officer" model="ir.rule">-->
+        <!--            <field name="name">Officer Writeoff</field>-->
+        <!--            <field name="model_id" ref="model_loan_prepayment_writeoff" />-->
+        <!--            <field name="domain_force">[(1,'=',1)]</field>-->
+        <!--            <field name="groups" eval="[(4,ref('hr.group_hr_user'))]" />-->
+        <!--        </record>-->
+
+        <!--        <record id="rule_writeoff_loan_accountant" model="ir.rule">-->
+        <!--            <field name="name">Accountant Writeoff</field>-->
+        <!--            <field name="model_id" ref="model_loan_prepayment_writeoff" />-->
+        <!--            <field name="domain_force">[(1,'=',1)]</field>-->
+        <!--            <field name="groups" eval="[(4,ref('account.group_account_invoice'))]" />-->
+        <!--        </record>-->
+
+        <record id="rule_loan_installment_officer" model="ir.rule">
+            <field name="name">Officer Loan Installments</field>
+            <field name="model_id" ref="model_loan_installment_details"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4,ref('hr.group_hr_user'))]"/>
+        </record>
+
+        <record id="rule_loan_installment_accountant" model="ir.rule">
+            <field name="name">Accountant Loan Installments</field>
+            <field name="model_id" ref="model_loan_installment_details"/>
+            <field name="domain_force">[(1,'=',1)]</field>
+            <field name="groups" eval="[(4,ref('account.group_account_invoice'))]"/>
+        </record>
+    </data>
+</odoo>

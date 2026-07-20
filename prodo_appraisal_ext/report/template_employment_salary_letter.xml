@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================================================
+         EMPLOYEE CERTIFICATE REPORT
+    ========================================================== -->
+    <template id="employee_certificate_template_layout_header">
+        <t t-call="prodo_appraisal_ext.employee_certificate_template_header"/>
+        <t t-raw="0"/>
+    </template>
+
+    <template id="employee_certificate_template_header">
+        <div class="header">
+            <div style="text-align: left; padding-bottom: 5px; margin: 0;">
+                <img t-if="docs.company_id.logo" t-att-src="image_data_uri(docs.company_id.logo)"
+                     alt="Company Logo" width="185" height="52"/>
+            </div>
+            <strong>
+                <h3 class="text-center">
+                    <t t-esc="company"/>
+                </h3>
+            </strong>
+            <!--                <strong><h3 class="text-center"><t t-esc=".company_id"/></h3></strong>-->
+            <!--                <strong><h3 class="text-center">Allied Engineering &amp; Services (Pvt.) Ltd.</h3></strong>-->
+
+        </div>
+    </template>
+    <template id="employee_certificate_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <t t-call="prodo_appraisal_ext.employee_certificate_template_layout_header"/>
+                    <div class="page"
+                         style="
+                            font-family: 'Times New Roman';
+                            font-size: 16px;
+                            padding-top: 20px;
+                            padding-left: 35px;
+                            padding-right: 35px;
+                         ">
+                        <!-- REF NO -->
+                        <div style="margin-bottom: 8px;">
+                            <span t-esc="o.x_studio_personal_file_number"/>
+                        </div>
+
+                        <!-- DATE -->
+
+                        <div style="
+                                text-align:right;
+                                margin-bottom:35px;
+                             ">
+                            <span t-esc="datetime.datetime.today().strftime('%B %d, %Y')"/>
+                        </div>
+                        <!-- TITLE -->
+                        <div style="
+                                text-align:center;
+                                font-weight:bold;
+                                font-size:18px;
+                                margin-bottom:45px;
+                                text-decoration: underline;
+                             ">
+                            TO WHOM IT MAY CONCERN
+                        </div>
+                        <!-- BODY -->
+                        <div style="
+                                text-align:justify;
+                                line-height: 2.2;
+                                font-size:17px;
+                             ">
+                            <p>
+                            This is to confirm that
+                            <strong>
+                                Mr.
+                                <span t-field="o.name"/>
+                            </strong>
+                            S/o.  <strong> Mr.
+<!--                                <span t-field="o.fam_member_ids[0].name"/>-->
+                                <strong>
+                                    <t t-set="father"
+                                       t-value="o.fam_member_ids.filtered(lambda f: f.relation == 'father')[:1]"/>
+
+                                    <span t-esc="father.name if father else ''"/>
+                                </strong>
+                            </strong>
+                            having CNIC No.
+                            <strong>
+                                <span t-field="o.ssnid"/>
+                            </strong>
+
+                            is working at Allied Engineering &amp;
+                            Services (Pvt) Limited since
+
+                            <strong>
+                                <span t-field="o.appointment_date"/>
+                            </strong>.
+
+                            He is a permanent employee of this organization.
+                            His present monthly gross salary is
+
+                            “<strong>
+                                <t t-set="open_contract"
+                                   t-value="o.contract_ids.filtered(lambda c: c.state == 'open')[:1]"/>
+
+                                <span t-esc="open_contract.wage if open_contract else 0"/>
+                            </strong>”.
+
+                             and his present designation is
+                            “<strong><span t-field="o.job_title"/></strong>”.
+
+                            </p>
+                        </div>
+
+                        <!-- FOOTER TEXT -->
+
+                        <div style="
+                                margin-top:45px;
+                                text-align:justify;
+                                line-height:2;
+                                font-size:17px;
+                             ">
+
+                            This letter is issued only for record purposes
+                            and doesn’t form any commitment/guarantee on the
+                            part of the company.
+
+                        </div>
+
+                        <!-- SIGNATURE -->
+
+                        <div style="margin-top:95px;">
+
+                            <div style="
+                                    font-size:17px;
+                                    margin-bottom:70px;
+                                 ">
+
+                                for ALLIED ENGINEERING &amp;
+                                SERVICES (PVT.) LTD.
+
+                            </div>
+                            <div style="
+                                    border-top:1px solid black;
+                                    width:230px;
+                                    padding-top:8px;
+                                    font-size:16px;
+                                 ">
+
+                                <div style="
+                                        text-align:left;
+                                        padding-bottom:5px;
+                                        margin:0;
+                                     ">
+
+                                <img t-att-src="'/prodo_appraisal_ext/static/description/img.png'"
+                                     style="width:185px;height:52px;"/>
+
+                                </div>
+
+                                AUTHORISED SIGNATURE
+
+                            </div>
+<!--                            <div style="-->
+<!--                                    border-top:1px solid black;-->
+<!--                                    width:230px;-->
+<!--                                    padding-top:8px;-->
+<!--                                    font-size:16px;-->
+<!--                                 ">-->
+<!--                                <div style="text-align: left; padding-bottom: 5px; margin: 0;">-->
+<!--                                    <img t-if="docs.company_id.logo" t-att-src="image_data_uri(docs.company_id.logo)"-->
+<!--                                         alt="Company Logo" width="185" height="52"/>-->
+<!--                                </div>-->
+
+<!--                                AUTHORISED SIGNATURE-->
+
+<!--                            </div>-->
+
+                        </div>
+
+                    </div>
+
+                </t>
+
+            </t>
+
+        </t>
+
+    </template>
+
+
+    <!-- =========================================================
+         REPORT ACTION
+    ========================================================== -->
+
+    <record id="action_employee_certificate_report" model="ir.actions.report">
+        <field name="name">Employee Certificate</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">prodo_appraisal_ext.employee_certificate_template</field>
+        <field name="report_file">prodo_appraisal_ext.employee_certificate_template</field>
+        <field name="binding_model_id" ref="hr.model_hr_employee"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">"'Employee Certificate - %s' % (object.name)"</field>
+    </record>
+
+</odoo>

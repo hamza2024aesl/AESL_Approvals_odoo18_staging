@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <template id="payslip_list_view_portal">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="1"/>
+
+            <div class="attendance-portal-header my-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2">
+                        <i class="oi oi-chevron-left"/>
+                    </a>
+                    <h3 class="my-0 mt-1 me-auto attendance-page-title">Payslips</h3>
+
+                    <div class="attendance-controls d-flex align-items-center flex-wrap gap-2">
+                        <div class="btn-group payslip-groupby-container">
+                            <button class="btn btn-secondary attendance-ctrl-btn dropdown-toggle"
+                                    type="button" data-bs-toggle="dropdown">
+                                Group By
+                            </button>
+                            <div class="dropdown-menu p-3">
+                                <div class="form-check">
+                                    <input class="form-check-input group-by-checkbox-payslip"
+                                           type="checkbox" value="month" id="groupByMonth"/>
+                                    <label class="form-check-label" for="groupByMonth">Month</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input group-by-checkbox-payslip"
+                                           type="checkbox" value="year" id="groupByYear"/>
+                                    <label class="form-check-label" for="groupByYear">Year</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <t t-call="portal.portal_searchbar">
+                        <t t-set="title">&#8203;</t>
+                    </t>
+                </div>
+            </div>
+
+            <br/>
+
+            <t t-if="not payslips">
+                <p class="alert alert-warning">There are currently no payslips.</p>
+            </t>
+
+            <t t-call="portal.portal_table">
+                <t t-if="payslips">
+                    <thead>
+                        <tr>
+                            <th class="ps2-num-col">Payslip Number</th>
+                            <th class="ps2-emp-col">Employee</th>
+                            <th class="ps2-batch-col">Batch Name</th>
+                            <th class="ps2-wage-col text-right">Net Wage</th>
+                            <th class="ps2-status-col text-center">Status</th>
+                            <th class="ps2-action-col"/>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="grouped_payslips.items()" t-as="group" t-if="grouped_payslips">
+                            <tr class="bg-light">
+                                <td colspan="11">
+                                    <button class="btn btn-link btn-sm payslip-expand-btn"
+                                            t-att-data-group-id="group[0]">
+                                        <i class="fa fa-plus payslip-expand-icon"/>
+                                    </button>
+                                    <strong>
+                                        <t t-if="group_by == 'month'">
+                                            Month: <t t-out="group[0]"/>
+                                        </t>
+                                        <t t-elif="group_by == 'year'">
+                                            Year: <t t-out="group[0]"/>
+                                        </t>
+                                    </strong>
+                                </td>
+                            </tr>
+                            <t t-foreach="sorted(group[1], key=lambda p: p.payslip_run_id.id, reverse=True)"
+                               t-as="payslip">
+                                <tr t-attf-data-group-id="{{group[0]}}"
+                                    class="payslip-group-row" style="display: none;">
+                                    <td class="ps2-num-col" style="padding-left: 25px;">
+                                        <span t-out="payslip.number"/>
+                                    </td>
+                                    <td class="ps2-emp-col">
+                                        <t t-out="payslip.employee_id.name"/>
+                                    </td>
+                                    <td class="ps2-batch-col">
+                                        <t t-out="payslip.payslip_run_id.name"/>
+                                    </td>
+                                    <td class="ps2-wage-col text-right">
+                                        <span t-if="payslip.net_wage == 0"
+                                              t-out="payslip.net_wage"
+                                              t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'
+                                              style="color:red"/>
+                                        <span t-else=""
+                                              t-out="payslip.net_wage"
+                                              t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'/>
+                                    </td>
+                                    <td class="ps2-status-col text-center">
+                                        <span style="color:rgb(23, 162, 184); font-style:italic">
+                                            <t t-out="payslip.state"/>
+                                        </span>
+                                    </td>
+                                    <td class="ps2-action-col text-right">
+                                        <a t-attf-href="/my/payslips/view/{{payslip.id}}"
+                                           title="Open Payslip"
+                                           aria-label="Open Payslip"
+                                           class="btn btn-sm btn-primary"
+                                           role="button">
+                                            <i class="fa fa-arrow-circle-right"/>
+                                            <span class="d-none d-md-inline">Open Payslip</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </t>
+                        </t>
+
+                        <t t-foreach="sorted(payslips, key=lambda p: p.payslip_run_id.id, reverse=True)"
+                           t-as="payslip" t-if="payslips and not grouped_payslips">
+                            <tr>
+                                <td class="ps2-num-col">
+                                    <span t-out="payslip.number"/>
+                                </td>
+                                <td class="ps2-emp-col">
+                                    <t t-out="payslip.employee_id.name"/>
+                                </td>
+                                <td class="ps2-batch-col">
+                                    <t t-out="payslip.payslip_run_id.name"/>
+                                </td>
+                                <td class="ps2-wage-col text-right">
+                                    <span t-if="payslip.net_wage == 0"
+                                          t-out="payslip.net_wage"
+                                          t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'
+                                          style="color:red"/>
+                                    <span t-else=""
+                                          t-out="payslip.net_wage"
+                                          t-options='{"widget": "monetary", "display_currency": payslip.currency_id}'/>
+                                </td>
+                                <td class="ps2-status-col text-center">
+                                    <span style="color:rgb(23, 162, 184); font-style:italic">
+                                        <t t-out="payslip.state"/>
+                                    </span>
+                                </td>
+                                <td class="ps2-action-col text-right">
+                                    <a t-attf-href="/my/payslips/view/{{payslip.id}}"
+                                       title="Open Payslip"
+                                       aria-label="Open Payslip"
+                                       class="btn btn-sm btn-primary"
+                                       role="button">
+                                        <i class="fa fa-arrow-circle-right"/>
+                                        <span class="d-none d-md-inline">Open Payslip</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="payslip_view_page_portal" name="Payslip"
+              inherit_id="portal.portal_sidebar" primary="True">
+        <xpath expr="//div[hasclass('o_portal_sidebar')]" position="inside">
+            <t t-if="page_name == 'payslip_view_page'">
+                <t t-set="no_breadcrumbs" t-value="1"/>
+
+                <div class="attendance-portal-header" style="margin-top:1rem; margin-bottom:2.5rem">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a href="/my/payslips" title="Go Back" class="btn btn-light px-2 mx-2">
+                            <i class="oi oi-chevron-left"/>
+                        </a>
+                        <h3 class="my-0 mt-1 attendance-page-title">Payslip</h3>
+                    </div>
+                </div>
+
+                <div class="row mt16 o_portal_invoice_sidebar">
+                    <t t-call="portal.portal_record_sidebar">
+                        <t t-set="classes" t-value="'col-lg-3 col-xl-4 d-print-none me-lg-auto'"/>
+                        <t t-set="title">
+                            <h2>
+                                <t t-out="this_payslip.number"/> &#8195;&#8195;&#8195;
+                            </h2>
+                        </t>
+                        <t t-set="entries">
+                            <div class="d-flex flex-column gap-4">
+                                <div class="flex-basis-100 flex-basis-sm-50 flex-basis-lg-100 order-1 order-lg-0">
+                                    <a t-attf-href="/my/payslips/download/{{this_payslip.id}}"
+                                       class="btn btn-primary d-block mb-2">
+                                        <i class="fa fa-download"/>&#8194;Download Payslip
+                                    </a>
+                                    <div class="o_download_pdf d-flex gap-1 flex-lg-column flex-xl-row"/>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+
+                    <div id="payslip_content" class="o_portal_content col-12 col-lg-9 col-xl-8">
+                        <div class="o_portal_html_view shadow p-3">
+                            <iframe id="invoice_html" class="mt8 mb8" width="100%" height="100%"
+                                    frameborder="0" scrolling="no"
+                                    t-attf-src="/my/payslips/html/{{this_payslip.id}}"/>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>

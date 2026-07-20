@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_payslip_custom,access.hr.payslip,model_hr_payslip,base.group_portal,1,0,0,0
+access_mail_activity,access.mail.activity,model_mail_activity,base.group_portal,1,1,1,1
+access_mail_activity_type,access.mail.activity.type,model_mail_activity_type,base.group_portal,1,1,1,1
+access_calendar_event,access.calendar.event,model_calendar_event,base.group_portal,1,1,1,1
+access_calendar_attendee,access.calendar.attendee,model_calendar_attendee,base.group_portal,1,1,1,1
+access_hr_leave_type,access.hr.leave.type,model_hr_leave_type,base.group_portal,1,0,0,0

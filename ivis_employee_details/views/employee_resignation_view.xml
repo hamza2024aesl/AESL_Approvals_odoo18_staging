@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="employee_resignation_list_view" model="ir.ui.view">
+            <field name="name">employee.resignation.view</field>
+            <field name="model">employee.resignation</field>
+            <field name="arch" type="xml">
+                <list string="Resignation Form">
+                    <field name="emp_name"/>
+                    <field name="emp_designation"/>
+                    <field name="company"/>
+                    <field name="department"/>
+                    <field name="immediate_boss"/>
+                    <field name="station"/>
+                    <field name="appointment_date"/>
+                    <field name="resignation_date"/>
+                    <field name="leaving_status"/>
+                    <field name="state"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="employee_resignation_form" model="ir.ui.view">
+            <field name="name">employee.resignation.form</field>
+            <field name="model">employee.resignation</field>
+            <field name="arch" type="xml">
+                <form string="Resignation">
+                    <header>
+                        <button name="buh_clearance" type="object" string="Proceed"
+                                class="oe_highlight"
+                                invisible="state in ['buh', 'vp', 'final_approval', 'approved', 'clearance_approved', 'final_settlemnet']"/>
+
+                        <button name="vp_clearance" type="object" string="First Approval"
+                                class="oe_highlight"
+                                invisible="state in ['draft', 'vp', 'final_approval', 'approved', 'clearance_approved', 'final_settlemnet']"/>
+
+                        <button name="fa_clearance" type="object" string="Second Approval"
+                                class="oe_highlight"
+                                invisible="state in ['draft', 'buh', 'final_approval', 'approved', 'clearance_approved', 'final_settlemnet']"/>
+
+                        <button name="approve_clearance" type="object" string="Final Approval"
+                                class="oe_highlight"
+                                invisible="state in ['draft', 'buh', 'vp', 'approved', 'clearance_approved', 'final_settlemnet']"/>
+
+                        <button name="clearance_received" type="object" string="Clearance Approved"
+                                class="oe_highlight"
+                                invisible="state in ['draft', 'buh', 'vp', 'final_approval', 'approved', 'final_settlemnet']"/>
+
+                        <button name="%(clearance_action_view_ga)d" type="action" string="Reject"
+                                invisible="state in ['draft', 'approved', 'clearance_approved']"/>
+
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <!--						<field name="emp_image" widget="image" class="oe_avatar" />-->
+                        <div class="oe_title">
+                            <label for="emp_name" class="oe_edit_only"/>
+                            <h1>
+                                <field name="emp_name" placeholder="Employee's Name" options="{'no_create': True}"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="company_id" invisible="1"/>
+                                <field name="emp_designation" readonly="1"/>
+                                <field name="emp_division" readonly="1"/>
+                                <field name="emp_badge" readonly="1"/>
+                                <field name="company" readonly="1"/>
+                                <field name="department" readonly="1"/>
+                                <field name="immediate_boss" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="station" readonly="1"/>
+                                <field name="appointment_date" readonly="1"/>
+                                <field name="resignation_date"/>
+                                <field name="exit_date"/>
+                                <field name="leaving_status"/>
+                            </group>
+                            <group string='Company Property '>
+                                <!--								<field name="company_property" widget="many2many_tags" />-->
+                                <field name="description"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Exit CheckList"
+                                  invisible="state in ['draft', 'buh', 'vp', 'final_approval', 'approved']"
+                                  groups="base.group_user,hr.group_hr_user">
+                                <field name="clearance_employee">
+                                    <list string="Exit CheckList" editable="bottom">
+                                        <field name="received"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_hr_certicate" model="ir.actions.act_window">
+            <field name="name">Resignation Form</field>
+            <field name="res_model">employee.resignation</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <menuitem id="hr_certificate" name="Resignation Forms"
+                  action="action_hr_certicate"
+                  groups="hr.group_hr_user,hr.group_hr_manager"
+                  parent="hr.menu_hr_root" sequence="94"/>
+    </data>
+</odoo>

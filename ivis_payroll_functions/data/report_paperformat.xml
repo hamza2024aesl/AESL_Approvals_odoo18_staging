@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <record id="paperformat_salarysheet_report" model="report.paperformat">
+        <field name="name">Salary Sheet Report</field>
+        <field name="orientation">Landscape</field>
+        <field name="dpi">96</field>
+    </record>
+</odoo>

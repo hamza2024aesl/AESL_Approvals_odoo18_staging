@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data noupdate="1">
+        <record id="appraisal_system_all_rule" model="ir.rule">
+            <field name="name">All Appraisal</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('aesl_appraisal_system.group_user_appraisals_1'))]"/>
+        </record>
+
+        <record id="appraisal_system_emp_rule" model="ir.rule">
+            <field name="name">Employee Appraisal</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="domain_force">['|', ('employee_id.user_id', '=', user.id), '&amp;', ('employee_id.parent_id', '!=', False), ('employee_id.parent_id', '=', user.employee_id.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record id="appraisal_system_manager_rule" model="ir.rule">
+            <field name="name">Manager Appraisal</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="domain_force">[('appraisal_approver_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <record model="ir.rule" id="appraisal_system_comp_rule">
+            <field name="name">Appraisal multi-company</field>
+            <field name="model_id" ref="model_appraisal_system"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+    </data>
+</odoo>

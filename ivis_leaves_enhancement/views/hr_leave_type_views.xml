@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="ga_hr_holidays_status" model="ir.ui.view">
+            <field name="name">leave.view</field>
+            <field name="model">hr.leave.type</field>
+            <field name='inherit_id' ref='hr_holidays.edit_holiday_status_form'/>
+            <field name="arch" type="xml">
+                <xpath expr="//form/sheet/group/group[@name='allocation_validation']" postion="replace"/>
+            </field>
+        </record>
+
+        <record id="ga_hr_holidays_status" model="ir.ui.view">
+            <field name="name">leave.view</field>
+            <field name="model">hr.leave.type</field>
+            <field name='inherit_id' ref='hr_holidays.edit_holiday_status_form'/>
+            <field name="arch" type="xml">
+                <xpath expr="//form/sheet/group/group[@name='configuration']" postion="inside">
+                    <field name="auto_allocate"/>
+                    <field name="leaves_collapse" string="Lapse"/>
+                    <field name="leaves_quantity"/>
+                    <field name="prorate_basis"/>
+                    <field name="allowed_in_probation"/>
+                    <field name="max_days"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

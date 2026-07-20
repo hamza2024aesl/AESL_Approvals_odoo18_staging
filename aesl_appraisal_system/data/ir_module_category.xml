@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="aesl_appraisal_system_root" model="ir.module.category">
+            <field name="name">Appraisals Group</field>
+        </record>
+    </data>
+</odoo>

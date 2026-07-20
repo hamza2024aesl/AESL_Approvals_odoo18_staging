@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="wizard_form" model="ir.ui.view">
+            <field name="name">Reconciliation.form</field>
+            <field name="model">payroll.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Wizard">
+                    <group>
+                        <group string="Report Type">
+                            <field name="type"/>
+                            <field name="employee_ids" widget="many2many_tags" invisible="type not in ['Provident Funds Report', 'Certificate Of Deduction', 'Provident Fund Deduction Certificate', 'Performance Appraisal Form']"/>
+                        </group>
+                        <group string="Date Range">
+                            <field name="previous_month" invisible="type != 'Payroll Reconiliation'" required="type == 'Payroll Reconiliation'"/>
+                            <field name="current_month" required="1"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button string='Print' name="reconciliation_report" type="object" class="btn-primary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

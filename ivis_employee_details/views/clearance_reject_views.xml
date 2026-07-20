@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <data>
+        <record id="clearance_form_view_ga" model="ir.ui.view">
+            <field name="name">Clearance.reject.view</field>
+            <field name="model">clearance.reject</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group>
+                        <field name="clearance_reject_reason"/>
+                    </group>
+                    <footer>
+                        <button name="reject_clearance" type="object" string="Submit" class="oe_highlight"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="clearance_action_view_ga" model="ir.actions.act_window">
+            <field name="name">Clearance Rejection</field>
+            <field name="res_model">clearance.reject</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+    </data>
+</odoo>
