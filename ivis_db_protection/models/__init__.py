@@ -1,1 +1,0 @@
-from . import ivis_db_protection

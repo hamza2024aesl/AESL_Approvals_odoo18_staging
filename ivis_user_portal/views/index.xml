@@ -1,5 +1,0 @@
-<odoo>
-    <template id="render_html">
-        <iframe width="100%" height="100%" src="/ivis_user_portal/static/index.html"></iframe>
-    </template>
-</odoo>
