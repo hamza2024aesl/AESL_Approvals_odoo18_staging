@@ -688,6 +688,14 @@ class ApprovalPortal(CustomerPortal):
             
         employee = request_rec.employee_id
         
+        def safe_float(val):
+            if not val:
+                return 0.0
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return 0.0
+
         try:
             trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
             
@@ -704,8 +712,8 @@ class ApprovalPortal(CustomerPortal):
                 'period_from': request_rec.date_start,
                 'period_to': request_rec.date_end,
                 'date': post.get('expense_date'),
-                'advance_by_company': float(post.get('advance_by_company', 0.0)),
-                'items_paid_direct': float(post.get('items_paid_direct', 0.0)),
+                'advance_by_company': safe_float(post.get('advance_by_company')),
+                'items_paid_direct': safe_float(post.get('items_paid_direct')),
                 'state': 'submitted',
             }
             expense = request.env['approval.travel.expense'].sudo().create(expense_vals)
@@ -717,16 +725,50 @@ class ApprovalPortal(CustomerPortal):
                 station_to = post.get(f'station_to_{i}')
                 date_str = post.get(f'date_{i}')
                 time_str = post.get(f'time_{i}')
-                description = post.get(f'description_{i}', '')
-                currency = post.get(f'currency_{i}', '')
+
+                fare_amt = safe_float(post.get(f'fare_{i}'))
+                fare_desc = post.get(f'fare_desc_{i}', '')
+                fare_curr = post.get(f'fare_curr_{i}', '')
+
+                hotel_amt = safe_float(post.get(f'hotel_{i}'))
+                hotel_desc = post.get(f'hotel_desc_{i}', '')
+                hotel_curr = post.get(f'hotel_curr_{i}', '')
+
+                meals_amt = safe_float(post.get(f'meals_{i}'))
+                meals_desc = post.get(f'meals_desc_{i}', '')
+                meals_curr = post.get(f'meals_curr_{i}', '')
+
+                taxi_amt = safe_float(post.get(f'taxi_{i}'))
+                taxi_desc = post.get(f'taxi_desc_{i}', '')
+                taxi_curr = post.get(f'taxi_curr_{i}', '')
+
+                laundry_amt = safe_float(post.get(f'laundry_{i}'))
+                laundry_desc = post.get(f'laundry_desc_{i}', '')
+                laundry_curr = post.get(f'laundry_curr_{i}', '')
+
+                telephone_amt = safe_float(post.get(f'telephone_{i}'))
+                telephone_desc = post.get(f'telephone_desc_{i}', '')
+                telephone_curr = post.get(f'telephone_curr_{i}', '')
+
+                other_amt = safe_float(post.get(f'other_{i}'))
+                other_desc = post.get(f'other_desc_{i}', '')
+                other_curr = post.get(f'other_curr_{i}', '')
+
+                daily_amt = safe_float(post.get(f'daily_{i}'))
+                daily_desc = post.get(f'daily_desc_{i}', '')
+                daily_curr = post.get(f'daily_curr_{i}', '')
                 
                 # Check if row has any data
                 has_data = any([
-                    station_from, station_to, date_str, time_str, description, currency,
-                    float(post.get(f'fare_{i}', 0.0) or 0.0), float(post.get(f'hotel_{i}', 0.0) or 0.0),
-                    float(post.get(f'meals_{i}', 0.0) or 0.0), float(post.get(f'taxi_{i}', 0.0) or 0.0),
-                    float(post.get(f'laundry_{i}', 0.0) or 0.0), float(post.get(f'telephone_{i}', 0.0) or 0.0),
-                    float(post.get(f'other_{i}', 0.0) or 0.0), float(post.get(f'daily_{i}', 0.0) or 0.0)
+                    station_from, station_to, date_str, time_str,
+                    fare_amt, fare_desc, fare_curr,
+                    hotel_amt, hotel_desc, hotel_curr,
+                    meals_amt, meals_desc, meals_curr,
+                    taxi_amt, taxi_desc, taxi_curr,
+                    laundry_amt, laundry_desc, laundry_curr,
+                    telephone_amt, telephone_desc, telephone_curr,
+                    other_amt, other_desc, other_curr,
+                    daily_amt, daily_desc, daily_curr,
                 ])
                 
                 if has_data:
@@ -736,16 +778,30 @@ class ApprovalPortal(CustomerPortal):
                         'station_to': station_to,
                         'date_str': date_str,
                         'time_str': time_str,
-                        'description': description,
-                        'currency': currency,
-                        'fare': float(post.get(f'fare_{i}', 0.0) or 0.0),
-                        'hotel_room': float(post.get(f'hotel_{i}', 0.0) or 0.0),
-                        'meals': float(post.get(f'meals_{i}', 0.0) or 0.0),
-                        'taxi': float(post.get(f'taxi_{i}', 0.0) or 0.0),
-                        'laundry': float(post.get(f'laundry_{i}', 0.0) or 0.0),
-                        'telephone': float(post.get(f'telephone_{i}', 0.0) or 0.0),
-                        'other_expense': float(post.get(f'other_{i}', 0.0) or 0.0),
-                        'daily_allowance': float(post.get(f'daily_{i}', 0.0) or 0.0),
+                        'fare': fare_amt,
+                        'fare_desc': fare_desc,
+                        'fare_curr': fare_curr,
+                        'hotel_room': hotel_amt,
+                        'hotel_desc': hotel_desc,
+                        'hotel_curr': hotel_curr,
+                        'meals': meals_amt,
+                        'meals_desc': meals_desc,
+                        'meals_curr': meals_curr,
+                        'taxi': taxi_amt,
+                        'taxi_desc': taxi_desc,
+                        'taxi_curr': taxi_curr,
+                        'laundry': laundry_amt,
+                        'laundry_desc': laundry_desc,
+                        'laundry_curr': laundry_curr,
+                        'telephone': telephone_amt,
+                        'telephone_desc': telephone_desc,
+                        'telephone_curr': telephone_curr,
+                        'other_expense': other_amt,
+                        'other_desc': other_desc,
+                        'other_curr': other_curr,
+                        'daily_allowance': daily_amt,
+                        'daily_desc': daily_desc,
+                        'daily_curr': daily_curr,
                     })
             
             # Trigger Email

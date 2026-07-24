@@ -803,15 +803,15 @@
                                     </tr>
                                     <tr class="bg-light text-dark">
                                         <th style="width: 18%; min-width: 220px;">STATION</th>
-                                        <th class="bg-primary text-white" style="width: 14%; min-width: 170px;">Total</th>
-                                        <th>Fare<br/><span class="text-muted fw-normal" style="font-size:0.7rem;">Amount</span></th>
+                                        <th class="bg-primary text-white" style="width: 10%; min-width: 110px;">Total</th>
+                                        <th>Fare</th>
                                         <th>Hotel<br/>Room</th>
                                         <th>Meals</th>
                                         <th>Taxi</th>
                                         <th>Laundry</th>
                                         <th>Telephone</th>
                                         <th>Other<br/>Expense</th>
-                                        <th class="bg-secondary text-white">DAILY<br/>ALLOWANCE<br/><span class="fw-normal" style="font-size:0.7rem;">Amount</span></th>
+                                        <th class="bg-secondary text-white">DAILY<br/>ALLOWANCE</th>
                                         <th style="width: 5%;" t-if="not is_readonly">Action</th>
                                     </tr>
                                 </thead>
@@ -820,7 +820,7 @@
                                     <t t-foreach="range(1, 8)" t-as="i">
                                         <tr class="expense-row">
                                             <t t-set="line" t-value="expense.expense_line_ids[i-1] if expense and len(expense.expense_line_ids) >= i else False"/>
-                                            <td class="text-start p-0">
+                                            <td class="text-start p-0" style="min-width: 220px;">
                                                 <div class="input-group input-group-sm border-bottom">
                                                     <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">From :</span>
                                                     <input type="text" t-attf-name="station_from_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.station_from if line else ''"/>
@@ -838,31 +838,66 @@
                                                     <input type="time" t-attf-name="time_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.time_str if line else ''"/>
                                                 </div>
                                             </td>
-                                            <td class="bg-light text-center p-0" style="min-width: 130px;">
-                                                <div class="border-bottom py-1">
-                                                    <span class="fw-bold row-total" t-attf-id="row_total_{{i}}">0.00</span>
-                                                    <span class="fw-bold ms-1 row-currency-label" t-attf-id="row_currency_label_{{i}}"></span>
-                                                </div>
-                                                <div class="border-bottom">
-                                                    <input type="text" t-attf-name="description_{{i}}" placeholder="Description" class="form-control form-control-sm border-0 rounded-0 text-center w-100" style="font-size: 0.75rem; background-color: #f8f9fa;" t-att-readonly="is_readonly" t-att-value="line.description if line else ''"/>
-                                                </div>
-                                                <div class="border-bottom">
-                                                    <input type="text" t-attf-name="currency_{{i}}" placeholder="Currency" class="form-control form-control-sm border-0 rounded-0 text-center row-currency-select w-100" style="font-size: 0.75rem; background-color: #f8f9fa;" t-att-readonly="is_readonly" t-att-value="line.currency if line else ''"/>
-                                                </div>
+                                            <td class="bg-light text-center align-middle p-2" style="min-width: 110px;">
+                                                <span class="fw-bold fs-6 row-total text-primary" t-attf-id="row_total_{{i}}">0.00</span>
                                             </td>
                                             <t t-foreach="cols" t-as="col">
                                                 <t t-set="col_val" t-value="0.00"/>
+                                                <t t-set="col_desc" t-value="''"/>
+                                                <t t-set="col_curr" t-value="''"/>
                                                 <t t-if="line">
-                                                    <t t-if="col == 'fare'" t-set="col_val" t-value="line.fare"/>
-                                                    <t t-if="col == 'hotel'" t-set="col_val" t-value="line.hotel_room"/>
-                                                    <t t-if="col == 'meals'" t-set="col_val" t-value="line.meals"/>
-                                                    <t t-if="col == 'taxi'" t-set="col_val" t-value="line.taxi"/>
-                                                    <t t-if="col == 'laundry'" t-set="col_val" t-value="line.laundry"/>
-                                                    <t t-if="col == 'telephone'" t-set="col_val" t-value="line.telephone"/>
-                                                    <t t-if="col == 'other'" t-set="col_val" t-value="line.other_expense"/>
-                                                    <t t-if="col == 'daily'" t-set="col_val" t-value="line.daily_allowance"/>
+                                                    <t t-if="col == 'fare'">
+                                                        <t t-set="col_val" t-value="line.fare"/>
+                                                        <t t-set="col_desc" t-value="line.fare_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.fare_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'hotel'">
+                                                        <t t-set="col_val" t-value="line.hotel_room"/>
+                                                        <t t-set="col_desc" t-value="line.hotel_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.hotel_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'meals'">
+                                                        <t t-set="col_val" t-value="line.meals"/>
+                                                        <t t-set="col_desc" t-value="line.meals_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.meals_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'taxi'">
+                                                        <t t-set="col_val" t-value="line.taxi"/>
+                                                        <t t-set="col_desc" t-value="line.taxi_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.taxi_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'laundry'">
+                                                        <t t-set="col_val" t-value="line.laundry"/>
+                                                        <t t-set="col_desc" t-value="line.laundry_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.laundry_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'telephone'">
+                                                        <t t-set="col_val" t-value="line.telephone"/>
+                                                        <t t-set="col_desc" t-value="line.telephone_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.telephone_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'other'">
+                                                        <t t-set="col_val" t-value="line.other_expense"/>
+                                                        <t t-set="col_desc" t-value="line.other_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.other_curr or ''"/>
+                                                    </t>
+                                                    <t t-if="col == 'daily'">
+                                                        <t t-set="col_val" t-value="line.daily_allowance"/>
+                                                        <t t-set="col_desc" t-value="line.daily_desc or ''"/>
+                                                        <t t-set="col_curr" t-value="line.daily_curr or ''"/>
+                                                    </t>
                                                 </t>
-                                                <td class="align-middle"><input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/></td>
+                                                <td class="p-1 align-middle">
+                                                    <div class="mb-1">
+                                                        <input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" placeholder="Amount" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/>
+                                                    </div>
+                                                    <div class="mb-1">
+                                                        <input type="text" t-attf-name="{{col}}_desc_{{i}}" placeholder="Description" class="form-control form-control-sm text-center" style="font-size: 0.75rem;" t-att-readonly="is_readonly" t-att-value="col_desc"/>
+                                                    </div>
+                                                    <div>
+                                                        <input type="text" t-attf-name="{{col}}_curr_{{i}}" placeholder="Currency" class="form-control form-control-sm text-center" style="font-size: 0.75rem;" t-att-readonly="is_readonly" t-att-value="col_curr"/>
+                                                    </div>
+                                                </td>
                                             </t>
                                             <td class="align-middle" t-if="not is_readonly">
                                                 <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row" title="Calculate Row">Calc</button>
@@ -927,41 +962,43 @@
                             let rowTotal = 0.0;
                             cols.forEach(col => {
                                 let input = document.querySelector(`input[name="${col}_${i}"]`);
-                                let val = parseFloat(input.value) || 0;
+                                let val = input ? (parseFloat(input.value) || 0) : 0;
                                 rowTotal += val;
                                 colTotals[col] += val;
                             });
-                            document.getElementById(`row_total_${i}`).innerText = rowTotal.toFixed(2);
+                            const rowTotElem = document.getElementById(`row_total_${i}`);
+                            if (rowTotElem) rowTotElem.innerText = rowTotal.toFixed(2);
                             grandTotal += rowTotal;
                         }
 
                         cols.forEach(col => {
-                            document.getElementById(`col_total_${col}`).innerText = colTotals[col].toFixed(2);
+                            const colTotElem = document.getElementById(`col_total_${col}`);
+                            if (colTotElem) colTotElem.innerText = colTotals[col].toFixed(2);
                         });
 
-                        document.getElementById('grand_total_col').innerText = grandTotal.toFixed(2);
-                        document.getElementById('summary_total_expense').innerText = grandTotal.toFixed(2);
-                        document.getElementById('total_expense_input').value = grandTotal.toFixed(2);
+                        const grandCol = document.getElementById('grand_total_col');
+                        if (grandCol) grandCol.innerText = grandTotal.toFixed(2);
+                        
+                        const sumTot = document.getElementById('summary_total_expense');
+                        if (sumTot) sumTot.innerText = grandTotal.toFixed(2);
+                        
+                        const totInp = document.getElementById('total_expense_input');
+                        if (totInp) totInp.value = grandTotal.toFixed(2);
 
                         let adv = parseFloat(document.getElementById('input_advance').value) || 0;
                         let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
 
                         let balance = grandTotal - adv - direct;
-                        document.getElementById('summary_balance_due').innerText = balance.toFixed(2);
+                        const balElem = document.getElementById('summary_balance_due');
+                        if (balElem) balElem.innerText = balance.toFixed(2);
                     }
 
                     // Trigger initial calculation
                     performCalculation();
 
-                    document.querySelectorAll('.row-currency-select').forEach(sel => {
-                        sel.addEventListener('input', function() {
-                            const rowId = this.name.split('_')[1];
-                            document.getElementById('row_currency_label_' + rowId).innerText = this.value;
-                        });
-                    });
-
                     document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
                         inp.addEventListener('change', performCalculation);
+                        inp.addEventListener('input', performCalculation);
                     });
 
                     document.querySelectorAll('.calc-btn-row').forEach(btn => {

@@ -67,13 +67,36 @@ class ApprovalTravelExpenseLine(models.Model):
     time_str = fields.Char(string='Time')
     
     fare = fields.Float(string='Fare')
+    fare_desc = fields.Char(string='Fare Description')
+    fare_curr = fields.Char(string='Fare Currency')
+
     hotel_room = fields.Float(string='Hotel Room')
+    hotel_desc = fields.Char(string='Hotel Description')
+    hotel_curr = fields.Char(string='Hotel Currency')
+
     meals = fields.Float(string='Meals')
+    meals_desc = fields.Char(string='Meals Description')
+    meals_curr = fields.Char(string='Meals Currency')
+
     taxi = fields.Float(string='Taxi')
+    taxi_desc = fields.Char(string='Taxi Description')
+    taxi_curr = fields.Char(string='Taxi Currency')
+
     laundry = fields.Float(string='Laundry')
+    laundry_desc = fields.Char(string='Laundry Description')
+    laundry_curr = fields.Char(string='Laundry Currency')
+
     telephone = fields.Float(string='Telephone')
+    telephone_desc = fields.Char(string='Telephone Description')
+    telephone_curr = fields.Char(string='Telephone Currency')
+
     other_expense = fields.Float(string='Other Expense')
+    other_desc = fields.Char(string='Other Description')
+    other_curr = fields.Char(string='Other Currency')
+
     daily_allowance = fields.Float(string='Daily Allowance')
+    daily_desc = fields.Char(string='Daily Description')
+    daily_curr = fields.Char(string='Daily Currency')
     
     description = fields.Char(string='Description')
     currency = fields.Char(string='Currency')
