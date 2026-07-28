@@ -8,3 +8,4 @@ from . import hr_payslip_input_type
 from . import hr_payslip_line
 from . import hr_payslip_recurring
 from . import hr_salary_rule
+from . import hr_work_entry

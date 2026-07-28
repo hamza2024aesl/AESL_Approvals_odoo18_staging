@@ -56,7 +56,7 @@ class HrPayslipInherit(models.Model):
             for slip in self.slip_ids:
 
                 x = {
-                    'reg_no': slip.employee_id.registration_number,
+                    'reg_no': slip.employee_id.identification_id,
                     'name': slip.employee_id.name,
                     'dept': slip.employee_id.department_id.name,
                     'job': slip.employee_id.job_id.name,

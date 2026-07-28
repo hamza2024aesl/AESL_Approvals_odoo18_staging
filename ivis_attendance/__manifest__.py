@@ -17,6 +17,7 @@
         'views/hr_attendance_view.xml',
         # 'views/holiday_schedule_view.xml',
         'views/hr_employee_view.xml',
+        'views/hr_leave.xml',
         # 'views/machine_data_view.xml',
         'security/ir.model.access.csv',
         'cron_task/process_attendance.xml'

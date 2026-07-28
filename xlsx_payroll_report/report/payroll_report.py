@@ -8,155 +8,196 @@ class PayrollReport(models.AbstractModel):
     _description = "Payroll Report"
 
     def generate_xlsx_report(self, workbook, data, lines):
-        # print("lines", lines.name)
+
+        # ================= FORMATS =================
         format1 = workbook.add_format({
-            'font_size': 12,
-            'align': 'vcenter',
-            'bold': True,
-            'bg_color': '#d3dde3',
-            'color': 'black',
-            'bottom': True,
+            'font_size': 12, 'align': 'vcenter', 'bold': True,
+            'bg_color': '#d3dde3', 'color': 'black', 'bottom': True,
         })
         format2 = workbook.add_format({
-            'font_size': 12,
-            'align': 'vcenter',
-            'bold': True,
-            'bg_color': '#edf4f7',
-            'color': 'black',
+            'font_size': 12, 'align': 'vcenter', 'bold': True,
+            'bg_color': '#edf4f7', 'color': 'black',
             'num_format': '#,##0.00'
         })
         format3 = workbook.add_format({
-            'font_size': 11,
-            'align': 'vcenter',
-            'bold': False,
+            'font_size': 11, 'align': 'vcenter',
             'num_format': '#,##0.00'
         })
         format3_colored = workbook.add_format({
-            'font_size': 11,
-            'align': 'vcenter',
+            'font_size': 11, 'align': 'vcenter',
             'bg_color': '#f7fcff',
-            'bold': False,
             'num_format': '#,##0.00'
         })
-        format4 = workbook.add_format({
-            'font_size': 12,
-            'align': 'vcenter',
-            'bold': True,
-        })
-        format5 = workbook.add_format({
-            'font_size': 12,
-            'align': 'vcenter',
-            'bold': False,
-        })
-        # sheet = workbook.add_worksheet('Payslip Report')
+        format4 = workbook.add_format({'font_size': 12, 'bold': True})
+        format5 = workbook.add_format({'font_size': 12})
 
-        # Fetch available salary rules:
+        # ================= STRUCTURES =================
         used_structures = []
-        for sal_structure in lines.slip_ids.struct_id:
-            if sal_structure.id not in used_structures:
-                used_structures.append([sal_structure.id, sal_structure.name])
+        for struct in lines.slip_ids.struct_id:
+            if struct.id not in [x[0] for x in used_structures]:
+                used_structures.append([struct.id, struct.name])
 
-        # Logic for each workbook, i.e. group payslips of each salary structure into a separate sheet:
         struct_count = 1
+
         for used_struct in used_structures:
-            # Generate Workbook
-            sheet = workbook.add_worksheet(str(struct_count) + ' - ' + str(used_struct[1]))
+
+            sheet = workbook.add_worksheet(f"{struct_count} - {used_struct[1]}")
+
             cols = list(string.ascii_uppercase)
             cols += [a + b for a in string.ascii_uppercase for b in string.ascii_uppercase]
 
+            # ================= FIXED HEADERS =================
+            fixed_headers = [
+                ('Registration Number', 10),
+                ('GP No.', 12),
+                ('Employee Name', 35),
+                ('Department', 20),
+                ('Grade', 15),
+                ('CNIC', 18),
+                ('Designation', 30),
+                ('Work Location', 15),
+            ]
+
+            start_rule_col = len(fixed_headers)
+            col_no = start_rule_col
             rules = []
-            col_no = 3
-            # Fetch available salary rules:
-            for item in lines.slip_ids.struct_id.rule_ids:
-                if item.struct_id.id == used_struct[0]:
-                    col_title = ''
-                    row = [None, None, None, None, None]
-                    row[0] = col_no
-                    row[1] = item.code
-                    row[2] = item.name
-                    col_title = str(cols[col_no]) + ':' + str(cols[col_no])
-                    row[3] = col_title
-                    if len(item.name) < 8:
-                        row[4] = 12
-                    else:
-                        row[4] = len(item.name) + 2
-                    rules.append(row)
-                    col_no += 1
 
-            # Report Details:
-            for item in lines.slip_ids:
-                if item.struct_id.id == used_struct[0]:
-                    batch_period = str(item.date_from.strftime('%B %d, %Y')) + '  To  ' + str(
-                        item.date_to.strftime('%B %d, %Y'))
-                    company_name = item.company_id.name
-                    break
+            # insert_after_name = "PF Loan - Total"
+            # pf_inserted = False
 
-            # Company Name
-            sheet.write(0, 0, company_name, format4)
+            # ================= SALARY RULES =================
+            for rule in lines.slip_ids.struct_id.rule_ids:
+                if rule.struct_id.id != used_struct[0]:
+                    continue
 
-            sheet.write(0, 2, 'Payslip Period:', format4)
-            sheet.write(0, 3, batch_period, format5)
+                rules.append([
+                    col_no,
+                    rule.code,
+                    rule.name,
+                    f"{cols[col_no]}:{cols[col_no]}",
+                    max(len(rule.name) + 2, 12),
+                ])
+                col_no += 1
 
-            sheet.write(1, 2, 'Payslip Structure:', format4)
-            sheet.write(1, 3, used_struct[1], format5)
+                # Insert PF Balance column
+                # if not pf_inserted and rule.name == insert_after_name:
+                #     pf_balance_col = col_no
+                #     rules.append([
+                #         pf_balance_col,
+                #         "PF_BAL",
+                #         "PF Balance",
+                #         f"{cols[pf_balance_col]}:{cols[pf_balance_col]}",
+                #         14,
+                #     ])
+                #     col_no += 1
+                #     pf_inserted = True
 
-            # List report column headers:
-            sheet.write(2, 0, 'Registration Number', format1)
-            sheet.write(2, 1, 'Employee Name', format1)
-            sheet.write(2, 2, 'Department', format1)
-            sheet.write(2, 3, 'Grade', format1)
-            sheet.write(2, 4, 'Designation', format1)
-            sheet.write(2, 5, 'Work Location', format1)
+            # if not pf_inserted:
+            #     pf_balance_col = col_no
+            #     rules.append([
+            #         pf_balance_col,
+            #         "PF_BAL",
+            #         "PF Balance",
+            #         f"{cols[pf_balance_col]}:{cols[pf_balance_col]}",
+            #         14,
+            #     ])
+            #     col_no += 1
+
+            # ================= TAIL HEADERS =================
+            tail_headers = [
+                ('Beneficiary Name', 25),
+                ('Beneficiary Account Number', 24),
+                ('Contact Number / Mobile', 22),
+                ('Beneficiary Email Address', 28),
+                ('Bank Account Title', 22),
+            ]
+
+            tail_cols = []
+            for title, width in tail_headers:
+                tail_cols.append((col_no, title, width))
+                col_no += 1
+
+            # ================= REPORT HEADER =================
+            slip = lines.slip_ids.filtered(lambda s: s.struct_id.id == used_struct[0])[:1]
+            if slip:
+                sheet.write(0, 0, slip.company_id.name, format4)
+                sheet.write(0, 2, 'Payslip Period:', format4)
+                sheet.write(0, 3, f"{slip.date_from:%B %d, %Y} To {slip.date_to:%B %d, %Y}", format5)
+                sheet.write(1, 2, 'Payslip Structure:', format4)
+                sheet.write(1, 3, used_struct[1], format5)
+
+            # ================= COLUMN HEADERS =================
+            for idx, (title, _) in enumerate(fixed_headers):
+                sheet.write(2, idx, title, format1)
+
             for rule in rules:
                 sheet.write(2, rule[0], rule[2], format1)
 
-            # Generate names, dept, and salary items:
-            # col = 0
-            x = 4
-            e_name = 4
-            has_payslips = False
-            for slip in lines.slip_ids:
-                if lines.slip_ids:
-                    if slip.struct_id.id == used_struct[0]:
-                        has_payslips = True
-                        sheet.write(e_name, 0, slip.employee_id.identification_id, format3)
-                        sheet.write(e_name, 1, slip.employee_id.name, format3)
-                        sheet.write(e_name, 2, slip.employee_id.department_id.name, format3)
-                        # grades column added (08/03/2022)
-                        sheet.write(e_name, 3, slip.employee_id.contract_id.x_studio_grade, format3)
-                        sheet.write(e_name, 4, slip.employee_id.job_id.name, format3)
-                        sheet.write(e_name, 5, slip.employee_id.work_location_id.name, format3)
-                        for line in slip.line_ids:
-                            for rule in rules:
-                                if line.code == rule[1]:
-                                    if line.amount > 0:
-                                        sheet.write(x, rule[0], line.amount, format3_colored)
-                                    else:
-                                        sheet.write(x, rule[0], line.amount, format3)
-                        x += 1
-                        e_name += 1
+            for col, title, _ in tail_cols:
+                sheet.write(2, col, title, format1)
 
-            # Generate summission row at report end:
-            sum_x = e_name
-            if has_payslips == True:
-                sheet.write(sum_x, 0, 'Total', format2)
-                sheet.write(sum_x, 1, '', format2)
-                for i in range(5, col_no):
-                    sum_start = cols[i] + '3'
-                    sum_end = cols[i] + str(sum_x)
-                    sum_range = '{=SUM(' + str(sum_start) + ':' + sum_end + ')}'
-                    # print(sum_range)
-                    sheet.write_formula(sum_x, i, sum_range, format2)
-                    i += 1
+            # ================= DATA ROWS =================
+            row = 3
+            sorted_slips = lines.slip_ids.sorted(lambda s: s.employee_id.identification_id.lower())
 
-            # set width and height of colmns & rows:
-            sheet.set_column('A:A', 10)
-            sheet.set_column('B:B', 35)
+            for slip in sorted_slips:
+                if slip.struct_id.id != used_struct[0]:
+                    continue
+
+                emp = slip.employee_id
+                bank = emp.bank_account_id
+
+                # Fixed columns
+                sheet.write(row, 0, emp.identification_id or '', format3)
+                sheet.write(row, 1, emp.x_studio_field_uRb4K or '', format3)
+                sheet.write(row, 2, emp.name or '', format3)
+                sheet.write(row, 3, emp.department_id.name or '', format3)
+                sheet.write(row, 4, emp.contract_id.x_studio_grade or '', format3)
+                sheet.write(row, 5, emp.ssnid or '', format3)
+                sheet.write(row, 6, emp.job_id.name or '', format3)
+                sheet.write(row, 7, emp.work_location_id.name or '', format3)
+
+                # Salary rules
+                for line in slip.line_ids:
+                    for rule in rules:
+                        if line.code == rule[1]:
+                            sheet.write(
+                                row, rule[0], line.amount,
+                                format3_colored if line.amount > 0 else format3
+                            )
+
+                # PF Balance from MODEL METHOD
+                pf_balance = slip.get_pf_balance_as_of()
+                # sheet.write(row, pf_balance_col, pf_balance, format3_colored)
+
+                # Tail columns
+                sheet.write(row, tail_cols[0][0], bank.partner_id.name if bank else '', format3)
+                sheet.write(row, tail_cols[1][0], bank.acc_number if bank else '', format3)
+                sheet.write(row, tail_cols[2][0], emp.private_phone or '', format3)
+                sheet.write(row, tail_cols[3][0], emp.private_email or '', format3)
+                sheet.write(row, tail_cols[4][0], bank.acc_holder_name if bank else '', format3)
+
+                row += 1
+
+            # ================= TOTAL ROW =================
+            sheet.write(row, 0, 'Total', format2)
+
+            first_tail_col = tail_cols[0][0]
+            for col in range(start_rule_col, first_tail_col):
+                sheet.write_formula(
+                    row, col,
+                    f"=SUM({cols[col]}3:{cols[col]}{row})",
+                    format2
+                )
+
+            # ================= COLUMN WIDTHS =================
+            for idx, (_, width) in enumerate(fixed_headers):
+                sheet.set_column(idx, idx, width)
+
             for rule in rules:
                 sheet.set_column(rule[3], rule[4])
-            sheet.set_column('C:C', 20)
-            sheet.set_column('D:D', 30)
-            sheet.set_column('E:E', 15)
-            sheet.set_column('F:F', 15)
+
+            for col, _, width in tail_cols:
+                sheet.set_column(col, col, width)
 
             struct_count += 1

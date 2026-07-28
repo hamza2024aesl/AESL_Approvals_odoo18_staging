@@ -22,6 +22,7 @@
                     <field name="leaves_quantity"/>
                     <field name="prorate_basis"/>
                     <field name="allowed_in_probation"/>
+                    <field name="max_days"/>
                 </xpath>
             </field>
         </record>

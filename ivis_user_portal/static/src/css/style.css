@@ -257,3 +257,232 @@
   align-items: center;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
+
+/* ── Header layout (reuse same classes as client 1) ─── */
+.attendance-page-title {
+    font-size: 1.5rem;
+}
+
+/* ── Attendance table columns ──────────────── */
+.att2-name-col {
+    white-space: nowrap;
+    min-width: 300px;
+}
+
+.att2-datetime-col {
+    white-space: nowrap;
+    min-width: 200px;
+}
+
+.att2-status-col {
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.att2-process-col {
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+/* ── Mobile only (≤576px) ────────────────────────────── */
+@media (max-width: 576px) {
+
+    .attendance-page-title {
+        font-size: 1.3rem;
+    }
+
+    /* Controls wrap to second line */
+    .attendance-controls {
+        width: 100%;
+        order: 3;
+    }
+
+    /* Shrink buttons */
+    .attendance-ctrl-btn,
+    .attendance-checkin-btn {
+        font-size: 0.75rem !important;
+        padding: 4px 8px !important;
+    }
+
+    /* Shrink switch labels */
+    .attendance-switch-label {
+        font-size: 0.75rem;
+    }
+
+    /* Search bar full width */
+    .attendance-portal-header .o_searchbar_form,
+    .attendance-portal-header form[role="search"] {
+        width: 100%;
+        flex: 1 1 100%;
+        order: 4;
+    }
+}
+
+/* ── Leave table columns ───────────────────── */
+.lv2-check-col {
+    width: 36px;
+    min-width: 36px;
+}
+
+.lv2-name-col {
+    white-space: nowrap;
+    min-width: 300px;
+}
+
+.lv2-type-col {
+    white-space: nowrap;
+    min-width: 150px;
+}
+
+.lv2-desc-col {
+    white-space: nowrap;
+    min-width: 150px;
+}
+
+.lv2-date-col {
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.lv2-dur-col {
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.lv2-status-col {
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.lv2-action-col {
+    white-space: nowrap;
+    min-width: 40px;
+}
+
+.lv2-approve-col {
+    white-space: nowrap;
+    min-width: 40px;
+}
+
+/* ── Payslip table columns ─────────────────── */
+.ps2-num-col {
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.ps2-emp-col {
+    white-space: nowrap;
+    min-width: 300px;
+}
+
+.ps2-batch-col {
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.ps2-wage-col {
+    white-space: nowrap;
+    min-width: 110px;
+}
+
+.ps2-status-col {
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.ps2-action-col {
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+/* ── Loan table columns ────────────────────── */
+.ln2-num-col {
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.ln2-date-col {
+    white-space: nowrap;
+    min-width: 110px;
+}
+
+.ln2-type-col {
+    white-space: nowrap;
+    min-width: 200px;
+}
+
+.ln2-amt-col {
+    white-space: nowrap;
+    min-width: 170px;
+}
+
+.ln2-rate-col {
+    white-space: nowrap;
+    min-width: 70px;
+}
+
+.ln2-status-col {
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+/* ── Profile page ────────────────────────────────────── */
+.profile-avatar {
+    width: 150px;
+}
+
+.profile-section .card {
+    border-radius: 0.5rem;
+}
+
+.profile-card-row {
+    padding: 4px 0;
+}
+
+.profile-label {
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.profile-value {
+    word-break: break-word;
+}
+
+/* Org chart scrollable on mobile */
+.org-chart-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ── Profile mobile (≤576px) ─────────────────────────── */
+@media (max-width: 576px) {
+
+    .profile-section {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    .profile-avatar {
+        width: 100px;
+    }
+
+    .profile-section .card-body {
+        padding: 1rem;
+    }
+
+    .profile-label,
+    .profile-value {
+        font-size: 0.82rem;
+    }
+
+    /* Org chart boxes scale down */
+    .o_org_chart_container .org_box {
+        min-width: 80px;
+        font-size: 0.75rem;
+    }
+
+    .o_org_chart_container .org_box .avatar img {
+        width: 40px;
+        height: 40px;
+    }
+}

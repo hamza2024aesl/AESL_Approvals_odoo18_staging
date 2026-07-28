@@ -1,5 +1,5 @@
 import string
-from odoo import models
+from odoo import models, fields
 
 
 class PayrollReportOne(models.AbstractModel):
@@ -103,20 +103,21 @@ class PayrollReportOne(models.AbstractModel):
             sheet.write(2, 0, 'Registration Number', format1)
             sheet.write(2, 1, 'Employee Name', format1)
             sheet.write(2, 2, 'Mobile Phone', format1)
-            sheet.write(2, 3, 'Department', format1)
-            sheet.write(2, 4, 'Designation', format1)
-            sheet.write(2, 5, 'CNIC No', format1)
-            sheet.write(2, 6, 'Grade', format1)
-            sheet.write(2, 7, 'Bank Account Number', format1)
-            sheet.write(2, 8, 'Bank Account Title Name', format1)
-            sheet.write(2, 9, 'Work Location', format1)
-            # sheet.write(2, 11, 'Gross', format1)
-            # sheet.write(2, 12, 'Net Salary', format1)
+            sheet.write(2, 3, 'Customer reference number', format1)
+            sheet.write(2, 4, 'Purpose of payment', format1)
+            sheet.write(2, 5, 'Department', format1)
+            sheet.write(2, 6, 'Designation', format1)
+            sheet.write(2, 7, 'CNIC No', format1)
+            sheet.write(2, 8, 'Grade', format1)
+            sheet.write(2, 9, 'Bank Account Number', format1)
+            sheet.write(2, 10, 'Bank Account Title Name', format1)
+            sheet.write(2, 11, 'Work Location', format1)
+            sheet.write(2, 12, 'Activity', format1)
             for rule in rules:
                 if rule[1] == 'GROSS':
-                    sheet.write(2, 10, rule[2], format1)
+                    sheet.write(2, 13, rule[2], format1)
                 elif rule[1] == 'NET':
-                    sheet.write(2, 11, rule[2], format1)
+                    sheet.write(2, 14, rule[2], format1)
 
             # Generate names, dept, and salary items:
             x = 4
@@ -126,29 +127,45 @@ class PayrollReportOne(models.AbstractModel):
                 if lines.slip_ids:
                     if slip.struct_id.id == used_struct[0] and slip.employee_id.bank_account_id.acc_number:
                         has_payslips = True
-                        sheet.write(e_name, 0, slip.employee_id.registration_number, format3)
+                        today = fields.Date.context_today(self)
+                        dd = f"{today.day:02d}"
+                        mm = f"{today.month:02d}"
+                        yyyy = f"{today.year:04d}"
+                        emp_code = slip.employee_id.identification_id or ""
+                        customer_ref = f"{emp_code}{dd}{mm}{yyyy}"  # e.g. 41715012026
+
+                        sheet.write(e_name, 0, emp_code, format3)
                         sheet.write(e_name, 1, slip.employee_id.name, format3)
                         sheet.write(e_name, 2, slip.employee_id.mobile_phone, format3)
-                        sheet.write(e_name, 3, slip.employee_id.department_id.name, format3)
-                        sheet.write(e_name, 4, slip.employee_id.job_id.name, format3)
-                        sheet.write(e_name, 5, slip.employee_id.identification_id, format3)
-                        sheet.write(e_name, 6, slip.employee_id.contract_id.x_studio_grade, format3)
-                        sheet.write(e_name, 7, slip.employee_id.bank_account_id.acc_number, format3)
-                        sheet.write(e_name, 8, slip.employee_id.bank_account_id.acc_holder_name, format3)
-                        sheet.write(e_name, 9, slip.employee_id.work_location_id.name, format3)
+                        sheet.write(e_name, 3, customer_ref, format3)
+                        sheet.write(e_name, 4, '012', format3)
+                        sheet.write(e_name, 5, slip.employee_id.department_id.name, format3)
+                        sheet.write(e_name, 6, slip.employee_id.job_id.name, format3)
+                        sheet.write(e_name, 7, slip.employee_id.ssnid, format3)
+                        sheet.write(e_name, 8, slip.employee_id.contract_id.x_studio_grade, format3)
+                        sheet.write(e_name, 9, slip.employee_id.bank_account_id.acc_number, format3)
+                        sheet.write(e_name, 10, slip.employee_id.bank_account_id.acc_holder_name, format3)
+                        sheet.write(e_name, 11, slip.employee_id.work_location_id.name, format3)
+                        department = slip.employee_id.department_id.name or ""
+                        work_location = slip.employee_id.work_location_id.name or ""
+
+                        activity = department + (work_location[0] if work_location else "")
+
+                        sheet.write(e_name, 12, activity, format3)
+
                         for line in slip.line_ids:
                             for rule in rules:
                                 if line.code == rule[1] and (line.code == 'GROSS'):
                                     if line.amount > 0:
-                                        sheet.write(x, 10, line.amount, format3_colored)
+                                        sheet.write(x, 13, line.amount, format3_colored)
                                     else:
-                                        sheet.write(x, 10, line.amount, format3)
+                                        sheet.write(x, 13, line.amount, format3)
 
                                 elif line.code == rule[1] and (line.code == 'NET'):
                                     if line.amount > 0:
-                                        sheet.write(x, 11, line.amount, format3_colored)
+                                        sheet.write(x, 14, line.amount, format3_colored)
                                     else:
-                                        sheet.write(x, 11, line.amount, format3)
+                                        sheet.write(x, 14, line.amount, format3)
 
                         x += 1
                         e_name += 1
@@ -158,7 +175,7 @@ class PayrollReportOne(models.AbstractModel):
             if has_payslips == True:
                 sheet.write(sum_x, 0, 'Total', format2)
                 sheet.write(sum_x, 1, '', format2)
-                for i in range(10, 12):
+                for i in range(13, 15):
                     sum_start = cols[i] + '5'
                     sum_end = cols[i] + str(sum_x)
                     sum_range = '{=SUM(' + str(sum_start) + ':' + sum_end + ')}'
@@ -166,11 +183,14 @@ class PayrollReportOne(models.AbstractModel):
                     i += 1
 
             # set width and height of colmns & rows:
-            sheet.set_column('A:A', 10)
-            sheet.set_column('B:B', 32)
+            sheet.set_column('A:A', 10)  # Registration
+            sheet.set_column('B:B', 32)  # Name
             for rule in rules:
                 sheet.set_column(rule[3], rule[4])
-            sheet.set_column('C:C', 13)
-            sheet.set_column('G:G', 7)
+            sheet.set_column('C:C', 13)   # Mobile
+            sheet.set_column('D:D', 22)  # Customer reference number
+            sheet.set_column('E:E', 16)  # Purpose of payment
+            sheet.set_column('I:I', 7)  # Grade
+            sheet.set_column('M:M', 12)  # Activity column
 
             struct_count += 1

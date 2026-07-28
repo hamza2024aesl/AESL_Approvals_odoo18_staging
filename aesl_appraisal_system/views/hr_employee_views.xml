@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <data>
+        <record id="hr_employee_appraisal_view_form_inherited9" model="ir.ui.view">
+            <field name="name">hr.employee.appraisal.view.form.inherited9</field>
+            <field name="model">hr.employee</field>
+            <field name="inherit_id" ref="hr.view_employee_form"/>
+            <field name="arch" type="xml">
+                <div name="button_box" position="inside">
+                    <button name="action_view_increment_history"
+                            class="oe_stat_button"
+                            icon="fa-star-half-o"
+                            type="object">
+                        <div class="o_field_widget o_stat_info">
+                            <span class="o_stat_text">
+                                Appraisal
+                            </span>
+                        </div>
+                    </button>
+                </div>
+                <xpath expr="//form" position="inside">
+                    <field name="appraisal_history_line_ids" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

@@ -38,7 +38,9 @@ class HrAppraisal(models.Model):
     appraisal_batch_id = fields.Many2one('appraisal.batches', string='Appraisal Batch')
 
     appointment_date = fields.Date(related='employee_id.appointment_date', string='Appointment Date')
-    registration_number = fields.Char(related='employee_id.registration_number', string='Registration Number')
+    registration_number = fields.Char(related='employee_id.identification_id', string='Registration Number')
+    # code = fields.Char(related='employee_id.identification_id', string='Registration Number')
+    grades = fields.Char(related='employee_id.x_studio_grade', string='Grade')
     cl_count = fields.Float('Casual leave availed', compute='_leaves_count')
     sl_count = fields.Float('Sick leave availed', compute='_leaves_count')
     pl_count = fields.Float('Paid leave availed', compute='_leaves_count')
@@ -60,6 +62,19 @@ class HrAppraisal(models.Model):
         ('save', 'Save'),
         ('done', 'Done'), ('revert', 'Revert'), ('publish', 'Publish')], default='draft'
     )
+    degree = fields.Char(string='Degree',compute='_compute_appraisal_vals')
+    education = fields.Char(string='Education',compute='_compute_appraisal_vals')
+
+    @api.depends('employee_id','appraisal_employee_id')
+    def _compute_appraisal_vals(self):
+        for rec in self:
+            for resume in rec.employee_id.resume_line_ids:
+                if resume.line_type_id.name.lower() == 'education':
+                    rec.degree = resume.degree
+                    rec.education = resume.name
+                else:
+                    rec.degree = ''
+                    rec.education = ''
 
     def _compute_is_first_manager(self):
         for rec in self:
@@ -287,8 +302,9 @@ class HrAppraisal(models.Model):
             #     new_wage = rec.employee_id.contract_id.wage + final_inc
             #     rec.gross_salary = new_wage
             #     rec.employee_id.contract_id.write({'wage': new_wage})
-            for remark in self.appraisal_remarks:
-                rec._append_manager_remark(remark.remark_text)
+            # for remark in rec.remarks_text:
+            if rec.remarks_text:
+                rec._append_manager_remark(rec.remarks_text)
 
         return {
             'effect': {
@@ -336,7 +352,7 @@ class HrAppraisal(models.Model):
             rec.recomm_increment_lines_id = [(0, 0, {
                 'increment_raise_amount': prev.increment_raise_amount if prev else 0,
                 'recomm_desigantion_id': prev.recomm_desigantion_id.id if prev else False,
-                'recomm_grades': prev.recomm_grades if prev else "",
+                'recomm_grades': int(prev.recomm_grades) if prev else "",
                 'increment_raise_by': user.id,
                 'incremented_date': fields.Datetime.now(),
                 'state': rec.state,
@@ -389,6 +405,16 @@ class HrAppraisal(models.Model):
                     "incremented_date": fields.Datetime.now(),
                     "state": self.state,
                 })]
+            else:
+                existing.write({
+                    "increment_raise_amount": float(
+                        vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
+                    "recomm_desigantion_id": int(
+                        vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
+                    "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
+                    "state": self.state,
+                })
+
         else:
             # Manager didn't add increment → auto copy previous
             self._save_increment_for_manager(user)
@@ -563,6 +589,7 @@ class HrAppraisal(models.Model):
                 #     ('state', '=', 'validate'),
                 #     ('employee_id', '=', emp.id)
                 # ])
+                pl_count = 0
                 for pl_leave_type in pl_leave_type:
                     pl_leave_allocate = self.env['hr.leave.allocation'].search([
                         ('holiday_status_id', '=', pl_leave_type.id),
@@ -677,26 +704,32 @@ class HrAppraisal(models.Model):
 
 
 
-    def save_recom_incrment(self,vals_increment_line):
+    def save_recom_incrment(self, vals_increment_line):
         self.doc_state = 'save'
-
         user = self.env.user
         filtered_increment = self.recomm_increment_lines_id.filtered(lambda x: x.increment_raise_by.id == user.id)
+
+        if not vals_increment_line:
+            return
+
+        increment_amount = float(vals_increment_line.get("increment_raise_amount") or 0)
+        desig_id = int(vals_increment_line.get("recomm_desigantion_id") or 0) or False
+        grades = vals_increment_line.get("recomm_grades") or ""
+
         if not filtered_increment:
             self.recomm_increment_lines_id = [(0, 0, {
-                "increment_raise_amount": float(vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0),
-                # "recomm_desigantion_id": int(vals_increment_line.get("recomm_desigantion_id") if vals_increment_line else 0),
-                "recomm_desigantion_id": vals_increment_line.get("recomm_desigantion_id") ,
-                "recomm_grades": vals_increment_line.get("recomm_grades") if vals_increment_line else "",
+                "increment_raise_amount": increment_amount,
+                "recomm_desigantion_id": desig_id,
+                "recomm_grades": grades,
                 "increment_raise_by": user.id,
                 "incremented_date": fields.Datetime.now(),
                 "state": self.state,
             })]
         else:
             filtered_increment.write({
-               'increment_raise_amount':vals_increment_line.get("increment_raise_amount") if vals_increment_line else 0,
-                'recomm_desigantion_id':int(vals_increment_line.get("recomm_desigantion_id")),
-                'recomm_grades':vals_increment_line.get("recomm_grades") if vals_increment_line else "",
+                'increment_raise_amount': increment_amount,
+                'recomm_desigantion_id': desig_id,
+                'recomm_grades': grades,
             })
 
 
@@ -725,7 +758,7 @@ class HrAppraisal(models.Model):
         # timestamp = now.strftime("%d %B %Y, %I:%M %p")
         # new_entry = f"{future_prospect}\nBy{user.name} [{timestamp}]:\n\n"
 
-        self.future_prospect_text.create({
+        self.future_prospect_remarks.create({
             'appraisal_id': self.id,
             'future_prospect_text': future_prospect
         })
@@ -814,3 +847,8 @@ class HrAppraisal(models.Model):
                 'default_mode': 'company',
             }
         }
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_if_new_or_cancel(self):
+        if any(appraisal.state not in ['draft', 'cancel'] for appraisal in self):
+            raise UserError(_("You cannot delete appraisal which is not in draft or cancelled state"))

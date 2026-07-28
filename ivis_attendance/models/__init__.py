@@ -4,3 +4,4 @@ from . import machine_analysis
 from . import my_change_request
 from . import processor
 from . import working_schedules
+from . import hr_leave

@@ -12,4 +12,4 @@ class HrPayslipLineInherit(models.Model):
     department_id = fields.Many2one('hr.department', related='employee_id.department_id', store=True)
     job_id = fields.Many2one('hr.job', related='employee_id.job_id', store=True)
     work_location = fields.Char(related='employee_id.work_location_name', store=True)
-    employee_code = fields.Char(related='employee_id.registration_number', store=True)
+    employee_code = fields.Char(related='employee_id.identification_id', store=True)

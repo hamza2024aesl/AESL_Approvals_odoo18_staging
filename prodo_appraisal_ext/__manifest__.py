@@ -20,9 +20,11 @@
         'data/ir_sequence_data.xml',
         'views/appraisal_batches.xml',
         'views/hr_appraisal.xml',
+        # 'views/hr_employee.xml',
         'report/report.xml',
         'report/appraisal_letter.xml',
-        'wizard/appraisal_group_by.xml'
+        'wizard/appraisal_group_by.xml',
+        'report/template_employment_salary_letter.xml'
     ],
     'installable': True,
     'auto_install': False,

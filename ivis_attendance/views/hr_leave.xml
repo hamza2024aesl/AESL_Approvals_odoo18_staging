@@ -1,0 +1,14 @@
+<odoo>
+    <record id="ivis_hr_leave_view_form_manager_refuse_reason" model="ir.ui.view">
+        <field name="name">hr.leave.view.form.manager.refuse.reason</field>
+        <field name="model">hr.leave</field>
+        <field name="inherit_id" ref="hr_holidays.hr_leave_view_form_manager"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='duration_display']" position="after">
+                <field name="refuse_reason"
+                       widget="text"
+                       placeholder="Reason for refusal / withdrawal"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

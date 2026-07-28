@@ -11,22 +11,71 @@ class HrLeaveInherit(models.Model):
     _inherit = 'hr.leave'
 
     remaining_leaves = fields.Float(compute='CheckRemainingLeaves')
+    check_in = fields.Datetime(string="Check In", compute='_compute_attendance_times', store=True, readonly=True)
+    check_out = fields.Datetime(string="Check Out", compute='_compute_attendance_times', store=True, readonly=True)
+
+    def _cancel_work_entry_conflict(self):
+        leaves_to_defer = self.filtered(lambda l: l.payslip_state == 'blocked')
+
+        # Skip activity scheduling entirely, just call grandparent directly
+        return super(HrLeaveInherit, self - leaves_to_defer)._cancel_work_entry_conflict()
+
+    @api.depends('employee_id', 'request_date_from', 'request_unit_half')
+    def _compute_attendance_times(self):
+        Attendance = self.env['hr.attendance'].sudo()
+        today = fields.Date.today()
+
+        for leave in self:
+            leave.check_in = False
+            leave.check_out = False
+
+            if not (leave.request_unit_half and leave.employee_id and leave.request_date_from):
+                continue
+
+            if leave.request_date_from > today:
+                continue
+
+            leave_date = leave.request_date_from
+
+            attendance = Attendance.search([
+                ('employee_id', '=', leave.employee_id.id),
+                ('attendance_date', '=', leave_date),
+            ], limit=1)
+
+            if attendance:
+                leave.check_in = attendance.check_in
+                leave.check_out = attendance.check_out
+
+    @api.model
+    def action_fill_checkin_checkout_for_existing_leaves(self):
+        """Fill check_in/check_out for existing half-day leaves where they are empty."""
+        today = fields.Date.today()
+
+        leaves = self.search([
+            ('request_unit_half', '=', True),
+            ('request_date_from', '<=', today),
+            '|', ('check_in', '=', False), ('check_out', '=', False),
+        ])
+
+        leaves._compute_attendance_times()
 
     @api.onchange('employee_id')
     def CheckRemainingLeaves(self):
-        self.remaining_leaves = 0
-        if not self.employee_id:
-            emp = self.env['hr.employee'].search([('user_id', '=', self.env.uid)])
-        else:
-            emp = self.employee_id
-        if emp and self.holiday_status_id:
-            records = self.env['hr.leave.report'].search([
-                ('employee_id', '=', emp.id),
-                ('holiday_status_id', '=', self.holiday_status_id.id),
-            ])
-            self.remaining_leaves = 0
-            for rec in records:
-                self.remaining_leaves += rec.number_of_days
+        for rec in self:
+            rec.remaining_leaves = 0
+            if not rec.employee_id:
+                emp = self.env['hr.employee'].search([('user_id', '=', self.env.uid)])
+            else:
+                emp = rec.employee_id
+            if emp and rec.holiday_status_id:
+                records = self.env['hr.leave.report'].search([
+                    ('employee_id', '=', emp.id),
+                    ('holiday_status_id', '=', rec.holiday_status_id.id),
+                    ('state', 'not in', ['cancel', 'refuse']),
+                ])
+                rec.remaining_leaves = 0
+                for line in records:
+                    rec.remaining_leaves += line.number_of_days
 
     @api.constrains('number_of_days', 'remaining_leaves')
     def _check_number_days(self):
@@ -40,14 +89,33 @@ class HrLeaveInherit(models.Model):
                         _('The number of remaining time off is not sufficient for this time off type.\nPlease also check the time off waiting for validation.'))
 
     def action_approve(self):
-        res = super(HrLeaveInherit, self).action_approve()
-        attendances = self.env['hr.attendance'].search(
-            [('employee_id', '=', self.employee_id.id), ('attendance_date', '<=', self.request_date_to),
-             ('attendance_date', '>=', self.request_date_from)])
-        if self.request_unit_half:
-            attendances = attendances.filtered(lambda x: x.attendance_date == self.request_date_from)
-        for attendance in attendances:
-            attendance.on_leave = True
+        res = super().action_approve()
+        for leave in self:
+            employee_id = leave.employee_id.id
+            date_from = leave.request_date_from
+            date_to = leave.request_date_to
+            if leave.request_unit_half:
+                self.env.cr.execute("""
+                    SELECT id FROM hr_attendance
+                    WHERE employee_id = %s
+                    AND attendance_date = %s
+                """, (employee_id, date_from))
+            else:
+                self.env.cr.execute("""
+                    SELECT id FROM hr_attendance
+                    WHERE employee_id = %s
+                    AND attendance_date >= %s
+                    AND attendance_date <= %s
+                """, (employee_id, date_from, date_to))
+            attendance_ids = [row[0] for row in self.env.cr.fetchall()]
+
+            if attendance_ids:
+                self.env.cr.execute("""
+                    UPDATE hr_attendance
+                    SET on_leave = TRUE
+                    WHERE id = ANY(%s)
+                """, (attendance_ids,))
+            self.env.cr.commit()
         return res
 
     def _create_lwp_leave(self, employee, start_date, end_date, lwp_leave_type, half_day=False, day_period=None):
@@ -73,132 +141,92 @@ class HrLeaveInherit(models.Model):
                 'request_unit_half': half_day,
                 'request_date_from_period': day_period,
             })
-            if leave.state == 'confirm':
-                leave.action_approve()
-            if leave.state in ['validate1', 'validate']:
-                leave.action_validate()
+            leave.action_approve()
             return leave
         except Exception as e:
             return False
 
     @api.model
     def create_lwp_for_absent_days(self, date_from=None, date_to=None):
-        current_date = datetime.today().date()
 
+        today = fields.Date.today()
+
+        # Default previous month
         if not date_from:
-            prev_month = current_date.month - 1 or 12
-            year = current_date.year if current_date.month > 1 else current_date.year - 1
-            date_from = datetime(year, prev_month, 1).date()
+            prev_month = today.month - 1 or 12
+            year = today.year if today.month > 1 else today.year - 1
+            date_from = fields.Date.from_string(f"{year}-{prev_month:02d}-01")
+
         if not date_to:
-            prev_month = current_date.month - 1 or 12
-            year = current_date.year if current_date.month > 1 else current_date.year - 1
-            last_day = calendar.monthrange(year, prev_month)[1]
-            date_to = datetime(year, prev_month, last_day).date()
+            last_day = calendar.monthrange(date_from.year, date_from.month)[1]
+            date_to = date_from.replace(day=last_day)
 
         if isinstance(date_from, str):
             date_from = fields.Date.from_string(date_from)
         if isinstance(date_to, str):
             date_to = fields.Date.from_string(date_to)
-        if date_to > current_date:
-            date_to = current_date
+        if date_to > today:
+            date_to = today
 
-        lwp_leave_type = self.env['hr.leave.type'].search([('name', '=', 'LWP')], limit=1)
+        lwp_leave_type = self.env['hr.leave.type'].search(
+            [('name', '=', 'LWP')], limit=1
+        )
         if not lwp_leave_type:
             raise UserError("Leave type 'LWP' not found.")
 
-        employees = self.env['hr.employee'].search([
-            ('active', '=', True),
-            ('contract_id.state', '=', 'open')
-        ])
+        domain = ["&", "&",
+                  ("attendance_date", ">=", date_from),
+                  ("attendance_date", "<=", date_to),
+                  "&",
+                  ("on_leave", "=", False),
+                  "&",
+                  ("status2", "!=", "off_day"),
+                  "&",
+                  ("employee_id.x_studio_grade", "in", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
+                  "|", "|",
+                  ("status2", "=", "absent"),
+                  ("in_status", "=", "3"),
+                  ("in_status", "=", "5")
+                  ]
 
-        all_leaves = self.env['hr.leave'].search([
-            ('employee_id', 'in', employees.ids),
-            ('request_date_to', '>=', date_from),
-            ('request_date_from', '<=', date_to),
-            ('state', 'not in', ['cancel', 'refuse']),
-            ('payslip_state', '!=', 'done'),
-        ])
+        attendances = self.env['hr.attendance'].search(domain)
 
-        leaves_dict = {}
-        for leave in all_leaves:
-            emp_id = leave.employee_id.id
-            if emp_id not in leaves_dict:
-                leaves_dict[emp_id] = set()
-            start = leave.request_date_from
-            end = leave.request_date_to
-            while start <= end:
-                leaves_dict[emp_id].add(start)
-                start += timedelta(days=1)
+        for attendance in attendances:
+            leave_date = attendance.attendance_date
 
-        all_attendances = self.env['hr.attendance'].search([
-            ('employee_id', 'in', employees.ids),
-            ('check_in', '>=', fields.Datetime.to_string(date_from)),
-            ('check_in', '<=', fields.Datetime.to_string(date_to + timedelta(days=1))),
-        ])
+            # 🔹 Ignore Saturday (5) and Sunday (6)
+            if leave_date.weekday() in (5, 6):
+                continue
 
-        attendance_dict = {}
-        for attendance in all_attendances:
-            emp_id = attendance.employee_id.id
-            att_date = attendance.check_in.date()
-            if emp_id not in attendance_dict:
-                attendance_dict[emp_id] = {}
-            attendance_dict[emp_id][att_date] = attendance
+            is_holiday = self.env['resource.calendar.leaves'].search([
+                                        ('date_from', '<=', attendance.attendance_date),
+                                        ('date_to', '>=', attendance.attendance_date),
+                                        ('resource_id', '=', False)
+                                    ], limit=1)
+            if is_holiday:
+                attendance.attendance_date += timedelta(days=1)
+                continue
 
-        for employee in employees:
-            current_day = date_from
-            emp_id = employee.id
+            overlapping = self.env['hr.leave'].search([
+                ('employee_id', '=', attendance.employee_id.id),
+                ('request_date_from', '<=', leave_date),
+                ('request_date_to', '>=', leave_date),
+                ('state', 'not in', ['cancel', 'refuse']),
+            ], limit=1)
 
-            grade = int(employee.x_studio_grade or 0)
-            if grade < 14:
-                while current_day <= date_to:
-                    try:
-                        # Skip Saturdays (5) and Sundays (6)
-                        if current_day.weekday() in (5, 6):
-                            current_day += timedelta(days=1)
-                            continue
+            if overlapping:
+                continue
 
-                        attendance = attendance_dict.get(emp_id, {}).get(current_day, None)
-                        status = attendance.status2 if attendance else None
-                        in_status = attendance.in_status if attendance else None
+            status = attendance.status2 if attendance else None
+            in_status = attendance.in_status if attendance else None
 
-                        if not attendance:
-                            current_day += timedelta(days=1)
-                            continue
-
-                        is_holiday = self.env['resource.calendar.leaves'].search([
-                            ('date_from', '<=', current_day),
-                            ('date_to', '>=', current_day),
-                            ('resource_id', '=', False)
-                        ], limit=1)
-
-                        if is_holiday:
-                            current_day += timedelta(days=1)
-                            continue
-
-                        if status == 'off_day':
-                            current_day += timedelta(days=1)
-                            continue
-                        elif status == 'absent':
-                            if emp_id in leaves_dict and current_day in leaves_dict[emp_id]:
-                                current_day += timedelta(days=1)
-                                continue
-                            self._create_lwp_leave(employee, current_day, current_day, lwp_leave_type)
-                        elif in_status == '3':
-                            if emp_id in leaves_dict and current_day in leaves_dict[emp_id]:
-                                current_day += timedelta(days=1)
-                                continue
-                            self._create_lwp_leave(employee,current_day,current_day,lwp_leave_type,half_day=True,day_period='am')
-                        elif in_status == '5':
-                            if emp_id in leaves_dict and current_day in leaves_dict[emp_id]:
-                                current_day += timedelta(days=1)
-                                continue
-                            self._create_lwp_leave(employee, current_day, current_day, lwp_leave_type)
-
-                        current_day += timedelta(days=1)
-
-                    except Exception:
-                        current_day += timedelta(days=1)
-                        continue
+            if status == 'absent':
+                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
+            elif in_status == '3':
+                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date,lwp_leave_type,half_day=True,day_period='am')
+            elif in_status == '5':
+                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
+            self.env.cr.commit()
 
     @api.depends('date_from', 'date_to', 'resource_calendar_id', 'holiday_status_id.request_unit', 'request_unit_half')
     def _compute_duration(self):
@@ -287,3 +315,4 @@ class HrLeaveTypeInherit(models.Model):
     leaves_quantity = fields.Integer('Total Leaves', default=0)
     prorate_basis = fields.Boolean('Prorate Basis', default=False)
     leaves_collapse = fields.Boolean('Collapse', default=True)
+    max_days = fields.Integer('Max. Days')

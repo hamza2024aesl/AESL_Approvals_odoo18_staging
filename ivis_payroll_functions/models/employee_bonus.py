@@ -15,6 +15,6 @@ class EmployeeBonus(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         res = super(EmployeeBonus, self).create(vals_list)
-        employee = self.env['hr.employee'].search([('registration_number', '=', res.employee_code)])
+        employee = self.env['hr.employee'].search([('identification_id', '=', res.employee_code)])
         res.update({'employee_id': employee.id})
         return res

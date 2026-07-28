@@ -126,14 +126,12 @@ class PayrollReportTwo(models.AbstractModel):
                     sheet.write(3, 11, rule[2], format1)
                 elif rule[1] == 'BONUS':
                     sheet.write(3, 12, 'Bonus', format1)
-                elif rule[1] == 'ITAXYB':
+                elif rule[1] == 'CURRENT_INCOME_TAX':
                     sheet.write(3, 13, 'Taxable Amount', format1)
-                elif rule[1] == 'SRITAXYB':
-                    sheet.write(3, 14, 'Surcharge Amount', format1)
                     # sheet.write(3, 12, rule[2], format1)
                 # elif rule[1] == 'BASIC':
                 #     sheet.write(3, 13, rule[2], format1)
-                # elif rule[1] == 'TIYB':
+                # elif rule[1] == 'ANNUAL_TXABLE_SALARY':
                 #     sheet.write(3, 14, rule[2], format1)
                 # sheet.write(3, rule[0], rule[2], format1)
 
@@ -146,40 +144,37 @@ class PayrollReportTwo(models.AbstractModel):
             has_payslips = False
             for slip in lines.slip_ids:
                 if lines.slip_ids:
-                    if slip.struct_id.id == used_struct[0]:  # and slip.line.code == 'ITAXYB':
+                    if slip.struct_id.id == used_struct[0]:  # and slip.line.code == 'CURRENT_INCOME_TAX':
                         has_payslips = True
 
                         val = {
                             'gross': 0,
-                            'itaxyb': 0,
-                            'sritaxyb': 0,
+                            'CURRENT_INCOME_TAX': 0,
                             'basicyb': 0,
-                            'tiyb': 0,
+                            'ANNUAL_TXABLE_SALARY': 0,
                             'bonus': 0
                         }
                         for line in slip.line_ids.filtered(
-                                lambda x: x.code in ['GROSS', 'ITAXYB', 'SRITAXYB', 'BASIC', 'TIYB', 'BONUS']):
+                                lambda x: x.code in ['GROSS', 'CURRENT_INCOME_TAX', 'BASIC', 'ANNUAL_TXABLE_SALARY', 'BONUS']):
                             if line.code == 'GROSS':
                                 val['gross'] = line.amount
-                            elif line.code == 'ITAXYB':
-                                val['itaxyb'] = line.amount
-                            elif line.code == 'SRITAXYB':
-                                val['sritaxyb'] = line.amount
+                            elif line.code == 'CURRENT_INCOME_TAX':
+                                val['CURRENT_INCOME_TAX'] = line.amount
                             elif line.code == 'BASIC':
                                 val['basicyb'] = line.amount
-                            elif line.code == 'TIYB':
-                                val['tiyb'] = line.amount
+                            elif line.code == 'ANNUAL_TXABLE_SALARY':
+                                val['ANNUAL_TXABLE_SALARY'] = line.amount
                             elif line.code == 'BONUS':
                                 val['bonus'] = line.amount
-                        if val['itaxyb'] != 0:
+                        if val['CURRENT_INCOME_TAX'] != 0:
                             sheet.write(e_name, 0, sno)
                             sheet.write(e_name, 1, '149/3')
-                            address_id = slip.employee_id.address_home_id.street
-                            address_id2 = slip.employee_id.address_home_id.street2
-                            city_id = slip.employee_id.address_home_id.city
-                            state_id = slip.employee_id.address_home_id.state_id
-                            zip_id = slip.employee_id.address_home_id.zip
-                            country_name = slip.employee_id.address_home_id.country_id
+                            address_id = slip.employee_id.private_street
+                            address_id2 = slip.employee_id.private_street2
+                            city_id = slip.employee_id.private_city
+                            state_id = slip.employee_id.private_state_id.display_name
+                            zip_id = slip.employee_id.private_zip
+                            country_name = slip.employee_id.private_country_id.display_name
 
                             # state_id1 = slip.employee_id.address_id.state_id
 
@@ -187,22 +182,21 @@ class PayrollReportTwo(models.AbstractModel):
                             sheet.write(e_name, 3, slip.employee_id.department_id.name, format3)
                             sheet.write(e_name, 4, slip.employee_id.job_id.name, format3)
                             sheet.write(e_name, 5, slip.employee_id.identification_id, format3)
-                            sheet.write(e_name, 6, slip.employee_id.location_id.emp_location, format3)
-                            sheet.write(e_name, 7, slip.employee_id.location_id.emp_location, format3)
+                            sheet.write(e_name, 6, slip.employee_id.work_location_id.display_name, format3)
+                            sheet.write(e_name, 7, slip.employee_id.work_location_id.display_name, format3)
                             # sheet.write(e_name, 7, ' ' + str(state_id.name) + ' ', format3)
                             sheet.write(e_name, 8,
                                         ' ' + str(address_id) + ' ' + str(address_id2) + ' ' + str(city_id) + ' ' + str(
-                                            state_id.name) + ' ' + str(zip_id) + ' ' + str(country_name.name) + ' ',
+                                            state_id) + ' ' + str(zip_id) + ' ' + str(country_name) + ' ',
                                         format3)
                             sheet.write(e_name, 9, 'INDIVIDUAL', format3)
                             sheet.write(e_name, 10, '', format3)
                             sheet.write(x, 11, val['gross'], format3)
                             sheet.write(x, 12, round(val['bonus']), format3)
-                            sheet.write(x, 13, round(val['itaxyb']), format3)
-                            sheet.write(x, 14, round(val['sritaxyb']), format3)
+                            sheet.write(x, 13, round(val['CURRENT_INCOME_TAX']), format3)
 
                             # sheet.write(x, 13, val['basicyb'], format3)
-                            # sheet.write(x, 14, val['tiyb'], format3)
+                            # sheet.write(x, 14, val['ANNUAL_TXABLE_SALARY'], format3)
                             p_section += 1
                             ind += 1
                             sno += 1
@@ -213,7 +207,7 @@ class PayrollReportTwo(models.AbstractModel):
             if has_payslips == True:
                 sheet.write(sum_x, 0, 'Total', format2)
                 sheet.write(sum_x, 6, '', format2)
-                for i in range(11, 16):
+                for i in range(11, 14):
                     sum_start = cols[i] + '5'
                     sum_end = cols[i] + str(sum_x)
                     sum_range = '{=SUM(' + str(sum_start) + ':' + sum_end + ')}'

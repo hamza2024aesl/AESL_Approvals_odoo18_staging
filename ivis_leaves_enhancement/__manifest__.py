@@ -9,7 +9,16 @@
     "summary": "Employee Leaves Enhancement",
     "description": """Employee Leaves Enhancement""",
     "version": "18.0",
-    "depends": ['hr', 'hr_attendance', 'hr_contract', 'hr_holidays', 'hr_payroll', 'ivis_attendance', 'hr_work_entry'],
+    "depends": [
+        'hr',
+        'hr_attendance',
+        'hr_contract',
+        'hr_holidays',
+        'hr_payroll',
+        'ivis_attendance',
+        'hr_payroll_holidays',
+        'hr_work_entry'
+    ],
     'data': [
         'data/scheduled_actions.xml',
         'wizard/monthly_timesheet_report_views.xml',

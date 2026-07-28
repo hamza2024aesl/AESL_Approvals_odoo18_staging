@@ -25,24 +25,34 @@ class HrLeaveInherited(models.Model):
 
         leave_lines = []
         for leave_type in leave_types:
-            availed = self.env['hr.leave'].search([
+            is_pl_aesl = (leave_type.name == "PL (AESL)")
+            availed_domain = [
                 ('employee_id', '=', self.employee_id.id),
                 ('holiday_status_id', '=', leave_type.id),
                 ('state', '=', 'validate'),
-                ('request_date_from', '>=', fiscal_start),
-                ('request_date_to', '<=', fiscal_end),
                 ('id', '!=', self.id),
-            ])
+            ]
+            if not is_pl_aesl:
+                availed_domain += [
+                    ('request_date_from', '>=', fiscal_start),
+                    ('request_date_to', '<=', fiscal_end),
+                ]
+
+            availed = self.env['hr.leave'].search(availed_domain)
             availed_leave = sum(availed.mapped('number_of_days')) or 0.0
 
             if leave_type.requires_allocation == 'yes':
-                allocated = self.env['hr.leave.allocation'].search([
+                alloc_domain = [
                     ('employee_id', '=', self.employee_id.id),
                     ('holiday_status_id', '=', leave_type.id),
                     ('state', '=', 'validate'),
-                    ('date_from', '<=', fiscal_end),
-                    ('date_to', '>=', fiscal_start),
-                ])
+                ]
+                if not is_pl_aesl:
+                    alloc_domain += [
+                        ('date_from', '<=', fiscal_end),
+                        ('date_to', '>=', fiscal_start),
+                    ]
+                allocated = self.env['hr.leave.allocation'].search(alloc_domain)
                 available_leave = sum(allocated.mapped('number_of_days_display')) or 0.0
                 balance_leave = available_leave - availed_leave
             else:

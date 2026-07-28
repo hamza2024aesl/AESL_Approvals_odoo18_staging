@@ -300,8 +300,12 @@
                                         </td>
                                         <td align="right" t-attf-style="width:40%;" colspan="6" style="font-size:14px;">
                                             <strong>
-                                                <p>Signature:
-                                                    <u>_________________</u>
+                                                <p>
+                                                    <t t-set="base_url"
+                                                       t-value="request.env['ir.config_parameter'].sudo().get_param('web.base.url')"/>
+                                                    <img t-att-src="'%s/ivis_payroll_functions/static/src/img/hasan_saeed_sign.jpeg' % base_url"
+                                                         alt="Signature" width="180" height="160"/>
+                                                     Signature
                                                 </p>
                                             </strong>
                                         </td>

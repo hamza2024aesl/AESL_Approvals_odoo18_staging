@@ -17,6 +17,9 @@
                             td{
                             padding:5px !important;
                             }
+                            .text-right {
+                            text-align: right;
+                            }
                         </style>
                         <div class="row">
 
@@ -24,7 +27,8 @@
                             <t t-set="total_deductions" t-value="0"/>
                             <t t-set="total" t-value="0"/>
                         </div>
-                        <table class="table table-condensed table-bordered" style="font-size:12px;">
+                        <table class="table table-condensed table-bordered"
+                               style="font-size:12px;border: 1px solid #d8dadd;">
                             <tr>
                                 <td>
                                     <span class="fa fa-list"/>
@@ -32,7 +36,7 @@
                                 </td>
                                 <td>
                                     <t t-if="o.id">
-                                        <span t-esc="o.employee_id.registration_number"/>
+                                        <span t-esc="o.employee_id.identification_id"/>
                                     </t>
                                 </td>
                                 <td>
@@ -60,8 +64,8 @@
                                     <strong>CNIC No.</strong>
                                 </td>
                                 <td>
-                                    <t t-if="o.employee_id.identification_id">
-                                        <span t-esc="o.employee_id.identification_id"/>
+                                    <t t-if="o.employee_id.ssnid">
+                                        <span t-esc="o.employee_id.ssnid"/>
                                     </t>
                                 </td>
 
@@ -107,14 +111,14 @@
                                 </td>
                             </tr>
 
-                            <tr t-foreach="o.rule_by_code(o.id,'AGROSS')" t-as="line">
+                            <tr t-foreach="o.rule_by_code(o.id,'MONTHLY_SALARY')" t-as="line">
                                 <td>
                                     <span class="fa fa-calendar"/>
                                     <strong>Joining Date</strong>
                                 </td>
                                 <td>
-                                    <t t-if="o.contract_id.date_start">
-                                        <span t-field="o.contract_id.date_start"
+                                    <t t-if="o.employee_id.first_contract_date">
+                                        <span t-field="o.employee_id.first_contract_date"
                                               t-options='{"format":"dd/MM/yyyy"}'/>
                                     </t>
                                 </td>
@@ -123,10 +127,9 @@
                                     <strong>Gross</strong>
                                 </td>
                                 <td>
-                                    <!--                                    <span t-esc="'{:,}'.format(round(o.employee_id.contract_id.wage))"/>-->
-                                    <span t-esc="'{:,}'.format(line['total'])"
-                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-
+                                    <!--                                    <span t-esc="'{:,}'.format(line['total'])"-->
+                                    <!--                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>-->
+                                    <span t-esc="'{:,}'.format(line['total'])"/>
                                 </td>
                             </tr>
                             <tr>
@@ -144,12 +147,13 @@
                             </tr>
                         </table>
                         <div class="row" style="font-size:12px;">
-                            <div class="col-6">
-                                <t t-if="o.payslip(o.id,'Basic')">
-                                    <table class="table table-condensed">
+                            <div class="col-6" style="padding-right:1rem;">
+                                <t t-if="o.payslip(o.id,'BASIC')">
+                                    <table class="table table-condensed table-bordered table-striped"
+                                           style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                         <thead>
                                             <tr>
-                                                <t t-if="o.payslip(o.id,'Basic')">
+                                                <t t-if="o.payslip(o.id,'BASIC')">
                                                     <td class="text-left" style="font-size:15px;">
                                                         <strong>Allowances</strong>
                                                     </td>
@@ -160,48 +164,64 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr t-foreach="o.payslip(o.id,'Basic')" t-as="line">
+                                            <tr t-foreach="o.payslip(o.id,'BASIC')" t-as="line">
                                                 <td>
                                                     <span t-esc="line['name']"/>
                                                 </td>
                                                 <td class="text-right">
-                                                    <span t-esc="'{:,}'.format(line['total'])"
-                                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                    <span t-esc="'{:,}'.format(line['total'])"/>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </t>
-                                <t t-if="o.payslip(o.id,'Basic Allowances')">
-                                    <table class="table table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
+                                    <thead>
+                                        <tr>
+                                            <t t-if="o.payslip(o.id,'TOTAL_ALLOWANCES')">
+                                                <td style="font-size:15px;">
+                                                    <strong>Basic Allowances</strong>
+                                                </td>
+                                                <td></td>
+                                            </t>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="o.payslip(o.id,'CONVENYANCE_ALW')" t-as="line">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'HOUSE_RENT')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'UTILITY')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <t t-if="o.payslip(o.id,'MONTHLY_SALARY')">
+                                    <table class="table table-condensed table-bordered table-striped"
+                                           style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                         <thead>
                                             <tr>
-                                                <t t-if="o.payslip(o.id,'Basic Allowances')">
-                                                    <td style="font-size:15px;">
-                                                        <strong>Basic Allowances</strong>
-                                                    </td>
-                                                    <td></td>
-                                                </t>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr t-foreach="o.payslip(o.id,'Basic Allowances')" t-as="line">
-                                                <td>
-                                                    <span t-esc="line['name']"/>
-                                                </td>
-                                                <td class="text-right">
-                                                    <span t-esc="'{:,}'.format(line['total'])"
-                                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </t>
-                                <t t-if="o.payslip(o.id,'Gross')">
-                                    <table class="table table-condensed">
-                                        <thead>
-                                            <tr>
-                                                <t t-if="o.payslip(o.id,'Gross')">
+                                                <t t-if="o.payslip(o.id,'MONTHLY_SALARY')">
                                                     <td style="font-size:15px;">
                                                         <strong>Gross</strong>
                                                     </td>
@@ -210,27 +230,35 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr t-foreach="o.payslip(o.id,'Gross')" t-as="line">
+                                            <tr t-foreach="o.payslip(o.id,'MONTHLY_SALARY')" t-as="line">
                                                 <td>
                                                     <span t-esc="line['name']"/>
                                                 </td>
-                                                <!-- below code commented intenionally, purpose is to get value only from last iteration of loop-->
-                                                <!--                                                <t t-set="gross_pay_allowances"-->
-                                                <!--                                                    t-value="gross_pay_allowances+line['total']"/>-->
                                                 <t t-set="gross_pay_allowances"
                                                    t-value="line['total']"/>
                                                 <td class="text-right">
-                                                    <span t-esc="'{:,}'.format(round(line['total']))"
-                                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                    <span t-esc="'{:,}'.format(round(line['total']))"/>
+                                                </td>
+                                            </tr>
+                                            <tr t-foreach="o.payslip(o.id,'GROSS')" t-as="line"
+                                                style="border-top: 1px solid #d8dadd;">
+                                                <td>
+                                                    <span t-esc="line['name']"/>
+                                                </td>
+                                                <t t-set="gross_pay_allowances"
+                                                   t-value="line['total']"/>
+                                                <td class="text-right">
+                                                    <span t-esc="'{:,}'.format(round(line['total']))"/>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </t>
-                                <table class="table table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
-                                            <t t-if="o.payslip(o.id,'Allowance')">
+                                            <t t-if="o.payslip(o.id,'BONUS')">
                                                 <td style="font-size:15px;">
                                                     <strong>Special Allowances</strong>
                                                 </td>
@@ -239,25 +267,25 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="o.payslip(o.id,'Allowance')" t-as="line">
+                                        <tr t-foreach="o.payslip(o.id,'BONUS')" t-as="line">
                                             <td>
                                                 <span t-esc="line['name']"/>
                                             </td>
                                             <t t-set="gross_pay_allowances"
                                                t-value="gross_pay_allowances+line['total']"/>
                                             <td class="text-right">
-                                                <span t-esc="'{:,}'.format(line['total'])"
-                                                      t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="col-6">
-                                <table class="table table-condensed">
+                            <div class="col-6" style="padding-left:1rem;">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
-                                            <t t-if="o.payslip(o.id,'Deduction')">
+                                            <t t-if="o.payslip(o.id,'TOTAL_DEDUCTION')">
                                                 <td style="font-size:15px;">
                                                     <strong>Deductions</strong>
                                                 </td>
@@ -268,44 +296,82 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="o.payslip(o.id,'Deduction')" t-as="line">
+                                        <tr t-foreach="o.payslip(o.id,'OTHER_DEDUCTION_NON_TAXABLE')" t-as="line">
                                             <td>
                                                 <span t-esc="line['name']"/>
                                             </td>
                                             <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
                                             <td class="text-right">
-                                                <span t-esc="'{:,}'.format(line['total'])"
-                                                      t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
                                             </td>
                                         </tr>
-                                        <tr t-foreach="o.payslip(o.id,'Total')" t-as="line">
-                                            <t t-if="line['name']=='PF Loan'">
-                                                <td>
-                                                    <span t-esc="line['name']"/>
-                                                </td>
-                                                <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
-                                                <td class="text-right">
-                                                    <span t-esc="'{:,}'.format(line['total'])"
-                                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-                                                </td>
-                                            </t>
+                                        <tr t-foreach="o.payslip(o.id,'CANTEEN')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'CLOAN')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PF_EMPLOYEE')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'CURRENT_INCOME_TAX')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PFLOAN_TOTAL')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <t t-set="total_deductions" t-value="total_deductions+line['total']"/>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
-                                <table class="table table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
                                             <td style="font-size:15px;">
                                                 <strong>Total Deductions</strong>
                                             </td>
                                             <td class="text-right">
-                                                <span t-esc="'{:,.2f}'.format(total_deductions)"
-                                                      t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                <span t-esc="'{:,.2f}'.format(total_deductions)"/>
                                             </td>
                                         </tr>
                                     </thead>
                                 </table>
-                                <table class="table table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
                                             <td style="font-size:15px;">
@@ -317,64 +383,119 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr t-foreach="o.payslip(o.id,'Other')" t-as="line">
+                                        <tr t-foreach="o.payslip(o.id,'LWPA')" t-as="line">
                                             <td>
                                                 <span t-esc="line['name']"/>
                                             </td>
                                             <td class="text-right">
-                                                <span t-esc="'{:,}'.format(line['total'])"
-                                                      t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
                                             </td>
                                         </tr>
+                                        <tr t-foreach="o.payslip(o.id,'OTHER_PAYMENTS_TAXABLE')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PFLB')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PFLPB')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PFWIB')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+                                        <tr t-foreach="o.payslip(o.id,'PFBAL')" t-as="line"
+                                            style="border-top: 1px solid #d8dadd;">
+                                            <td>
+                                                <span t-esc="line['name']"/>
+                                            </td>
+                                            <td class="text-right">
+                                                <span t-esc="'{:,.2f}'.format(line['total'])"/>
+                                            </td>
+                                        </tr>
+<!--                                        <tr style="border-top: 1px solid #d8dadd;">-->
+<!--                                            <td>-->
+<!--                                                PF Balance-->
+<!--                                            </td>-->
+<!--                                            <td class="text-right">-->
+<!--                                                &lt;!&ndash;                                                <span t-esc="('{:,.2f}'.format(o.employee_id.total + o.employee_id.pf_employee + o.employee_id.pf_employer + o.employee_id.pf_interest)) or 0"/>&ndash;&gt;-->
+<!--                                                <span t-esc="('{:,.2f}'.format(o.get_pf_balance_as_of()))"/>-->
+<!--                                            </td>-->
+<!--                                        </tr>-->
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                         <div class="row" style="font-size:12px;">
-                            <div class="col-6">
-                                <table class="table table-condensed">
+                            <div class="col-6" style="padding-right:1rem;">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
                                             <td style="font-size:15px;">
                                                 <strong>Gross Pay and Allowances</strong>
                                             </td>
                                             <td class="text-right">
-                                                <span t-esc="'{:,}'.format(round(gross_pay_allowances))"
-                                                      t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                <span t-esc="'{:,}'.format(round(gross_pay_allowances))"/>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style="font-size:15px;">
                                                 <strong>Net Pay (Rs)</strong>
                                             </td>
-                                            <t t-foreach="o.payslip(o.id,'Net')" t-as="line">
+                                            <t t-foreach="o.payslip(o.id,'NET')" t-as="line">
                                                 <t t-set="total" t-value="total+line['total']"/>
                                                 <td class="text-right">
-                                                    <span t-esc="'{:,}'.format(-1 * round(line['total']))"
-                                                          t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                                    <span t-esc="'{:,}'.format(round(line['total']))"/>
                                                 </td>
                                             </t>
                                         </tr>
                                     </thead>
                                 </table>
 
-                                <table class="table table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <tbody>
                                         <tr>
                                             <td colspan="2">
                                                 <i>
-                                                    <span t-esc="o.company_id.currency_id.amount_to_text(round(-1 * total))"/>
+                                                    <span t-esc="o.company_id.currency_id.amount_to_text(round(total))"/>
                                                 </i>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="col-6" style="font-size:12px;" t-if="int(o.employee_id.contract_id.x_studio_grade) &lt; 14">
+                            <div class="col-6" style="font-size:12px;padding-left:1rem; "
+                                 t-if="int(o.employee_id.contract_id.x_studio_grade) &lt; 14">
                                 <p style="font-size:15px;">
                                     <strong>LWP (Details)</strong>
                                 </p>
-                                <table class="table table-sm table-condensed">
+                                <table class="table table-condensed table-bordered table-striped"
+                                       style="border: 1px solid white;border-top: 1px solid #d8dadd;">
                                     <thead>
                                         <tr>
                                             <th class="text-left">Date</th>
@@ -404,45 +525,5 @@
                 </t>
             </t>
         </t>
-    </template>
-
-    <template id="internal_layout_inherit" inherit_id="web.internal_layout">
-        <xpath expr="//div[@class='header']" position="replace">
-            <div class="header">
-                <t t-if='res_company.name in "YourCompany"'>
-                    <div class="row" style="margin-top:20px;">
-                        <table style="width:100%;margin-bottom:20px;">
-                            <tr>
-                                <td style="width:25%;">
-                                    <img t-att-src="'/ga_riztech_customization/static/description/RizLogo.png'"
-                                         style="width:70%;height:30%;"/>
-                                </td>
-                                <td style="text-align:right;">
-                                    <img t-att-src="'/ga_riztech_customization/static/description/address.png'"
-                                         style="width:80%;height:15%;"/>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </t>
-                <t t-if="not res_company.name in  'YourCompany'">
-                    <div class="o_boxed_header">
-                        <div class="row mb8">
-                            <div class="col-4">
-                                <img t-if="res_company.logo" t-att-src="image_data_uri(res_company.logo)" alt="Logo"/>
-                            </div>
-                            <div class="text-center">
-                                <h4 class="mt0" t-field="res_company.report_header"/>
-                                <div name="company_address">
-                                    <span class="company_address" style="font-size:20px"
-                                          t-field="res_company.partner_id"
-                                          t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;], &quot;no_marker&quot;: true}"/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </t>
-            </div>
-        </xpath>
     </template>
 </odoo>

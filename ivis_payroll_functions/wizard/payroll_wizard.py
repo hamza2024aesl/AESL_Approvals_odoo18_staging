@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from odoo import models, fields
-
+from odoo.osv import expression
 
 class PayrollWizard(models.TransientModel):
     _name = 'payroll.wizard'
@@ -70,33 +70,60 @@ class PayrollWizard(models.TransientModel):
     def get_salaries_through_cheque(self):
         month_start = self.current_month + relativedelta(day=1)
         month_end = self.current_month + relativedelta(day=0)
-        self.env.cr.execute("""select hr.name,hrj.name as "designation",hr.work_location,hpsl.amount from hr_payslip as hps
-                                                    inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id 
-        											inner join hr_employee as hr on hps.employee_id = hr.id
-													inner join hr_job as hrj on hr.job_id = hrj.id
-        											where hpsl.code = 'NET' and hr.bank_account_id is null and
-        											 hps.date_from between '%s' and '%s' and hps.state='done' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
+        query = """
+               SELECT 
+                   hr.name AS employee_name,
+                   hrj.name AS designation,
+                   COALESCE(hw.name, 'Unassigned') AS work_location,
+                   hpsl.amount AS amount
+               FROM hr_payslip AS hps
+               INNER JOIN hr_payslip_line AS hpsl 
+                   ON hps.id = hpsl.slip_id
+               INNER JOIN hr_employee AS hr 
+                   ON hps.employee_id = hr.id
+               INNER JOIN hr_job AS hrj 
+                   ON hr.job_id = hrj.id
+               LEFT JOIN hr_work_location AS hw 
+                   ON hr.work_location_id = hw.id
+               WHERE hpsl.code = 'NET'
+                 AND hr.bank_account_id IS NULL
+                 AND hps.date_from BETWEEN %s AND %s
+                 AND hps.state in ('done', 'paid')
+                 AND hps.company_id = %s
+           """
+
+        self.env.cr.execute(query, (str(month_start), str(month_end), self.env.company.id))
         cheque = self.env.cr.dictfetchall()
+
+        # self.env.cr.execute("""select hr.name,hrj.name as "designation",hr.work_location,hpsl.amount from hr_payslip as hps
+        #                                             inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+        # 											inner join hr_employee as hr on hps.employee_id = hr.id
+        # 											inner join hr_job as hrj on hr.job_id = hrj.id
+        # 											where hpsl.code = 'NET' and hr.bank_account_id is null and
+        # 											 hps.date_from between '%s' and '%s' and hps.state='done' and hps.company_id = '%s'
+        #                                     """ % (str(month_start), str(month_end), str(self.env.company.id)))
+        # cheque = self.env.cr.dictfetchall()
         data_list = []
         total = 0
         for ch in cheque:
-            total += abs(ch['amount'])
-            data_list.append((ch['name'], ch['designation'], ch['work_location'], abs(ch['amount'])))
-        result_list = []
-        vals = {'data': data_list,
-                'total': total}
-        result_list.append(vals)
+            amount = abs(ch['amount'] or 0)
+            total += amount
+            data_list.append((ch['employee_name'], ch['designation'].get('en_US', ''), ch['work_location'], amount))
+
+        result_list = [{
+            'data': data_list,
+            'total': total
+        }]
         return result_list
 
     def get_previous_month_gross(self, date, code="('GROSS')"):
         month_start = date + relativedelta(day=1)
         month_end = date + relativedelta(day=0)
         self.env.cr.execute(f"""
-                                    select sum(hpsl.amount) from hr_payslip as hps
-                                    inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                    where hpsl.code in {code} and hps.date_from between '%s' and '%s' and hps.state='done' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
+            select sum(hpsl.amount) from hr_payslip as hps
+            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+            where hpsl.code in {code} and hps.date_from between '%s' and '%s' and hps.state in ('done', 'paid') and hps.company_id = '%s'
+                    """ % (str(month_start), str(month_end), str(self.env.company.id)))
         records = self.env.cr.dictfetchall()
         if records[0]['sum']:
             return records[0]['sum']
@@ -106,10 +133,10 @@ class PayrollWizard(models.TransientModel):
         month_start = date + relativedelta(day=1)
         month_end = date + relativedelta(day=0)
         self.env.cr.execute("""
-                                            select count(hpsl.amount) from hr_payslip as hps
-                                            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                            where hpsl.code = 'GROSS' and hps.date_from between '%s' and '%s' and hps.state='done' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
+            select count(hpsl.amount) from hr_payslip as hps
+            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+            where hpsl.code = 'GROSS' and hps.date_from between '%s' and '%s' and hps.state='done' and hps.company_id = '%s'
+            """ % (str(month_start), str(month_end), str(self.env.company.id)))
         records = self.env.cr.dictfetchall()
         if records[0]['count']:
             return records[0]['count']
@@ -145,10 +172,42 @@ class PayrollWizard(models.TransientModel):
         month_start = self.current_month + relativedelta(day=1)
         month_end = self.current_month + relativedelta(day=0)
         self.env.cr.execute("""
-                                            select sum(hpsl.amount),count(*) from hr_payslip as hps
-                                            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                            where hpsl.code = 'ARR' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
+                select sum(hpsl.amount),count(*) from hr_payslip as hps
+                inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+                where hpsl.code = 'OTHER_PAYMENTS_TAXABLE' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
+                """ % (str(month_start), str(month_end), str(self.env.company.id)))
+        records = self.env.cr.dictfetchall()
+        records_list = []
+        vals = {'arrears': records[0]['sum'] if records[0]['sum'] else 0,
+                'employees_arrears': records[0]['count'] if records[0]['count'] else 0,
+                }
+        records_list.append(vals)
+        return records_list
+
+    def get_current_month_bonus(self):
+        month_start = self.current_month + relativedelta(day=1)
+        month_end = self.current_month + relativedelta(day=0)
+        self.env.cr.execute("""
+                select sum(hpsl.amount),count(*) from hr_payslip as hps
+                inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+                where hpsl.code = 'BONUS' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
+                """ % (str(month_start), str(month_end), str(self.env.company.id)))
+        records = self.env.cr.dictfetchall()
+        records_list = []
+        vals = {'bonus': records[0]['sum'] if records[0]['sum'] else 0,
+                'employees_bonus': records[0]['count'] if records[0]['count'] else 0,
+                }
+        records_list.append(vals)
+        return records_list
+
+    def get_previous_month_arrears(self, date):
+        month_start = date + relativedelta(day=1)
+        month_end = date + relativedelta(day=0)
+        self.env.cr.execute("""
+                select sum(hpsl.amount),count(*) from hr_payslip as hps
+                inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
+                where hpsl.code = 'OTHER_PAYMENTS_TAXABLE' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
+                """ % (str(month_start), str(month_end), str(self.env.company.id)))
         records = self.env.cr.dictfetchall()
         records_list = []
         vals = {'arrears': records[0]['sum'] if records[0]['sum'] else 0,
@@ -158,9 +217,10 @@ class PayrollWizard(models.TransientModel):
         return records_list
 
     def get_new_employment(self, previous, current, code="('GROSS')"):
+
         self.env.cr.execute(
-            """select employee_id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s') and date_from <= '%s' and date_to >= '%s'"""
-            % (str(previous), str(previous), str(current), str(current)))
+             """select employee_id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s') and date_from <= '%s' and date_to >= '%s'"""
+             % (str(previous), str(previous), str(current), str(current)))
         records = self.env.cr.dictfetchall()
         name_list = []
         for rec in records:
@@ -184,13 +244,21 @@ class PayrollWizard(models.TransientModel):
             return [('', 0)]
 
     def get_outgoing_staff(self, previous, current, code="('GROSS')"):
+        company_filter = ""
+        if self.env.company.id:
+            company_filter = f"and company_id = {self.env.company.id}"
         self.env.cr.execute(
-            """select employee_id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s') and date_from <= '%s' and date_to >= '%s'"""
-            % (str(current), str(current), str(previous), str(previous)))
+            """select employee_id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s' %s) and date_from <= '%s' and date_to >= '%s' %s"""
+            % (str(current), str(current), company_filter, str(previous), str(previous), company_filter))
         records = self.env.cr.dictfetchall()
+       # self.env.cr.execute(
+       #     """select employee_id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s') and date_from <= '%s' and date_to >= '%s'"""
+       #     % (str(current), str(current), company_filter, str(previous), str(previous), company_filter))
+       # records = self.env.cr.dictfetchall()
         name_list = []
         for rec in records:
-            employee = self.env['hr.employee'].search([('id', '=', rec['employee_id'])])
+            employee = self.env['hr.employee'].search([('id', '=', rec['employee_id']),('active','=',False),
+                                                       ('company_id', '=', self.env.company.id)])
             name_list.append((employee.name, employee.id))
         self.env.cr.execute(
             f"""select * from hr_payslip_line where code in {code} and slip_id in (select id from hr_payslip where employee_id not in (select employee_id from hr_payslip where date_from <= '%s' and date_to >= '%s') and date_from <= '%s' and date_to >= '%s')"""
@@ -211,40 +279,37 @@ class PayrollWizard(models.TransientModel):
 
     def get_leave_without_pay(self):
         month_start = self.current_month + relativedelta(day=1)
-        month_end = self.current_month + relativedelta(day=0)
+        month_end = self.current_month + relativedelta(day=31)
         self.env.cr.execute("""
-                                                    select hpsl.amount,hpsl.employee_id from hr_payslip as hps
-                                                    inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                                    where hpsl.code = 'SPD' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
-        SPD = self.env.cr.dictfetchall()
-        name_list = []
-        for rec in SPD:
-            employee = self.env['hr.employee'].search([('id', '=', rec['employee_id'])])
-            name_list.append((employee.name, employee.id, rec['amount'], employee.registration_number))
-        self.env.cr.execute("""
-                                                            select hpsl.amount,hpsl.employee_id from hr_payslip as hps
-                                                            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                                            where hpsl.code = 'LWP' and hps.date_from between '%s' and '%s' and hps.company_id = '%s'
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
-        ABS = self.env.cr.dictfetchall()
-        amount_list = []
-        for rec in ABS:
-            amount_list.append((rec['amount'], rec['employee_id']))
-        data_list = []
-        for name in name_list:
-            for amount in amount_list:
-                if name[1] == amount[1] and amount[0] > 0:
-                    data_list.append((name[0], "%0.2f" % ((amount[0] * name[2])), name[3]))
-        records_list = []
-        total = 0
-        for s in data_list:
-            total += float(s[1])
-        vals = {'lwp': data_list if data_list else [('', 0, 0)],
-                'total': total,
-                }
-        records_list.append(vals)
-        return records_list
+            SELECT hpsl.amount, hpsl.employee_id
+            FROM hr_payslip AS hps
+            INNER JOIN hr_payslip_line AS hpsl ON hps.id = hpsl.slip_id
+            WHERE hpsl.code = 'LWPA'
+              AND hps.date_from BETWEEN %s AND %s
+              AND hps.company_id = %s
+        """, (str(month_start), str(month_end), self.env.company.id))
+
+        lwpa_rows = self.env.cr.dictfetchall()
+
+        lwp_list = []
+        total = 0.0
+
+        for rec in lwpa_rows:
+            employee = self.env['hr.employee'].browse(rec['employee_id'])
+            amount = float(rec.get('amount') or 0.0)
+
+            if amount > 0:
+                lwp_list.append({
+                    'name': employee.name or '',
+                    'emp_no': employee.identification_id or '',
+                    'amount': amount,
+                })
+                total += amount
+
+        return [{
+            'lwp': lwp_list,
+            'total': total
+        }]
 
     def get_net_salary(self):
         month_start = self.current_month + relativedelta(day=1)
@@ -263,24 +328,57 @@ class PayrollWizard(models.TransientModel):
     def get_total_deductions(self):
         month_start = self.current_month + relativedelta(day=1)
         month_end = self.current_month + relativedelta(day=0)
-        self.env.cr.execute("""
-                                                            select sum(hpsl.amount),hpsl.name from hr_payslip as hps
-                                                            inner join hr_payslip_line as hpsl on hps.id = hpsl.slip_id
-                                                            where hpsl.category_id = (select id from hr_salary_rule_category where name='Deduction') and hps.date_from between '%s' and '%s' and hps.company_id = '%s' group by hpsl.name
-                                            """ % (str(month_start), str(month_end), str(self.env.company.id)))
+
+        deduction_codes = (
+            'OTHER_DEDUCTION_NON_TAXABLE',
+            'CANTEEN',
+            'PFLOAN',
+            'PFLWI',
+            'CLWI',
+            'CLOAN',
+            'CLWIB',
+            'PF_EMPLOYEE',
+            'CURRENT_INCOME_TAX',
+            'TAX_REBATE',
+            'PFLIA',
+        )
+
+        query = """
+                SELECT SUM(hpsl.amount) AS sum,
+                hpsl.name
+                FROM hr_payslip AS hps
+                    INNER JOIN hr_payslip_line AS hpsl \
+                ON hps.id = hpsl.slip_id
+                WHERE hpsl.code IN %s
+                  AND hps.date_from BETWEEN %s \
+                  AND %s
+                  AND hps.company_id = %s
+                GROUP BY hpsl.name
+                ORDER BY hpsl.name \
+                """
+
+        self.env.cr.execute(
+            query,
+            (deduction_codes, str(month_start), str(month_end), self.env.company.id),
+        )
         deductions = self.env.cr.dictfetchall()
+
         data_list = []
-        total = 0
-        for data in deductions:
-            if data['sum'] < 0:
-                data_list.append((data['name'], "%0.2f" % (abs(data['sum']))))
-            total += round(float(abs(data['sum'])))
-        records_list = []
-        vals = {'deduction': data_list,
-                'total': total
-                }
-        records_list.append(vals)
-        return records_list
+        total = 0.0
+
+        for row in deductions:
+            amount = float(row['sum'] or 0.0)
+            if amount < 0:
+                amount = abs(amount)
+
+            if amount:
+                data_list.append((row['name'], f"{amount:.2f}"))
+                total += amount
+
+        return [{
+            'deduction': data_list,
+            'total': round(total, 2),
+        }]
 
     def get_payment_type_and_amount(self):
         month_start = self.current_month + relativedelta(day=1)
@@ -317,9 +415,27 @@ class PayrollWizard(models.TransientModel):
         return records_list
 
     def get_eobi_contributors(self):
-        self.env.cr.execute("""select work_location,count(*) from hr_employee 
-                            where eobi is False and company_id = '%s' and work_location is not null group by work_location"""
-                            % (str(self.env.company.id)))
+        query = """
+                SELECT 
+                    COALESCE(hw.name, 'Unassigned') AS work_location,
+                    COUNT(he.id) AS count
+                FROM hr_employee AS he
+                LEFT JOIN hr_contract AS hc 
+                    ON he.contract_id = hc.id
+                LEFT JOIN hr_work_location AS hw 
+                    ON he.work_location_id = hw.id
+                WHERE hc.eobi IS FALSE
+                  AND he.company_id = %s
+                  AND he.work_location_id IS NOT NULL
+                GROUP BY hw.name
+                ORDER BY hw.name
+            """
+
+        self.env.cr.execute(query, (self.env.company.id,))
+
+        # self.env.cr.execute("""select work_location,count(*) from hr_employee
+        #                     where eobi is False and company_id = '%s' and work_location is not null group by work_location"""
+        #                     % (str(self.env.company.id)))
         eobi_contributor = self.env.cr.dictfetchall()
         data_list = []
         total = 0
@@ -333,42 +449,73 @@ class PayrollWizard(models.TransientModel):
         return result_list
 
     def get_eobi_non_contributors(self):
-        self.env.cr.execute("""select work_location,name from hr_employee 
-                            where eobi is True and company_id = '%s' and work_location is not null"""
-                            % (str(self.env.company.id)))
+        query = """
+               SELECT 
+                   COALESCE(hw.name, 'Unassigned') AS work_location,
+                   he.name AS employee_name
+               FROM hr_employee AS he
+               LEFT JOIN hr_contract AS hc 
+                   ON he.contract_id = hc.id
+               LEFT JOIN hr_work_location AS hw 
+                   ON he.work_location_id = hw.id
+               WHERE hc.eobi IS TRUE
+                 AND he.company_id = %s
+                 AND he.work_location_id IS NOT NULL
+               ORDER BY hw.name, he.name
+           """
+
+        self.env.cr.execute(query, (self.env.company.id,))
+
+        # self.env.cr.execute("""select work_location,name from hr_employee
+        #                     where eobi is True and company_id = '%s' and work_location is not null"""
+        #                     % (str(self.env.company.id)))
         eobi_non_contributor = self.env.cr.dictfetchall()
         data_list = []
         for rec in eobi_non_contributor:
-            data_list.append((rec['work_location'], rec['name']))
-        result_list = []
-        vals = {'eobi': data_list,
-                }
-        result_list.append(vals)
-        return result_list
+            data_list.append((rec['work_location'], rec['employee_name']))
+
+        return [{'eobi': data_list}]
 
     def total_contributors(self):
-        self.env.cr.execute("""select work_location,count(*) from hr_employee 
-                                    where eobi is False and company_id = '%s' and work_location is not null group by work_location"""
-                            % (str(self.env.company.id)))
-        eobi_contributor = self.env.cr.dictfetchall()
-        data_list = []
-        total = 0
-        for rec in eobi_contributor:
-            total += rec['count']
-        data_list.append(('EOBI Contributors', total))
-        self.env.cr.execute("""select count(work_location) from hr_employee 
-                                    where eobi is True and company_id = '%s' and work_location is not null"""
-                            % (str(self.env.company.id)))
-        eobi_non_contributor = self.env.cr.dictfetchall()
-        total_noneobi = 0
-        for rec in eobi_non_contributor:
-            total_noneobi += rec['count']
-        data_list.append(('Non-EOBI Contributors', total_noneobi))
-        result_list = []
-        vals = {'eobi': data_list,
-                'total': total + total_noneobi
-                }
-        result_list.append(vals)
+        query_contrib = """
+               SELECT 
+                   COUNT(he.id) AS count
+               FROM hr_employee AS he
+               LEFT JOIN hr_contract AS hc ON he.contract_id = hc.id
+               WHERE hc.eobi IS FALSE
+                 AND he.company_id = %s
+                 AND he.work_location_id IS NOT NULL
+           """
+        self.env.cr.execute(query_contrib, (self.env.company.id,))
+        # self.env.cr.execute("""select work_location,count(*) from hr_employee
+        #                             where eobi is False and company_id = '%s' and work_location is not null group by work_location"""
+        #                     % (str(self.env.company.id)))
+        eobi_contributor = self.env.cr.dictfetchone()
+        total_contrib = eobi_contributor['count'] if eobi_contributor and eobi_contributor['count'] else 0
+
+        query_non_contrib = """
+               SELECT 
+                   COUNT(he.id) AS count
+               FROM hr_employee AS he
+               LEFT JOIN hr_contract AS hc ON he.contract_id = hc.id
+               WHERE hc.eobi IS TRUE
+                 AND he.company_id = %s
+                 AND he.work_location_id IS NOT NULL
+           """
+        self.env.cr.execute(query_non_contrib, (self.env.company.id,))
+        eobi_non_contributor = self.env.cr.dictfetchone()
+        total_noneobi = eobi_non_contributor['count'] if eobi_non_contributor and eobi_non_contributor['count'] else 0
+
+        data_list = [
+            ('EOBI Contributors', total_contrib),
+            ('Non-EOBI Contributors', total_noneobi),
+        ]
+
+        result_list = [{
+            'eobi': data_list,
+            'total': total_contrib + total_noneobi
+        }]
+
         return result_list
 
     def report_Data(self):
@@ -376,8 +523,8 @@ class PayrollWizard(models.TransientModel):
         previous_month = self.get_previous_month_gross(self.previous_month)
         previous_month_lwpa = self.get_previous_month_gross(self.previous_month, code="('LWPA')")
         previous_month_total = previous_month + previous_month_lwpa
-        previous_month_total_employees = self.get_previous_total_employees(self.previous_month)
-        arrears = sum(i['arrears'] for i in self.get_current_month_arrears())
+        previous_month_total_employees = self.get_current_total_employees(self.previous_month)
+        arrears = sum(i['arrears'] for i in self.get_previous_month_arrears(self.previous_month))
         previous_month_total += arrears
 
         current_month = self.get_current_month_gross(self.current_month)
@@ -465,7 +612,7 @@ class PayrollWizard(models.TransientModel):
         for employee in all_employees:
             current_date = datetime.date.today()
             payslips_of_current_year = self.env['hr.payslip'].search(
-                [('employee_id', '=', employee.id), ('state', '=', 'done'),
+                [('employee_id', '=', employee.id), ('state', 'in', ['done', 'paid']),
                  ('date_from', '>=', first_day),
                  ('date_from', '<=', self.current_month),
                  ('company_id', '=', self.env.company.id)],
@@ -482,11 +629,11 @@ class PayrollWizard(models.TransientModel):
             for payslip in payslips_of_current_year:
                 current_year_employee_contributions1 += payslip.line_ids.filtered(lambda x: x.code == 'BASIC').total
                 current_year_employee_contributions2 += payslip.line_ids.filtered(lambda x: x.code == 'BONUS').total
-                current_year_employee_contributions3 += payslip.line_ids.filtered(lambda x: x.code == 'HRA').total
-                current_year_employee_contributions4 += payslip.line_ids.filtered(lambda x: x.code == 'COALW').total
-                current_year_employee_contributions5 += payslip.line_ids.filtered(lambda x: x.code == 'UOA').total
-                current_year_employee_contributions6 = payslip.line_ids.filtered(lambda x: x.code == 'TPF').total
-                current_year_employee_contributions7 = payslip.line_ids.filtered(lambda x: x.code == 'TAXD').total
+                current_year_employee_contributions3 += payslip.line_ids.filtered(lambda x: x.code == 'HOUSE_RENT').total
+                current_year_employee_contributions4 += payslip.line_ids.filtered(lambda x: x.code == 'CONVENYANCE_ALW').total
+                current_year_employee_contributions5 += payslip.line_ids.filtered(lambda x: x.code == 'UTILITY').total
+                current_year_employee_contributions6 = payslip.line_ids.filtered(lambda x: x.code == 'TAXPF').total
+                current_year_employee_contributions7 = payslip.line_ids.filtered(lambda x: x.code == 'CURRENT_INCOME_TAX').total + payslip.line_ids.filtered(lambda x: x.code == 'TAXABLE_SALARY_OLD').total
             car_tax = (employee.contract_id.car_cost * 5 / 100)  # 5% of car cost
             address = (str(employee.company_id.street) + ' ' if employee.company_id.street else '') + \
                       (str(employee.company_id.street2) + ' ' if employee.company_id.street2 else '') + \
@@ -541,11 +688,13 @@ class PayrollWizard(models.TransientModel):
             positions = self.env['hr.employee'].search([('job_id', '=', 'FINANCE MANAGER')])
             for employes in rec.employee_ids:
                 payslips = rec.env['hr.payslip'].search(
-                    [('employee_id', '=', employes.id), ('date_from', '>=', str(start_dat)), ('state', '=', 'done'),
+                    [('employee_id', '=', employes.id), ('date_from', '>=', str(start_dat)), ('state', 'in', ['done', 'paid']),
                      ('date_from', '<=', str(end_date))])
                 total = 0
                 for payslip in payslips:
-                    total += payslip.line_ids.filtered(lambda x: x.code == 'PF').total
+                    print('payslip',payslip)
+                    print('payslip.line_ids',payslip.line_ids)
+                    total += payslip.line_ids.filtered(lambda x: x.code == 'PF_EMPLOYER').total
                 vals = {
                     'name': employes.name,
                     'total': abs(total),
@@ -562,14 +711,33 @@ class PayrollWizard(models.TransientModel):
         last = date(2050, 12, 31)
 
         for employee in all_employees:
-            employee_wage = self.env['hr.contract'].search([('employee_id', '=', employee.id)]).wage
+            contract = self.env['hr.contract'].search([
+                ('employee_id', '=', employee.id),
+                ('state', '=', 'open')
+            ], limit=1, order='date_start desc')
 
-            sl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', employee.company_id.id), ('code', '=', 'SL')]).id
-            cl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', employee.company_id.id), ('code', '=', 'CL')]).id
-            pl_type_id = self.env['hr.leave.type'].search(
-                [('company_id', '=', employee.company_id.id), ('code', '=', 'PL')]).id
+            employee_wage = contract.wage if contract else 0.0
+
+            domain_sl = [('name', 'ilike', 'SL')]
+            domain_cl = [('name', 'ilike', 'CL')]
+            domain_pl = [('name', 'ilike', 'PL')]
+
+            if employee.company_id:
+                company_domain = ['|', ('company_id', '=', employee.company_id.id), ('company_id', '=', False)]
+            else:
+                company_domain = [('company_id', '=', False)]
+
+            domain_sl = expression.AND([domain_sl, company_domain])
+            domain_cl = expression.AND([domain_cl, company_domain])
+            domain_pl = expression.AND([domain_pl, company_domain])
+
+            sl_type = self.env['hr.leave.type'].search(domain_sl, limit=1)
+            cl_type = self.env['hr.leave.type'].search(domain_cl, limit=1)
+            pl_type = self.env['hr.leave.type'].search(domain_pl, limit=1)
+
+            sl_type_id = sl_type.id if sl_type else False
+            cl_type_id = cl_type.id if cl_type else False
+            pl_type_id = pl_type.id if pl_type else False
 
             employee_leaves = self.env['hr.leave'].search([
                 ('employee_id', '=', employee.id), ('date_from', '>=', first), ('date_to', '<=', last),
@@ -588,23 +756,24 @@ class PayrollWizard(models.TransientModel):
             annual_allocation_count = sum(
                 employee_allocations.filtered(lambda x: x.holiday_status_id.id == pl_type_id).mapped('number_of_days'))
 
-            # degree = employee.academic_ids and employee.academic_ids.mapped('degree_id')[0].name
+           # degree = employee.academic_ids and employee.academic_ids.mapped('degree_id')[0].name
+            degree = employee.study_field if employee.study_field else ''
 
             y = {
-                'name': str(employee.registration_number) + ' ' + str(employee.name),
+                'name': str(employee.identification_id) + ' ' + str(employee.name),
                 'birthday': employee.birthday,
                 'grade': employee.contract_id.x_studio_grade,
                 'department': employee.department_id.name,
                 'position': employee.job_id.name,
                 'joining_date': employee.appointment_date,
-                # 'degree': degree,
+                'degree': degree,
                 'gross_salary': employee_wage,
                 'year_end': self.current_month,
                 'sick_leave': sick_leaves_count,
                 'casual_leave': casual_leaves_count,
                 'earned_leave_balance': annual_allocation_count - annual_leaves_count,
                 'personal_file_no': employee.x_studio_personal_file_number,
-                'location': employee.work_location,
+                'location': employee.work_location_id.name if employee.work_location_id else '',
                 'company_name': employee.company_id.name,
             }
 

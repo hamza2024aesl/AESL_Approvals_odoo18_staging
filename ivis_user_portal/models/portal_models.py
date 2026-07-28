@@ -81,6 +81,7 @@ class ResCompanyInherit(models.Model):
     allow_portal_leaves_management = fields.Boolean(string="Allow Portal Leaves Management")
     allow_change_request = fields.Boolean(string="Allow Change Request")
     allow_pin_change = fields.Boolean(string="Allow Portal Pin Change")
+    allow_portal_apply_loan = fields.Boolean(string="Allow Portal Apply Loan")
 
 class ResConfigSettingInherit(models.TransientModel):
     _inherit = ["res.config.settings"]
@@ -89,12 +90,24 @@ class ResConfigSettingInherit(models.TransientModel):
     allow_portal_leaves_management = fields.Boolean(string="Allow Portal Leaves Management", related="company_id.allow_portal_leaves_management", readonly=False)
     allow_change_request = fields.Boolean(string="Allow Change Request", related="company_id.allow_change_request", readonly=False)
     allow_pin_change = fields.Boolean(string="Allow Portal Pin Change", related="company_id.allow_pin_change", readonly=False)
+    allow_portal_apply_loan = fields.Boolean(string="Allow Portal Apply Loan", related="company_id.allow_portal_apply_loan", readonly=False,)
 
 class HrLeaveTypeInherit(models.Model):
     _inherit = ["hr.leave.type"]
 
 # class AppraisalSystemInherit(models.Model):
-#     _inherit = "hr.appraisal"
-#
+#     _inherit = "appraisal.system"
+
 # class IncrementRaiseLinesInherit(models.Model):
 #     _inherit = "increment.raise.lines"
+
+class ResUsers(models.Model):
+    _inherit = 'res.users'
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        portal_group = self.env.ref('base.group_portal', raise_if_not_found=False)
+        if portal_group:
+            res['groups_id'] = [(6, 0, [portal_group.id])]
+        return res

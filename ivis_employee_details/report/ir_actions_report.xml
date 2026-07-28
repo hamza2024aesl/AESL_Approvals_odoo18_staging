@@ -6,8 +6,8 @@
             <field name="name">Employee Profile</field>
             <field name="model">hr.employee</field>
             <field name="report_type">qweb-pdf</field>
-            <field name="report_name">ivis_employee.employee_profile_report</field>
-            <field name="report_file">ivis_employee.employee_profile_report</field>
+            <field name="report_name">ivis_employee_details.employee_profile_report</field>
+            <field name="report_file">ivis_employee_details.employee_profile_report</field>
             <field name="binding_model_id" ref="hr.model_hr_employee"/>
             <field name="binding_type">report</field>
         </record>

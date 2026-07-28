@@ -150,9 +150,27 @@ class HrEmployeeInherit(models.Model):
     def getEmpStatus(self, type):
         contract = self.env['hr.contract'].search([('employee_id', '=', self.id), ('state', '=', 'open')], limit=1)
         if type == 'type':
-            return contract.emp_type
+            return contract.contract_type_id.name
         if type == 'wage':
             return contract.wage
+
+    def getacademics(self):
+        self.ensure_one()
+        lines = self.env['hr.resume.line'].search([
+            ('employee_id', '=', self.id),
+            ('line_type_id.name', '=', 'Education'),
+        ])
+
+        lst = []
+        for line in lines:
+            lst.append({
+                'degree': line.degree,
+                'specialization': line.specialization,
+                'percentage': line.percentage,
+                'cgpa': line.cgpa,
+                'division': line.division,
+            })
+        return lst
 
     def getRelativeName(self, relation):
         for line in self.fam_member_ids.filtered(lambda x: x.relation == relation):

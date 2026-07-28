@@ -76,12 +76,19 @@ class hrAttendance(models.Model):
     def check_if_on_leave(self):
         for rec in self:
             if rec.state == 'done':
-                rec._cr.execute('''SELECT id FROM hr_leave
+                rec._cr.execute('''SELECT id, request_unit_half FROM hr_leave
                                 WHERE employee_id = %s AND DATE(date_from) <= to_date('%s', 'YYYY-MM-DD')
                                 AND DATE(date_to) >= to_date('%s', 'YYYY-MM-DD') AND state = 'validate';''' % (rec.employee_id.id, rec.attendance_date, rec.attendance_date))
                 result = rec._cr.dictfetchall()
                 if result:
                     rec.on_leave = True
+                    half_leave_ids = [row['id'] for row in result if row.get('request_unit_half')]
+                    if half_leave_ids and rec.check_in and rec.check_out:
+                        half_leaves = self.env['hr.leave'].browse(half_leave_ids)
+                        half_leaves.write({
+                            'check_in': rec.check_in,
+                            'check_out': rec.check_out,
+                        })
 
     @api.depends('employee_id', 'check_in', 'check_out', 'current_shift', 'toggle')
     def _compute_worked_hours(self):

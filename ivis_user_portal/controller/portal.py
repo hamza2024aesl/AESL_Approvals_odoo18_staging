@@ -1,7 +1,8 @@
 import calendar
-import datetime
-import time
 from collections import defaultdict
+from dateutil.relativedelta import relativedelta
+import time
+from datetime import datetime, date, time as dt_time, timedelta
 
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager
 from pytz import timezone
@@ -11,8 +12,7 @@ from odoo.exceptions import AccessDenied, UserError
 from odoo.http import request
 from odoo.tools import float_round
 from odoo.exceptions import UserError, ValidationError
-from odoo.http import request, Response
-import json
+
 
 class EmployeePortal(CustomerPortal):
 
@@ -37,9 +37,11 @@ class EmployeePortal(CustomerPortal):
         }
 
         user = request.env.user
+        show_lwp = kw.get('show_lwp') == '1'
         user_timezone = timezone(user.tz)
         date_format = (lambda lang: f"{lang.date_format} {lang.time_format}")(
             request.env['res.lang'].search([('code', '=', user.lang)], limit=1))
+
         attendance_obj = request.env['hr.attendance']
         is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
         subordinate = kw.get('subordinate') == '1'
@@ -88,21 +90,104 @@ class EmployeePortal(CustomerPortal):
             },
         }
 
-        # if search_in == 'check_in_search':
-        #     employees = employees_obj.sudo().search([('employee_id', '=', user.employee_id.id), search_domain], limit=80, order=default_order_by, offset=page_detail['offset'])
-        #     search_domain = search_list[search_in]['domain']
-        #     employees = employees_obj.sudo().search([('employee_id', '=', user.employee_id.id)])
-        #     total_attendances = employees_obj.sudo().search_count([('employee_id', '=', user.employee_id.id)])
-        # if search_in == 'check_in_search':
+        # ---- Helper: filter attendances that are LWP ----
+        def _filter_lwp_attendances(attendances):
+            """Return only attendances that should be treated as LWP (no creation)."""
+            Leave = request.env['hr.leave'].sudo()
+            Holiday = request.env['resource.calendar.leaves'].sudo()
+            attendance_obj = request.env['hr.attendance']
+
+            if not attendances:
+                return attendances
+
+            current_date = date.today()
+            date_from = current_date - timedelta(days=90)
+            date_to = current_date
+
+            employees_in_att = attendances.mapped("employee_id")
+            # --- Get all leaves to skip days already on some leave ---
+            all_leaves = Leave.search([
+                ('employee_id', 'in', employees_in_att.ids),
+                ('request_date_to', '>=', date_from),
+                ('request_date_from', '<=', date_to),
+                ('state', 'not in', ['cancel', 'refuse']),
+            ])
+
+            leaves_dict = {}
+            for leave in all_leaves:
+                emp_id = leave.employee_id.id
+                if emp_id not in leaves_dict:
+                    leaves_dict[emp_id] = set()
+                start = leave.request_date_from
+                end = leave.request_date_to
+                while start <= end:
+                    leaves_dict[emp_id].add(start)
+                    start += timedelta(days=1)
+
+            lwp_attendance_ids = []
+
+            for att in attendances:
+                emp = att.employee_id
+                emp_id = emp.id
+
+                # Grade condition
+                grade = int(emp.x_studio_grade or 0)
+                if grade >= 14:
+                    continue
+
+                if not att.check_in:
+                    continue
+
+                # convert check_in -> date
+                current_day = att.check_in.date()
+                if current_day < date_from or current_day > date_to:
+                    continue
+
+                # Skip Saturday (5) and Sunday (6)
+                if current_day.weekday() in (5, 6):
+                    continue
+
+                # Convert date -> datetime with +5h offset for UTC-aligned search
+                current_day_dt = datetime.combine(current_day, datetime.min.time()) + timedelta(hours=5)
+                is_holiday = Holiday.search_count([
+                    ('date_from', '<=', current_day_dt),
+                    ('date_to', '>=', current_day_dt),
+                    ('resource_id', '=', False),
+                ]) > 0
+                if is_holiday:
+                    continue
+
+                status = att.status2 or False
+                in_status = att.in_status or False
+                # If employee has leave on this day, skip completely
+                if emp_id in leaves_dict and current_day in leaves_dict[emp_id]:
+                    continue
+
+                # Same logic as LWP creation, but only filter:
+                if status == 'off_day':
+                    continue
+                elif status == 'absent':
+                    lwp_attendance_ids.append(att.id)
+                elif in_status in ('3', '5'):
+                    lwp_attendance_ids.append(att.id)
+
+            return attendance_obj.sudo().browse(lwp_attendance_ids)
 
         default_order_by = sorted_list[sortby]['order']
         change_request_obj = request.env['my.change.request']
-        attendances = attendance_obj.sudo().search(domain, order=default_order_by)
+
+        # Get all attendances for domain (ordered)
+        all_attendances = attendance_obj.sudo().search(domain, order=default_order_by)
+
+        # Apply LWP filter if toggle is ON
+        if show_lwp:
+            all_attendances = _filter_lwp_attendances(all_attendances)
+
         grouped_attendances = False
 
         if group_by:
             grouped_attendances = defaultdict(list)
-            for attendance in attendances:
+            for attendance in all_attendances:
                 check_in = attendance.check_in.astimezone(user_timezone) if attendance.check_in else None
 
                 if group_by == 'month':
@@ -111,6 +196,8 @@ class EmployeePortal(CustomerPortal):
                     group_key = check_in.strftime('%Y') if check_in else 'No Year'
                 elif group_by == 'employee':
                     group_key = attendance.employee_id.name
+                else:
+                    group_key = 'Other'
 
                 grouped_attendances[group_key].append(attendance)
 
@@ -124,13 +211,16 @@ class EmployeePortal(CustomerPortal):
                     'search': search,
                     'group_by': group_by,
                     'subordinate': '1' if subordinate else '0',
+                    'show_lwp': '1' if show_lwp else '0',
                 },
                 step=35,
             )
+            attendances = all_attendances
         else:
+            total = len(all_attendances)
             page_detail = pager(
                 url='/my/attendance',
-                total=attendance_obj.sudo().search_count(domain),
+                total=total,
                 page=page,
                 url_args={
                     'sortby': sortby,
@@ -138,46 +228,45 @@ class EmployeePortal(CustomerPortal):
                     'search': search,
                     'group_by': group_by,
                     'subordinate': '1' if subordinate else '0',
+                    'show_lwp': '1' if show_lwp else '0',
                 },
                 step=35,
             )
-            attendances = attendance_obj.sudo().search(
-                domain,
-                limit=35,
-                offset=page_detail['offset'],
-                order=default_order_by,
-            )
+            start = page_detail['offset']
+            end = start + 35
+            attendances = all_attendances[start:end]
 
         if request.httprequest.method == "POST":
             request_id: str = kw.get("id")
 
             new_check_in = str(kw.get("new_check_in"))
             new_check_out = str(kw.get("new_check_out"))
-            check_in_x = datetime.datetime.strptime(new_check_in, "%Y-%m-%dT%H:%M")
-            check_out_x = datetime.datetime.strptime(new_check_out, "%Y-%m-%dT%H:%M")
-            name = f"{user.employee_id.name} from {check_in_x} to {check_out_x}"
+            if new_check_in and new_check_out:
+                check_in_x = datetime.strptime(new_check_in, "%Y-%m-%dT%H:%M")
+                check_out_x = datetime.strptime(new_check_out, "%Y-%m-%dT%H:%M")
+                name = f"{user.employee_id.name} from {check_in_x} to {check_out_x}"
 
-            if not change_request_obj.sudo().search([('attendance_id.id', '=', request_id)]):
-                change_request_id = change_request_obj.sudo().create({
-                    "attendance_id": request_id,
-                    "name": name,
-                    "state": "first",
-                    "reason": kw.get("reason"),
-                    "description": kw.get("desc"),
-                    "new_check_in": check_in_x,
-                    "new_check_out": check_out_x,
-                })
-                attendance_obj.sudo().browse(int(request_id)).write({
-                    "change_request": change_request_id,
-                    "request_created": True
-                })
-        else:
-            pass
+                if not change_request_obj.sudo().search([('attendance_id.id', '=', request_id)]):
+                    change_request_id = change_request_obj.sudo().create({
+                        "attendance_id": request_id,
+                        "name": name,
+                        "state": "first",
+                        "reason": kw.get("reason"),
+                        "description": kw.get("desc"),
+                        "new_check_in": check_in_x,
+                        "new_check_out": check_out_x,
+                    })
+                    attendance_obj.sudo().browse(int(request_id)).write({
+                        "change_request": change_request_id,
+                        "request_created": True
+                    })
+
         vals = {
             'grouped_attendances': grouped_attendances,
             'group_by': group_by,
             'is_manager': is_manager,
             'subordinate': subordinate,
+            'show_lwp': show_lwp,
             'attendances': attendances,
             'page_name': 'attendance_list_view',
             'pager': page_detail,
@@ -203,7 +292,9 @@ class EmployeePortal(CustomerPortal):
 
         user = request.env.user
         date_format = request.env['res.lang'].search([('code', '=', user.lang)], limit=1).date_format
-        date_today = datetime.date.today()
+        time_format = request.env['res.lang'].search([('code', '=', user.lang)], limit=1).time_format
+        datetime_format = f"{date_format} {time_format}"
+        date_today = date.today()
         is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
 
         subordinate = kw.get('subordinate') == '1'
@@ -258,7 +349,7 @@ class EmployeePortal(CustomerPortal):
             },
         }
 
-        current_year = datetime.date.today().year
+        current_year = date.today().year
         leaves_allocation_obj = request.env['hr.leave.allocation']
         allocated_leave_ids = leaves_allocation_obj.sudo().search([
             ('employee_id.user_id', '=', request.env.user.id),
@@ -270,7 +361,9 @@ class EmployeePortal(CustomerPortal):
         leaves_types = request.env['hr.leave.type'].sudo().search([
             '|',
             ('id', 'in', allocated_leave_ids),
-            ('requires_allocation', '=', 'no')
+            ('requires_allocation', '=', 'no'),
+            ('company_id', '=', request.env.user.company_id.id),
+            ('display_name', 'not in', ['LWP'])
         ])
 
         leaves = leaves_obj.sudo().search(domain, order=default_order_by)
@@ -329,6 +422,7 @@ class EmployeePortal(CustomerPortal):
 
         leaves_allocation = leaves_allocation_obj.sudo().search([('employee_id', '=', request.env.user.employee_id.id)])
 
+        leaves_types_portal = []
         for record in leaves_types:
             name = record.name
             if record.requires_allocation == "yes":
@@ -339,17 +433,20 @@ class EmployeePortal(CustomerPortal):
                         float_round(record.max_leaves, precision_digits=2) or 0.0,
                     ) + (_(' hours') if record.request_unit == 'hour' else _(' days')),
                 )
-            record.display_name = name
+            leaves_types_portal.append({
+                'id': record.id,
+                'display_name': name,
+            })
 
         if request.httprequest.method == "POST":
             date_from_x = kw.get("date_from")
             custom_time1 = "03:00:00"
-            fmt_from = datetime.datetime.strptime(f"{date_from_x} {custom_time1}", "%Y-%m-%d %H:%M:%S")
+            fmt_from = datetime.strptime(f"{date_from_x} {custom_time1}", "%Y-%m-%d %H:%M:%S")
 
             if kw.get("date_to") and not kw.get("half_day"):
                 date_to_x = kw.get("date_to")
                 custom_time2 = "12:00:00"
-                fmt_to = datetime.datetime.strptime(f"{date_to_x} {custom_time2}", "%Y-%m-%d %H:%M:%S")
+                fmt_to = datetime.strptime(f"{date_to_x} {custom_time2}", "%Y-%m-%d %H:%M:%S")
 
             if kw.get('half_day') and kw.get('date_from_period'):
                 leaves_obj.sudo().create({
@@ -384,10 +481,12 @@ class EmployeePortal(CustomerPortal):
                 </script>
             """
 
-        manage_leaves_count = request.env['hr.leave'].sudo().search_count([
-            ("can_approve", "!=", False),
-            ("state", "=", "confirm")
+        leaves_to_manage = request.env['hr.leave'].sudo().search([
+            ("employee_id.parent_id.user_id", "=", request.env.user.id),
+            ("state", "=", "confirm"),
         ])
+        leaves_to_manage = leaves_to_manage.filtered('can_approve')
+        manage_leaves_count = len(leaves_to_manage)
 
         leave_lines_map = {}
 
@@ -397,27 +496,40 @@ class EmployeePortal(CustomerPortal):
                 fiscal_start = leave.employee_id.contract_id.get_fiscal_date_start(leave.request_date_from)
                 fiscal_end = leave.employee_id.contract_id.get_fiscal_date_end(leave.request_date_from)
 
-                leave_types = request.env['hr.leave.type'].search([])
+                leave_types = request.env['hr.leave.type'].search([
+                    ('company_id', 'in', request.env.user.company_ids.ids),
+                    ('display_name', 'not in', ['LWP', 'ML (AESL)'])
+                ])
 
                 for leave_type in leave_types:
-                    availed = request.env['hr.leave'].sudo().search([
+                    is_pl_aesl = (leave_type.name == "PL (AESL)")
+                    availed_domain = [
                         ('employee_id', '=', leave.employee_id.id),
                         ('holiday_status_id', '=', leave_type.id),
                         ('state', '=', 'validate'),
-                        ('request_date_from', '>=', fiscal_start),
-                        ('request_date_to', '<=', fiscal_end),
                         ('id', '!=', leave.id),
-                    ])
+                    ]
+                    if not is_pl_aesl:
+                        availed_domain += [
+                            ('request_date_from', '>=', fiscal_start),
+                            ('request_date_to', '<=', fiscal_end),
+                        ]
+                    availed = request.env['hr.leave'].sudo().search(availed_domain)
                     availed_leave = sum(availed.mapped('number_of_days')) or 0.0
 
                     if leave_type.requires_allocation == 'yes':
-                        allocated = request.env['hr.leave.allocation'].sudo().search([
+                        alloc_domain = [
                             ('employee_id', '=', leave.employee_id.id),
                             ('holiday_status_id', '=', leave_type.id),
                             ('state', '=', 'validate'),
-                            ('date_from', '<=', fiscal_end),
-                            ('date_to', '>=', fiscal_start),
-                        ])
+                        ]
+                        if not is_pl_aesl:
+                            alloc_domain += [
+                                ('date_from', '<=', fiscal_end),
+                                ('date_to', '>=', fiscal_start),
+                            ]
+
+                        allocated = request.env['hr.leave.allocation'].sudo().search(alloc_domain)
                         available_leave = sum(allocated.mapped('number_of_days_display')) or 0.0
                         balance_leave = available_leave - availed_leave
                     else:
@@ -433,7 +545,25 @@ class EmployeePortal(CustomerPortal):
 
             leave_lines_map[leave.id] = lines
 
+        employee = request.env.user.employee_id
+        payslip_cutoff = False
+
+        if employee:
+            last_payslip = request.env['hr.payslip'].sudo().search(
+                [
+                    ('employee_id', '=', employee.id),
+                    ('state', 'in', ['done', 'paid']),
+                ],
+                order='date_to desc',
+                limit=2
+            )
+
+            payslip_cutoff = last_payslip[1].date_to if len(last_payslip) >= 2 else False
+
+            # payslip_cutoff = last_payslip.date_to if last_payslip else False
+
         error_message = request.session.pop('leave_error', None)
+        user_timezone = timezone(user.tz)
         vals = {
             'leaves': leaves,
             'grouped_leaves': grouped_leaves,
@@ -442,7 +572,7 @@ class EmployeePortal(CustomerPortal):
             'is_manager': is_manager,
             'subordinate': subordinate,
             'leaves_allocation': leaves_allocation,
-            'leaves_types': leaves_types,
+            'leaves_types': leaves_types_portal,
             'page_name': 'leave_list_view',
             'pager': page_detail,
             'sortby': sortby,
@@ -454,6 +584,9 @@ class EmployeePortal(CustomerPortal):
             'manage_leaves_count': manage_leaves_count,
             'date_format': date_format,
             'error_message': error_message,
+            'payslip_cutoff': payslip_cutoff,
+            'timezone': user_timezone,
+            'datetime_format': datetime_format,
         }
 
         return request.render("ivis_user_portal.leave_list_view_portal", vals)
@@ -469,6 +602,9 @@ class EmployeePortal(CustomerPortal):
 
         payslips_obj = request.env["hr.payslip"]
 
+        # date: July 1, 2025
+        min_date = date(2025, 7, 1)
+
         domain = [
             ('employee_id', '=', request.env.user.employee_id.id),
             '|',
@@ -476,7 +612,8 @@ class EmployeePortal(CustomerPortal):
             ('state', '=', 'paid'), '|', '|',
             ('payslip_run_id.name', 'ilike', search),
             ('number', 'ilike', search),
-            ('net_wage', 'ilike', search)
+            ('net_wage', 'ilike', search),
+            ('date_from', '>=', min_date),
         ]
         search_list = {
             'All': {
@@ -574,7 +711,7 @@ class EmployeePortal(CustomerPortal):
                             url_args={'sortby': sortby, 'search_in': search_in, 'search': search}, step=80)
         loans = loans_obj.sudo().search(domain, limit=80, order=default_order_by, offset=page_detail['offset'])
         loan_types = request.env['loan.type'].sudo().search([])
-        date_today = (datetime.date.today()).strftime("%Y/%m/%d")
+        date_today = date.today().strftime("%Y/%m/%d")
 
         grouped_loans = defaultdict(list)
         if group_by:
@@ -588,7 +725,7 @@ class EmployeePortal(CustomerPortal):
                 grouped_loans[group_key].append(loan)
 
         if request.httprequest.method == "POST":
-            app_date = datetime.date.today()
+            app_date = date.today()
             loans_obj.sudo().create({
                 "employee_id": request.env.user.employee_id.id,
                 "user_id": request.env.user.id,
@@ -663,7 +800,7 @@ class EmployeePortal(CustomerPortal):
                 },
                 'overtime_today': request.env['hr.attendance.overtime'].sudo().search([
                     ('employee_id', '=', employee.id),
-                    ('date', '=', datetime.date.today()),
+                    ('date', '=', date.today()),
                     ('adjustment', '=', False),
                 ]).duration or 0,
                 'use_pin': employee.company_id.attendance_kiosk_use_pin,
@@ -686,21 +823,23 @@ class EmployeePortal(CustomerPortal):
 
     @http.route('/my/leaves/check_duration', type="json", auth="user")
     def duration_check(self, date_from, date_to, half_day, period):
-        leaves = request.env['hr.leave'].sudo().search([('employee_id', '=', request.env.user.employee_id.id)])
+        user = request.env.user
+        employee = user.employee_id
 
-        for record in leaves:
-            fmt_from = record.date_from.strftime("%Y-%m-%d")
-            if half_day and period:
-                if (date_from == fmt_from and not record.request_unit_half):
-                    return False
-                if (date_from == fmt_from and record.request_unit_half):
-                    if (period == record.request_date_from_period):
-                        return False
+        my_from_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+        my_to_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+        start_dt = datetime.combine(my_from_date, dt_time.min)
+        end_dt = datetime.combine(my_to_date, dt_time.max)
+        domain = [
+            ('employee_id', '=', employee.id),
+            ('date_from', '<', end_dt),
+            ('date_to', '>', start_dt),
+            ('state', 'not in', ['cancel', 'refuse']),
+        ]
 
-            fmt_to = record.date_to.strftime("%Y-%m-%d")
-            if (date_from <= fmt_to) and (date_to >= fmt_from):
-                return False
-        return True
+        conflicts = request.env['hr.leave'].sudo().search_count(domain)
+
+        return conflicts == 0
 
     @http.route(['/my/profile'], type="http", website=True)
     def _profile_form_view(self, **kw):
@@ -777,7 +916,8 @@ class EmployeePortal(CustomerPortal):
             raise UserError("No authenticated user found.")
 
         try:
-            user._check_credentials(current_password, {'interactive': True})
+            user._check_credentials({'type': 'password', 'password': current_password}, {'interactive': True})
+
         except AccessDenied:
             raise UserError("Incorrect current password.")
 
@@ -791,31 +931,65 @@ class EmployeePortal(CustomerPortal):
 
         return request.redirect('/web')
 
-    @http.route(['/leave/cancel'], type='json', auth='public', website=True)
-    def _leave_cancel(self, **kw):
-        leave = int(kw.get('leave_id'))
-        leave_id = request.env['hr.leave'].sudo().browse(leave)
-        if leave_id.state == 'confirm':
-            leave_id.action_refuse()
-        return True
+    @http.route('/my/leaves/refuse_leave', type='json', auth='user', website=True)
+    def refuse_leave(self, leave_id, refuse_reason):
+        Leave = request.env['hr.leave'].sudo()
+        leave = Leave.browse(int(leave_id))
+
+        if not leave:
+            return {'error': 'Leave not found.'}
+
+        user = request.env.user
+
+        is_owner = (leave.employee_id.user_id == user)
+        is_manager = (leave.employee_id.parent_id and leave.employee_id.parent_id.user_id == user)
+
+        if not (is_owner or is_manager):
+            return {'error': 'Access denied.'}
+
+        if not refuse_reason or not refuse_reason.strip():
+            return {'error': 'Refuse reason is required.'}
+
+        leave.write({'refuse_reason': refuse_reason.strip()})
+        leave.action_refuse()
+
+        return {'success': True}
 
     @http.route(['/leave/approve'], type='json', auth='public', website=True)
     def _leave_approve(self, **kw):
         leave = int(kw.get('leave_id'))
         leave_id = request.env['hr.leave'].sudo().browse(leave)
-
-        employee = request.env.user.employee_id
         if leave_id.state == 'confirm':
-            # leave_id.sudo().write({'state': 'validate', 'second_approver_id': employee.id})
             leave_id.sudo().action_approve()
+            return True
+        return True
+
+    @http.route(['/leave/approve/bulk'], type='json', auth='public', website=True)
+    def _leave_approve_bulk(self, leave_ids=None, **kw):
+        if not leave_ids:
+            return True
+
+        Leave = request.env['hr.leave'].sudo()
+
+        leaves = Leave.browse(leave_ids).filtered(lambda l: l.state == 'confirm')
+
+        for leave in leaves:
+            leave.action_approve()
+
         return True
 
     @http.route(['/my/leaves/manage', '/my/leaves/manage/page/<int:page>'], type='http', auth='public', website=True)
     def _leaves_manage(self, page=1, sortby='start_date', search="", search_in="All", group_by=None, **kw):
-        date_today = datetime.date.today()
         user = request.env.user
+        is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
+        if not is_manager:
+            return request.redirect('/web')
+
+        date_today = date.today()
         date_format = request.env['res.lang'].search([('code', '=', user.lang)], limit=1).date_format
         user_timezone = timezone(request.env.user.tz)
+        time_format = request.env['res.lang'].search([('code', '=', user.lang)], limit=1).time_format
+        datetime_format = f"{date_format} {time_format}"
 
         sorted_list = {
             'timeoff_type': {'label': 'Time Off', 'order': 'holiday_status_id'},
@@ -826,34 +1000,44 @@ class EmployeePortal(CustomerPortal):
 
         default_order_by = sorted_list[sortby]['order']
 
-        if search != "":
-            domain = [
-                ("employee_id.user_id", "!=", request.env.user.id),
-                ('employee_id.name', 'ilike', search),
-                ("can_approve", "!=", False)
-            ]
-        else:
-            domain = [
-                ("employee_id.user_id", "!=", request.env.user.id),
-                ("can_approve", "!=", False),
-                # ("state", "=", 'confirm'),
-            ]
+        # --- base domain: leaves of my subordinates, in confirm state ---
+        base_domain = [
+            ("employee_id.parent_id.user_id", "=", user.id),
+            # ("state", "=", "confirm"),
+        ]
+        if search:
+            base_domain.append(('employee_id.name', 'ilike', search))
 
         search_list = {
             'check_in_search': {
                 'label': 'Search...',
                 'input': 'All',
-                'domain': domain,
+                'domain': base_domain,
             },
         }
 
-        leaves_obj = request.env['hr.leave']
-        total_leaves = leaves_obj.sudo().search_count(domain)
-        page_detail = pager(url='/my/leaves/manage', total=total_leaves, page=page,
-                            url_args={'sortby': sortby, 'search_in': search_in, 'search': search}, step=80)
+        leaves_obj = request.env['hr.leave'].sudo()
 
-        filtered_leaves = leaves_obj.sudo().search(domain, limit=80, order=default_order_by,
-                                                   offset=page_detail['offset'])
+        # First fetch all matching leaves (without can_approve)
+        all_leaves = leaves_obj.search(base_domain, order=default_order_by)
+
+        # Then filter by computed field can_approve in Python
+        all_leaves = all_leaves.filtered('can_approve')
+
+        # ---- pagination AFTER filtering ----
+        total_leaves = len(all_leaves)
+        page_detail = pager(
+            url='/my/leaves/manage',
+            total=total_leaves,
+            page=page,
+            url_args={'sortby': sortby, 'search_in': search_in, 'search': search},
+            step=80,
+        )
+
+        # slice for current page
+        start = page_detail['offset']
+        end = start + 80
+        filtered_leaves = all_leaves[start:end]
 
         grouped_leaves = defaultdict(list)
 
@@ -879,27 +1063,41 @@ class EmployeePortal(CustomerPortal):
                 fiscal_start = leave.employee_id.contract_id.get_fiscal_date_start(leave.request_date_from)
                 fiscal_end = leave.employee_id.contract_id.get_fiscal_date_end(leave.request_date_from)
 
-                leave_types = request.env['hr.leave.type'].search([])
+                leave_types = request.env['hr.leave.type'].search([
+                    ('company_id', 'in', leave.employee_id.user_id.company_ids.ids),
+                    ('display_name', 'not in', ['LWP', 'ML (AESL)'])
+                ])
 
                 for leave_type in leave_types:
-                    availed = request.env['hr.leave'].sudo().search([
+                    is_pl_aesl = (leave_type.name == "PL (AESL)")
+
+                    availed_domain = [
                         ('employee_id', '=', leave.employee_id.id),
                         ('holiday_status_id', '=', leave_type.id),
                         ('state', '=', 'validate'),
-                        ('request_date_from', '>=', fiscal_start),
-                        ('request_date_to', '<=', fiscal_end),
                         ('id', '!=', leave.id),
-                    ])
+                    ]
+                    if not is_pl_aesl:
+                        availed_domain += [
+                            ('request_date_from', '>=', fiscal_start),
+                            ('request_date_to', '<=', fiscal_end),
+                        ]
+                    availed = request.env['hr.leave'].sudo().search(availed_domain)
                     availed_leave = sum(availed.mapped('number_of_days')) or 0.0
 
                     if leave_type.requires_allocation == 'yes':
-                        allocated = request.env['hr.leave.allocation'].sudo().search([
+                        alloc_domain = [
                             ('employee_id', '=', leave.employee_id.id),
                             ('holiday_status_id', '=', leave_type.id),
                             ('state', '=', 'validate'),
-                            ('date_from', '<=', fiscal_end),
-                            ('date_to', '>=', fiscal_start),
-                        ])
+                        ]
+                        if not is_pl_aesl:
+                            alloc_domain += [
+                                ('date_from', '<=', fiscal_end),
+                                ('date_to', '>=', fiscal_start),
+                            ]
+
+                        allocated = request.env['hr.leave.allocation'].sudo().search(alloc_domain)
                         available_leave = sum(allocated.mapped('number_of_days_display')) or 0.0
                         balance_leave = available_leave - availed_leave
                     else:
@@ -922,6 +1120,8 @@ class EmployeePortal(CustomerPortal):
             'group_by': group_by,
             'date_today': date_today,
             'date_format': date_format,
+            'datetime_format': datetime_format,
+            'timezone': user_timezone,
             'sortby': sortby,
             'searchbar_sortings': sorted_list,
             'pager': page_detail,
@@ -941,6 +1141,337 @@ class EmployeePortal(CustomerPortal):
             return True
         return False
 
+    # @http.route(["/my/appraisal", '/my/appraisal/page/<int:page>'], type="http", methods=["POST", "GET"], website=True)
+    # def _appraisal_list_view(self, page=1, sortby="create_date", search="", search_in="All", **kw):
+    #     sorted_list = {
+    #         'create_date': {'label': 'Created On', 'order': 'create_date'},
+    #         'date_close': {'label': 'Appraisal Deadline', 'order': 'date_close desc'},
+    #         'status': {'label': 'Status', 'order': 'state'}
+    #     }
+    #
+    #     user = request.env.user
+    #     default_order_by = sorted_list[sortby]['order']
+    #
+    #     appraisal_obj = request.env['appraisal.system']
+    #
+    #     is_manager = bool(request.env['hr.employee'].sudo().search([('parent_id.user_id', '=', user.id)], limit=1))
+    #     employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
+    #
+    #     subordinate = kw.get('subordinate') == '1'
+    #
+    #     if subordinate and employee:
+    #         all_subordinates = self._get_all_subordinate_employees(employee)
+    #         domain = [('employee_id', 'in', all_subordinates.ids), ('state', 'not in', ['draft', 'cancel'])]
+    #     else:
+    #         domain = [('employee_id', '=', employee.id), ('state', 'not in', ['draft', 'cancel'])]
+    #
+    #     search_list = {
+    #         'All': {
+    #             'label': 'Search...',
+    #             'input': 'All',
+    #             'domain': domain,
+    #         },
+    #     }
+    #
+    #     total_appraisals = appraisal_obj.sudo().search_count(domain)
+    #     page_detail = pager(url='/my/appraisal', total=total_appraisals, page=page,
+    #                         url_args={'sortby': sortby, 'search_in': search_in, 'search': search,
+    #                                   'subordinate': '1' if subordinate else '0', }, step=35)
+    #     appraisals = appraisal_obj.sudo().search(domain, limit=35, order=default_order_by, offset=page_detail['offset'])
+    #     date_today = date.today().strftime("%Y/%m/%d")
+    #
+    #     vals = {
+    #         'appraisals': appraisals,
+    #         'date_today': date_today,
+    #         'is_manager': is_manager,
+    #         'subordinate': subordinate,
+    #         'pager': page_detail,
+    #         'sortby': sortby,
+    #         'searchbar_sortings': sorted_list,
+    #         'search_in': search_in,
+    #         'searchbar_inputs': search_list,
+    #         'search': search,
+    #         'page_name': 'view_appraisal_page'
+    #     }
+    #
+    #     return request.render("ivis_user_portal.appraisal_list_view_portal", vals)
+
+    def _get_all_subordinate_employees(self, employee):
+        Employee = request.env['hr.employee'].sudo()
+        subordinates = Employee.browse()
+        stack = Employee.browse([employee.id])
+        while stack:
+            current_employee = stack[-1]
+            stack = stack[:-1]
+            direct_subs = Employee.search([('parent_id', '=', current_employee.id)])
+            subordinates += direct_subs
+            stack += direct_subs
+        return subordinates
+
+    # @http.route(["/my/appraisal/view/<int:appraisal_id>"], type="http", methods=["POST", "GET"], website=True)
+    # def _appraisal_view(self, appraisal_id, **kw):
+    #     appraisal_obj = request.env["appraisal.system"]
+    #     appraisal_data = appraisal_obj.sudo().search([("id", '=', appraisal_id)])
+    #     user = request.env.user
+    #
+    #     desigantions = request.env['hr.job'].sudo().search([])
+    #     vals = {'appraisal': appraisal_data, 'page_name': 'view_appraisal_detail_page', 'user': user,
+    #             'desigantions': desigantions}
+    #
+    #     return request.render("ivis_user_portal.appraisal_detail_page_portal", vals)
+    #
+    # @http.route(['/my/appraisal/view/save'], type='http', auth="user", website=True, methods=['POST'])
+    # def portal_appraisal_save(self, **post):
+    #     appraisal_id = int(post.get("appraisal_id"))
+    #     appraisal_obj = request.env["appraisal.system"].sudo().browse(appraisal_id)
+    #     if not appraisal_obj.exists():
+    #         return request.redirect('/my/appraisal')
+    #
+    #     vals = {}
+    #     keys = [
+    #         "remarks", "remarks_2", "remarks_3", "remarks_4", "remarks_5",
+    #         "future_project", "total_points", "given_points", "leave_points",
+    #         "availed_points", "bonus_amount", "date_effective"
+    #     ]
+    #     vals.update({
+    #         key: post.get(key) for key in keys if post.get(key)
+    #     })
+    #
+    #     vals_lines = {
+    #         "increment_raise_amount": post.get("increment_raise_amount") or 0,
+    #         "recomm_desigantion_id": post.get("recomm_desigantion_id") or False,
+    #         "recomm_grades": post.get("recomm_grades") or "",
+    #     }
+    #
+    #     if appraisal_obj.state == 'new':
+    #         self._update_action_confirm(appraisal_obj, vals, vals_lines)
+    #     elif appraisal_obj.state == 'pending':
+    #         self._update_action_confirm2(appraisal_obj, vals, vals_lines)
+    #     elif appraisal_obj.state == 'pending2':
+    #         self._update_action_confirm3(appraisal_obj, vals, vals_lines)
+    #     elif appraisal_obj.state == 'pending3':
+    #         self._update_action_done(appraisal_obj, vals, vals_lines)
+    #     elif appraisal_obj.state == 'pending4':
+    #         self._update_action_confirm4(appraisal_obj, vals, vals_lines)
+    #
+    #     return request.redirect('/my/appraisal/view/%s' % appraisal_id)
+
+    # def _update_action_confirm(self, appraisal_obj, vals, vals_lines):
+    #     login_user = request.env.user.id
+    #     manager_user = request.env['res.users'].search([('id', '=', 414)])
+    #     manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
+    #     if len(appraisal_obj.manager_ids) <= 2:
+    #         vals.update({'is_md_state': True})
+    #     elif len(appraisal_obj.manager_ids) <= 3:
+    #         vals.update({'is_exec_state': True})
+    #
+    #     if appraisal_obj.employee_id.parent_id.user_id.id == login_user:
+    #         vals.update({
+    #             'doc_state': 'draft',
+    #             'state': appraisal_obj.state,
+    #             'appraisal_last_approver_id': login_user,
+    #             'name_of_reporting_officer': login_user,
+    #             'ro_submit_date': date.today(),
+    #         })
+    #         if login_user == 663 or login_user == 626:
+    #             vals.update({
+    #                 'last_state': appraisal_obj.state,
+    #                 'state': 'pending4',
+    #                 'is_manager': True,
+    #                 'is_exec_state': True,
+    #                 'appraisal_approver_id': manager_user.id
+    #             })
+    #         elif len(appraisal_obj.manager_ids) == 2 or (
+    #                 (not (manager.get('manager3')) and (not manager.get('manager4')) and (
+    #                         not manager.get('manager5')))):
+    #             vals.update({
+    #                 'last_state': appraisal_obj.state,
+    #                 'state': 'pending3',
+    #                 'is_md_state': True,
+    #                 'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
+    #             })
+    #         elif len(appraisal_obj.manager_ids) == 3:
+    #             vals.update({
+    #                 'last_state': appraisal_obj.state,
+    #                 'state': 'pending4',
+    #                 'is_exec_state': True,
+    #                 'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
+    #             })
+    #         elif len(appraisal_obj.manager_ids) == 4:
+    #             vals.update({
+    #                 'last_state': appraisal_obj.state,
+    #                 'state': 'pending2',
+    #                 'is_manager2': True,
+    #                 'is_manager3': True,
+    #                 'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
+    #             })
+    #         else:
+    #             vals.update({
+    #                 'last_state': appraisal_obj.state,
+    #                 'state': 'pending',
+    #                 'is_manager': True,
+    #                 'is_manager2': True,
+    #                 'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.user_id.id
+    #             })
+    #         appraisal_obj.write(vals)
+    #
+    #         if vals_lines['increment_raise_amount'] != 0:
+    #             vals_lines.update({
+    #                 'increment_raise_by': login_user,
+    #                 'incremented_date': fields.Datetime.now(),
+    #                 'state': appraisal_obj.state,
+    #                 'increment_raise_id': appraisal_obj.id
+    #             })
+    #             request.env["increment.raise.lines"].create(vals_lines)
+    #     else:
+    #         raise ValidationError(
+    #             _('Please let Mr. %s fill the form.') % appraisal_obj.employee_id.parent_id.user_id.name)
+
+    # def _update_action_confirm2(self, appraisal_obj, vals, vals_lines):
+    #     login_user = request.env.user.id
+    #     manager_user = request.env['res.users'].search([('id', '=', 414)])
+    #     manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
+    #     if len(appraisal_obj.manager_ids) <= 3:
+    #         vals.update({'is_md_state': True})
+    #     elif len(appraisal_obj.manager_ids) <= 4:
+    #         vals.update({'is_exec_state': True})
+    #
+    #     if login_user == 663 or login_user == 626:
+    #         vals.update({
+    #             'last_state': appraisal_obj.state,
+    #             'state': 'pending4',
+    #             'is_manager': True,
+    #             'is_exec_state': True,
+    #             'appraisal_approver_id': manager_user.id
+    #         })
+    #         appraisal_obj.write(vals)
+    #         if vals_lines['increment_raise_amount'] != 0:
+    #             vals_lines.update({
+    #                 'increment_raise_by': login_user,
+    #                 'incremented_date': fields.Datetime.now(),
+    #                 'state': appraisal_obj.state,
+    #                 'increment_raise_id': appraisal_obj.id
+    #             })
+    #             request.env["increment.raise.lines"].create(vals_lines)
+
+        # elif appraisal_obj.employee_id.parent_id.parent_id.user_id.id == login_user:
+        #     if not manager.get('manager4'):
+        #         vals.update({
+        #             'last_state': appraisal_obj.state,
+        #             'state': 'pending3',
+        #             'is_md_state': True,
+        #             'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
+        #         })
+        #     else:
+        #         vals.update({
+        #             'last_state': appraisal_obj.state,
+        #             'state': 'pending2',
+        #             'is_manager3': True,
+        #             'appraisal_approver_id': appraisal_obj.employee_id.parent_id.parent_id.parent_id.user_id.id
+        #         })
+        #     appraisal_obj.write(vals)
+        #
+        #     if vals_lines['increment_raise_amount'] != 0:
+        #         vals_lines.update({
+        #             'increment_raise_by': login_user,
+        #             'incremented_date': fields.Datetime.now(),
+        #             'state': appraisal_obj.state,
+        #             'increment_raise_id': appraisal_obj.id
+        #         })
+        #         request.env["increment.raise.lines"].create(vals_lines)
+        # # else:
+        # #     raise ValidationError(
+        # #         _('Please let Mr. %s proceed the form.') % appraisal_obj.employee_id.parent_id.parent_id.user_id.name)
+
+    # def _update_action_confirm3(self, appraisal_obj, vals, vals_lines):
+    #     login_user = request.env.user.id
+    #     manager_user = request.env['res.users'].search([('id', '=', 414)])
+    #     manager = appraisal_obj.find_managers(appraisal_obj.employee_id)
+    #
+    #     if appraisal_obj.appraisal_approver_id.id == login_user:
+    #         vals.update({
+    #             'doc_state': 'draft',
+    #             'last_state': appraisal_obj.state,
+    #             'state': 'pending4',
+    #             'is_manager3': True,
+    #             'appraisal_last_approver_id': login_user,
+    #         })
+    #         if login_user == 663:
+    #             vals.update({
+    #                 'appraisal_approver_id': manager_user.id,
+    #             })
+    #         else:
+    #             vals.update({
+    #                 'appraisal_approver_id': appraisal_obj.appraisal_approver_id.employee_id.parent_id.user_id.id
+    #             })
+    #         appraisal_obj.write(vals)
+    #
+    #         if vals_lines['increment_raise_amount'] != 0:
+    #             vals_lines.update({
+    #                 'increment_raise_by': login_user,
+    #                 'incremented_date': fields.Datetime.now(),
+    #                 'state': appraisal_obj.state,
+    #                 'increment_raise_id': appraisal_obj.id
+    #             })
+    #             request.env["increment.raise.lines"].create(vals_lines)
+    #
+    #     else:
+    #         raise ValidationError(_('Please let Mr. %s proceed the form.') % appraisal_obj.appraisal_approver_id.name)
+
+    # def _update_action_done(self, appraisal_obj, vals, vals_lines):
+    #     login_user = request.env.user.id
+    #
+    #     if login_user != 408:
+    #         raise ValidationError(_('Mr.Syed Feisal Ali will complete/done the Appraisal.'))
+    #     else:
+    #         vals.update({
+    #             'doc_state': 'done',
+    #             'last_state': appraisal_obj.state,
+    #             'state': 'done',
+    #             'appraisal_last_approver_id': login_user,
+    #             'countersignedby_name': login_user,
+    #             'countersignature_date': fields.Datetime.now(),
+    #             'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
+    #         })
+    #         appraisal_obj.write(vals)
+    #
+    #         if vals_lines['increment_raise_amount'] != 0:
+    #             vals_lines.update({
+    #                 'increment_raise_by': login_user,
+    #                 'incremented_date': fields.Datetime.now(),
+    #                 'state': appraisal_obj.state,
+    #                 'increment_raise_id': appraisal_obj.id
+    #             })
+    #             request.env["increment.raise.lines"].create(vals_lines)
+
+    # def _update_action_confirm4(self, appraisal_obj, vals, vals_lines):
+    #     login_user = request.env.user.id
+    #     manager_user = request.env['res.users'].search([('id', '=', 414)])
+    #
+    #     if login_user == 414:
+    #         vals.update({
+    #             'doc_state': 'draft',
+    #             'last_state': appraisal_obj.state,
+    #             'state': 'pending3',
+    #             'appraisal_last_approver_id': login_user,
+    #             'is_exec_state': True,
+    #             'appraisal_approver_id': manager_user.id,
+    #             'recomm_increment': appraisal_obj.recomm_increment_lines_id[-1].increment_raise_amount,
+    #         })
+    #
+    #         appraisal_obj.write(vals)
+    #
+    #         if vals_lines['increment_raise_amount'] != 0:
+    #             vals_lines.update({
+    #                 'increment_raise_by': login_user,
+    #                 'incremented_date': fields.Datetime.now(),
+    #                 'state': appraisal_obj.state,
+    #                 'increment_raise_id': appraisal_obj.id
+    #             })
+    #             request.env["increment.raise.lines"].create(vals_lines)
+    #     else:
+    #         raise ValidationError(_('Please let Mr. Ahad proceed the form.'))
+
     @http.route(['/my/leaves/apply'], type='http', auth="user", website=True, methods=['POST'])
     def leave_apply_submit(self, **post):
         login_user = request.env.user.id
@@ -949,7 +1480,6 @@ class EmployeePortal(CustomerPortal):
 
         leave_type = request.env['hr.leave.type'].sudo().browse(leave_type_id)
         remaining_days = float_round(leave_type.virtual_remaining_leaves, precision_digits=2) or 0.0
-        print('remaining_days', remaining_days)
 
         employee = request.env['hr.employee'].sudo().search([('user_id', '=', login_user)], limit=1)
         if not employee:
@@ -963,20 +1493,37 @@ class EmployeePortal(CustomerPortal):
             ) % (leave_duration, remaining_days)
             return request.redirect('/my/leaves')
 
+        date_from = post.get("date_from")
+        is_half_day = bool(post.get("half_day"))
+        date_to = post.get("date_from") if is_half_day else post.get("date_to")
+
+        Leave = request.env['hr.leave'].sudo()
+        existing_leave = Leave.search([
+            ('employee_id', '=', employee.id),
+            ('state', 'in', ['confirm', 'validate', 'validate1']),  # active / pending leaves
+            ('request_date_from', '<=', date_to),
+            ('request_date_to', '>=', date_from),
+        ], limit=1)
+
+        if existing_leave:
+            # If you want different messages for half-day/full-day you can branch here
+            request.session['leave_error'] = _(
+                "You already have a leave between %s and %s."
+            ) % (existing_leave.request_date_from, existing_leave.request_date_to)
+            return request.redirect('/my/leaves')
+
         vals = {
             'employee_id': employee.id,
             'holiday_status_id': leave_type_id,
             'name': post.get("desc") or '',
             'request_date_from': post.get("date_from"),
             'request_date_from_period': post.get("date_from_period"),
-            'request_date_to': post.get("date_to"),
+            'request_date_to': post.get("date_from") if post.get("half_day") else post.get("date_to"),
             'request_unit_half': True if post.get("half_day") else False,
             'duration_display': leave_duration,
             'state': 'confirm',
         }
 
-        request.env['hr.leave'].sudo().create(vals)
+        Leave.create(vals)
 
         return request.redirect('/my/leaves')
-
-

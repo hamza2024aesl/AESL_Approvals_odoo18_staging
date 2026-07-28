@@ -21,7 +21,7 @@
                                     <span>Emp # for GP</span>
                                 </td>
                                 <td>
-                                    <t t-esc="o.registration_number"/>
+                                    <t t-esc="o.identification_id"/>
                                 </td>
 
                             </tr>
@@ -45,7 +45,7 @@
                                     <span>CNIC</span>
                                 </td>
                                 <td>
-                                    <t t-esc="o.identification_id"/>
+                                    <t t-esc="o.ssnid"/>
                                 </td>
                                 <td>
                                     <span>CNIC Expiry</span>
@@ -84,7 +84,6 @@
                                 <td>
                                     <t t-esc="o.blood_group"/>
                                 </td>
-
                             </tr>
                             <tr>
                                 <td>
@@ -97,7 +96,7 @@
                                     Phone No.
                                 </td>
                                 <td>
-                                    <t t-esc="o.phone"/>
+                                    <t t-esc="o.work_phone"/>
                                 </td>
 
                             </tr>
@@ -112,7 +111,7 @@
                                     Phone No.
                                 </td>
                                 <td>
-                                    <t t-esc="o.phone"/>
+                                    <t t-esc="o.mobile_phone"/>
                                 </td>
 
                             </tr>
@@ -217,6 +216,8 @@
                                         Sessi
                                     </span>
                                 </td>
+                                <td>
+                                </td>
                             </tr>
 
                             <tr>
@@ -232,6 +233,9 @@
                                     <span>
                                         Work Location
                                     </span>
+                                </td>
+                                <td>
+                                    <t t-esc="o.work_location_id.name"/>
                                 </td>
                             </tr>
 
@@ -251,17 +255,15 @@
                                     Account Number
                                 </td>
                                 <td>
-                                    <t tesc="o.bank_account_id.acc_number"/>
-
+                                    <t t-esc="o.bank_account_id.acc_number"/>
                                 </td>
-
                             </tr>
                             <tr>
                                 <td>
                                     Bank Name
                                 </td>
                                 <td>
-                                    <t tesc="o.bank_account_id.bank_id.name"/>
+                                    <t t-esc="o.bank_account_id.bank_id.name"/>
                                 </td>
 
                                 <td>
@@ -273,43 +275,43 @@
                             </tr>
                         </table>
                         <br/>
-                        <!--                        <h5>Education Details</h5>-->
-                        <!--                        <table style="border: 1px solid black; width:100%; padding:20px;">-->
-                        <!--                            <td style="padding-left: 20px; text-align:center;">-->
-                        <!--                                Degree-->
-                        <!--                            </td>-->
-                        <!--                            <td style="text-align:center;">-->
-                        <!--                                Specialization-->
-                        <!--                            </td>-->
-                        <!--                            <td style="text-align:center;">-->
-                        <!--                                Percentage-->
-                        <!--                            </td>-->
-                        <!--                            <td style="text-align:center;">-->
-                        <!--                                CGPA-->
-                        <!--                            </td>-->
-                        <!--                            <td style="text-align:center;">-->
-                        <!--                                Division/Grade-->
-                        <!--                            </td>-->
-                        <!--                            <t t-foreach="o.getacademics()" t-as="line">-->
-                        <!--                                <tr>-->
-                        <!--                                    <td style="text-transform:capitalize; padding-left: 20px; text-align:center;">-->
-                        <!--                                        <t t-esc="line['degree']"/>-->
-                        <!--                                    </td>-->
-                        <!--                                    <td style="text-transform:capitalize; text-align:center;">-->
-                        <!--                                        <t t-esc="line['study_field']"/>-->
-                        <!--                                    </td>-->
-                        <!--                                    <td style="text-align:center;">-->
-                        <!--                                        <t t-esc="line['percentage']"/>-->
-                        <!--                                    </td>-->
-                        <!--                                    <td style="text-align:center;">-->
-                        <!--                                        <t t-esc="line['cgpa']"/>-->
-                        <!--                                    </td>-->
-                        <!--                                    <td style="text-align:center;">-->
-                        <!--                                        <t t-esc="line['grade']"/>-->
-                        <!--                                    </td>-->
-                        <!--                                </tr>-->
-                        <!--                            </t>-->
-                        <!--                        </table>-->
+                        <h5>Education Details</h5>
+                        <table style="border: 1px solid black; width:100%; padding:20px;">
+                            <td style="padding-left: 20px; text-align:center;">
+                                Degree
+                            </td>
+                            <td style="text-align:center;">
+                                Specialization
+                            </td>
+                            <td style="text-align:center;">
+                                Percentage
+                            </td>
+                            <td style="text-align:center;">
+                                CGPA
+                            </td>
+                            <td style="text-align:center;">
+                                Division/Grade
+                            </td>
+                            <t t-foreach="o.getacademics()" t-as="line">
+                                <tr>
+                                    <td style="text-transform:capitalize; padding-left: 20px; text-align:center;">
+                                        <t t-esc="line['degree']"/>
+                                    </td>
+                                    <td style="text-transform:capitalize; text-align:center;">
+                                        <t t-esc="line['specialization']"/>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <t t-esc="line['percentage']"/>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <t t-esc="line['cgpa']"/>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <t t-esc="line['division']"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </table>
                     </t>
                 </t>
             </t>

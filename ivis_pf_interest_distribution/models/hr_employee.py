@@ -18,19 +18,17 @@ class EmployeeInherit(models.Model):
 
     def compute_funds_pf(self):
         for rec in self:
-            employee_contract = self.env['hr.contract'].search([('employee_id', '=', rec.id), ('state', '=', 'open')])
-            for contract in employee_contract:
-                employee_payslip = self.env['hr.payslip'].search(
-                    [('contract_id', '=', contract.id), ('state', '=', 'done')], order='date_from asc')
-                employee_contribution = 0
-                employer_contribution = 0
-                payMonth = ''
-                for payslips in employee_payslip.line_ids.filtered(lambda l: (l.code == 'PF_EMPLOYEE' or l.code == 'PF_EMPLOYER')):
-                    payMonth = datetime.strptime(str(payslips.date_from), '%Y-%m-%d').strftime('%B')
-                    if payslips.code == 'PF_EMPLOYEE':
-                        employee_contribution += abs(payslips.total)
-                    elif payslips.code == 'PF_EMPLOYER':
-                        employer_contribution += abs(payslips.total)
-                rec.employee_contribution = employee_contribution
-                rec.employer_contribution = employer_contribution
-                rec.total = employer_contribution + employee_contribution + rec.interest
+            employee_payslip = self.env['hr.payslip'].search(
+                [('employee_id', '=', rec.id), ('state', 'in', ['done', 'paid'])], order='date_from asc')
+            employee_contribution = 0
+            employer_contribution = 0
+            payMonth = ''
+            for payslips in employee_payslip.line_ids.filtered(lambda l: (l.code == 'PF_EMPLOYEE' or l.code == 'PF_EMPLOYER')):
+                payMonth = datetime.strptime(str(payslips.date_from), '%Y-%m-%d').strftime('%B')
+                if payslips.code == 'PF_EMPLOYEE':
+                    employee_contribution += abs(payslips.total)
+                elif payslips.code == 'PF_EMPLOYER':
+                    employer_contribution += abs(payslips.total)
+            rec.employee_contribution = employee_contribution
+            rec.employer_contribution = employer_contribution
+            rec.total = employer_contribution + employee_contribution + rec.interest

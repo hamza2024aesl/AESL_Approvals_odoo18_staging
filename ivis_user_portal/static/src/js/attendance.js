@@ -107,6 +107,7 @@ publicWidget.registry.AttendanceGroupBy = publicWidget.Widget.extend({
     start() {
         const checkboxes = document.querySelectorAll('.group-by-checkbox-attendances');
         const subordinateSwitch = document.getElementById('attendance-sub-ordinates');
+         const lwpSwitch = document.getElementById('attendance-show-lwp');
         const currentParams = new URLSearchParams(window.location.search);
 
         checkboxes.forEach(checkbox => {
@@ -145,6 +146,23 @@ publicWidget.registry.AttendanceGroupBy = publicWidget.Widget.extend({
                 window.location.href = `${window.location.pathname}?${updatedParams.toString()}`;
             });
         }
+
+        if (lwpSwitch) {
+            lwpSwitch.checked = currentParams.get('show_lwp') === '1';
+
+            lwpSwitch.addEventListener('change', function () {
+                const updatedParams = new URLSearchParams(window.location.search);
+
+                if (this.checked) {
+                    updatedParams.set('show_lwp', '1');
+                } else {
+                    updatedParams.delete('show_lwp');
+                }
+
+                window.location.href = `${window.location.pathname}?${updatedParams.toString()}`;
+            });
+        }
+
         return this._super(...arguments);
     },
 });

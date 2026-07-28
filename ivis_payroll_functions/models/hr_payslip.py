@@ -1,5 +1,5 @@
-from datetime import datetime
-
+from datetime import datetime, time
+import calendar
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models, _
@@ -11,9 +11,9 @@ class HrPayslipInherit(models.Model):
 
     input_lines = fields.One2many('hr.payslip.recurring', 'line')
 
-    def compute_sheet(self):
-        res = super(HrPayslipInherit, self).compute_sheet()
-        return res
+    # def compute_sheet(self):
+    #     res = super(HrPayslipInherit, self).compute_sheet()
+    #     return res
 
     @api.onchange('employee_id', 'struct_id', 'contract_id', 'date_from', 'date_to')
     def _onchange_employee(self):
@@ -50,23 +50,36 @@ class HrPayslipInherit(models.Model):
         self.worked_days_line_ids = self._get_new_worked_days_lines()
 
     def get_allied_lwp_days(self):
-        previous_month = self.date_from + relativedelta(months=-1) + relativedelta(day=16)
-        current_month = self.date_from + relativedelta(day=15)
-        attendences = self.env['hr.attendance'].search([('attendance_date', '>=', previous_month),
-                                                        ('attendance_date', '<=', current_month),
-                                                        ('on_leave', '=', False),
-                                                        '|',
-                                                        ('status2', '=', 'absent'),
-                                                        ('attendance_status', 'in', ['3', '5']),
-                                                        ('employee_id', '=', self.employee_id.id)])
-        x = list()
-        for attendence in attendences:
-            d = {
-                'date': attendence.attendance_date.strftime('%A, %d-%m-%Y'),
-                'amt': 0.5 if attendence.attendance_status == '3' else 1
-            }
-            x.append(d)
-        return x
+        prev_month = self.date_from.month - 1 or 12
+        year = self.date_from.year if self.date_from.month > 1 else self.date_from.year - 1
+        date_from = fields.Date.from_string(f"{year}-{prev_month:02d}-01")
+
+        last_day = calendar.monthrange(date_from.year, date_from.month)[1]
+        date_to = date_from.replace(day=last_day)
+
+        period_start = date_from
+        period_end = date_to
+        start_dt = datetime.combine(period_start, time.min)
+        end_dt = datetime.combine(period_end, time.max)
+        lwp_type = self.env['hr.leave.type'].search([('name', '=', 'LWP')], limit=1)
+        if not lwp_type:
+            return []
+        leaves = self.env['hr.leave'].search([
+            ('employee_id', '=', self.employee_id.id),
+            ('holiday_status_id', '=', lwp_type.id),
+            ('state', '=', 'validate'),
+            ('request_date_from', '<=', end_dt),
+            ('request_date_to', '>=', start_dt),
+        ], order='request_date_from asc')
+        rows = []
+        for leave in leaves:
+            lf = max(leave.request_date_from, period_start)
+            lt = min(leave.request_date_to, period_end)
+            rows.append({
+                'date': lf.strftime('%A, %d-%m-%Y'),
+                'amt': leave.duration_display,
+            })
+        return rows
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
@@ -110,26 +123,28 @@ class HrPayslipInherit(models.Model):
         return str(years) + " Year(s), " + str(months) + " Month(s), " + str(days) + " Day(s)"
 
     def payslip(self, slip_id, category_name):
-        user_lang = self.env.user.lang  # Get current user's language dynamically
-        category_name = category_name.title()  # Ensure proper case
-
+        user_lang = self.env.user.lang or 'en_US'
         total_field = "-hsl.total" if category_name == "Deduction" else "hsl.total"
 
         query = f"""
-            SELECT hsl.name, {total_field} AS total 
-            FROM hr_payslip_line AS hsl 
-            INNER JOIN hr_salary_rule AS hsr ON hsl.salary_rule_id = hsr.id 
-            INNER JOIN hr_salary_rule_category AS hsrc ON hsr.category_id = hsrc.id
-            WHERE hsl.slip_id = %s 
-            AND hsrc.name->>%s = %s 
-            AND hsr.appears_on_payslip = TRUE 
-            ORDER BY hsrc.name->>%s ASC, hsr.sequence ASC
-        """
+               SELECT
+                   hsr.name->>'{user_lang}' AS name,
+                   hsr.sequence,
+                   COALESCE(SUM(hsl.total), 0) AS total
+               FROM hr_salary_rule AS hsr
+               LEFT JOIN hr_payslip_line AS hsl
+                   ON hsl.salary_rule_id = hsr.id
+                   AND hsl.slip_id = %s
+               WHERE hsr.code = %s
+                 AND hsr.appears_on_payslip = TRUE
+               GROUP BY hsr.name->>'{user_lang}', hsr.sequence
+               ORDER BY hsr.sequence ASC;
+           """
 
-        self.env.cr.execute(query, (slip_id, user_lang, category_name, user_lang))
+        self.env.cr.execute(query, (slip_id, category_name))
         data = self.env.cr.dictfetchall()
 
-        return data if data else 0
+        return data if data else [{'name': category_name, 'total': 0}]
 
     def rule_by_code(self, slip_id, code):
         self.env.cr.execute("""
@@ -153,3 +168,70 @@ class HrPayslipInherit(models.Model):
             r = {'input_type_id': rec.id, 'code': rec.code, 'payslip_id': self.id}
             re.append((0, 0, r))
         return {'value': {'input_line_ids': re}}
+
+    def get_pf_balance_as_of(self):
+        """PF balance as of this specific payslip's date (ignoring future months PF)."""
+        self.ensure_one()
+        payslip = self
+
+        employee = payslip.employee_id
+
+        final_pf = (
+                (employee.total or 0)
+                + (employee.pf_employee or 0)
+                + (employee.pf_employer or 0)
+                + (employee.pf_interest or 0)
+        )
+
+        future_slips = self.env['hr.payslip'].search([
+            ('employee_id', '=', employee.id),
+            ('date_from', '>', payslip.date_to),
+            ('state', 'in', ['done', 'paid'])
+        ])
+        future_pf = 0.0
+        if future_slips:
+            future_pf_lines = self.env['hr.payslip.line'].search([
+                ('slip_id', 'in', future_slips.ids),
+                ('code', 'in', ['PF_EMPLOYEE', 'PF_EMPLOYER'])
+            ])
+            future_pf = sum(future_pf_lines.mapped('total'))
+
+        return final_pf - future_pf
+
+    def compute_sheet(self):
+        if self.env.context.get('salary_simulation'):
+            return super().compute_sheet()
+
+        if self.filtered(lambda p: p.is_regular):
+            employees = self.mapped('employee_id')
+            leaves = self.env['hr.leave'].search([
+                ('employee_id', 'in', employees.ids),
+                ('state', '!=', 'refuse'),
+            ])
+
+            dates = self.mapped('date_to')
+            max_date = datetime.combine(max(dates), datetime.max.time())
+
+            leaves_to_green = leaves.filtered(
+                lambda l: l.payslip_state != 'blocked' and l.date_to <= max_date
+            )
+            leaves_to_green.write({'payslip_state': 'done'})
+
+        return super(HrPayslipInherit, self.with_context(salary_simulation=True)).compute_sheet()
+
+    def _get_payslip_lines(self):
+        for payslip in self:
+            if not payslip.contract_id:
+                # Find contract that overlaps any part of the payslip period,
+                # including ones that expired mid-period
+                contract = self.env['hr.contract'].search([
+                    ('employee_id', '=', payslip.employee_id.id),
+                    ('date_start', '<=', payslip.date_to),
+                    ('state', 'in', ['open', 'close']),
+                    '|',
+                        ('date_end', '=', False),
+                        ('date_end', '>=', payslip.date_from),
+                ], order='date_end desc', limit=1)
+                if contract:
+                    payslip.contract_id = contract
+        return super()._get_payslip_lines()

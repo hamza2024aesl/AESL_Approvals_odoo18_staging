@@ -149,6 +149,9 @@
 
                 <xpath expr="//field[@name='assessment_note']" position="before">
                     <field name="registration_number"/>
+                    <field name="grades"/>
+                    <field name="degree"/>
+                    <field name="education"/>
                     <field name="appointment_date"/>
                     <field name="sl_count" readonly="1"/>
                     <field name="cl_count" readonly="1"/>

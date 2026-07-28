@@ -19,6 +19,9 @@
                 <setting id="allow_pin_change" help="Allow Portal user to change pin">
                     <field name="allow_pin_change"/>
                 </setting>
+                <setting id="allow_portal_apply_loan" help="Allow Portal user to apply loan">
+                    <field name="allow_portal_apply_loan"/>
+                </setting>
             </xpath>
         </field>
     </record>

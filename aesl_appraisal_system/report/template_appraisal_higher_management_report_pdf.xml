@@ -1,0 +1,218 @@
+<odoo>
+    <data>
+        <template id="appraisal_higher_management_layout_header">
+            <t t-call="aesl_appraisal_system.appraisal_higher_management_header"/>
+            <t t-raw="0"/>
+        </template>
+        <template id="appraisal_higher_management_header">
+            <div class="header">
+                <!--                <strong><h3 class="text-center"><t t-esc=".company_id"/></h3></strong>-->
+                <strong>
+                    <h3 class="text-center">Allied Engineering &amp; Service Pvt. Ltd.</h3>
+                </strong>
+                <h3 class="text-center">Executive Summary</h3>
+            </div>
+        </template>
+        <template id="template_appraisal_higher_management_report">
+            <t t-call="web.basic_layout">
+                <t t-call="aesl_appraisal_system.appraisal_higher_management_layout_header"/>
+                <div class="page" style="page-break-before:always;">
+                    <div style="width:100%;">
+                        <table style="width: 100%; border-collapse: collapse;" border="1">
+                            <!-- Header is moved out of the loop -->
+                            <thead style="text-align:center;">
+                                <tr>
+                                    <th style="border:1px solid black;"></th>
+                                    <th style="border:1px solid black;" colspan="2"></th>
+                                    <th style="border:1px solid black;"></th>
+                                    <th style="border:1px solid black;" colspan="5">Existing</th>
+                                    <th style="border:1px solid black;" colspan="6">Recommended</th>
+                                    <th style="border:1px solid black;"></th>
+                                    <th style="border:1px solid black;"></th>
+                                </tr>
+                                <tr>
+                                    <th style="border:1px solid black;">S.No.</th>
+                                    <th style="border:1px solid black;" colspan="2">Employee Name</th>
+                                    <th style="border:1px solid black;">Employee No.</th>
+                                    <th style="border:1px solid black;" colspan="2">Salary</th>
+                                    <th style="border:1px solid black;">Grade</th>
+                                    <th style="border:1px solid black;" colspan="2">Designation</th>
+                                    <th style="border:1px solid black;">Increment</th>
+                                    <th style="border:1px solid black;" colspan="2">Salary</th>
+                                    <th style="border:1px solid black;">Grade</th>
+                                    <th style="border:1px solid black;" colspan="2">Designation</th>
+                                    <th style="border:1px solid black;">Percentage %</th>
+                                    <th style="border:1px solid black;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Iterate over records -->
+                                <t t-set="grand_total_salary" t-value="0"/>
+                                <t t-set="grand_total_recomm_salary" t-value="0"/>
+                                <t t-set="grand_total_recomm_salary1" t-value="0"/>
+                                <t t-set="grand_total_recomm_salary_percentage" t-value="0"/>
+                                <t t-foreach="records" t-as="record">
+                                    <!-- Print Record Heading -->
+                                    <tr>
+                                        <th style="border:1px solid black; background-color:#fece12; text-align:left; padding-left:13px;" colspan="17">
+                                            Approver: <t t-esc="record"/>
+                                        </th>
+                                    </tr>
+                                    <t t-foreach="records.get(record)" t-as="line">
+                                        <tr>
+                                            <td style="border:1px solid black; text-align:left; padding-left:13px;" colspan="17">
+                                                <b><span t-esc="line"/></b>
+                                            </td>
+                                        </tr>
+                                        <t t-set="i" t-value="1"/>
+                                        <t t-set="total_salary" t-value="0"/>
+                                        <t t-set="total_recomm_salary" t-value="0"/>
+                                        <t t-set="total_recomm_salary1" t-value="0"/>
+                                        <t t-set="total_recomm_salary_percentage" t-value="0"/>
+                                        <t t-foreach="records[record][line]" t-as="li">
+                                        <tr>
+                                            <td style="border:1px solid black;">
+                                                <span t-esc="i"/>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <a t-att-href="li['url']" target="_blank">
+                                                    <span t-esc="li['emp_name']"/>
+                                                </a>
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <span t-esc="li['emp_no']"/>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <span t-esc="li['curr_salary']"/>
+                                                <t t-set="total_salary" t-value="li['curr_salary']+total_salary"/>
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <span t-esc="li['curr_grade']"/>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <span t-esc="li['curr_designation']"/>
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                                <span t-esc="li['recomm_raise_amount']"/>
+                                                <t t-set="total_recomm_salary1"
+                                               t-value="li['recomm_raise_amount']+total_recomm_salary1"/>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <span t-esc="li['recomm_salary']"/>
+                                                <t t-set="total_recomm_salary"
+                                               t-value="li['recomm_salary'] + total_recomm_salary"/>
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <span t-esc="li['recomm_grade']"/>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <span t-esc="li['recomm_designation']"/>
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <span t-esc="'{:.1f}'.format(li['percentage'])"/>%
+                                                <t t-set="total_recomm_salary_percentage"
+                                               t-value="li['percentage'] + total_recomm_salary_percentage"/>
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <span t-esc="li['doc_state']"/>
+                                            </td>
+                                        </tr>
+                                        <t t-set="i" t-value="i+1"/>
+                                        </t>
+
+                                        <tr>
+                                            <td style="border:1px solid black;" colspan="4">
+                                                <center>
+                                                    <b>Total</b>
+                                                </center>
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                                <b>
+                                                    <span t-esc="total_salary"/>
+                                                    <t t-set="grand_total_salary" t-value="grand_total_salary + total_salary"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                                <b>
+                                                    <span t-esc="total_recomm_salary1"/>
+                                                    <t t-set="grand_total_recomm_salary1" t-value="grand_total_recomm_salary1 + total_recomm_salary1"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <b>
+                                                    <span t-esc="total_recomm_salary"/>
+                                                    <t t-set="grand_total_recomm_salary" t-value="grand_total_recomm_salary + total_recomm_salary"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                            <b><span t-esc="'{:.1f}'.format(((total_recomm_salary - total_salary)/total_salary)*100)"/></b>%
+                                            </td>
+                                            <td style="border:1px solid black;">
+
+                                            </td>
+                                        </tr>
+
+                                    </t>
+                                </t>
+<!--                                GRAND TOTAL-->
+                                <tr style="background-color:#fece12;">
+                                            <td style="border:1px solid black;" colspan="4">
+                                                <center>
+                                                    <b>Grand Total</b>
+                                                </center>
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                                <b>
+                                                    <span t-esc="grand_total_salary"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                                <b>
+                                                    <span t-esc="grand_total_recomm_salary1"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                                <b>
+                                                    <span t-esc="grand_total_recomm_salary"/>
+                                                </b>
+                                            </td>
+                                            <td style="border:1px solid black;">
+                                            </td>
+                                            <td style="border:1px solid black;" colspan="2">
+                                            </td>
+                                            <td style="border:1px solid black; text-align:center;">
+                                                <t t-if="grand_total_recomm_salary">
+                                                    <b>
+                                                        <span t-esc="'{:.1f}'.format(((grand_total_recomm_salary - grand_total_salary)/grand_total_salary)*100)"/>
+                                                    </b>
+                                                    %
+                                                </t>
+                                                <t t-if="not grand_total_recomm_salary">
+                                                    <b>0%</b>
+                                                </t>
+                                            </td>
+                                            <td style="border:1px solid black;">
+
+                                            </td>
+                                        </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+    </data>
+</odoo>

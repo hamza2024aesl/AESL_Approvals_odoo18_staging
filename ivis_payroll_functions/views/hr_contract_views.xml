@@ -9,8 +9,6 @@
             <xpath expr="//page[@name='information']//group[@name='salary_info']" position="inside">
                 <group>
                     <field name="tax_rebate" groups="hr.group_hr_manager"/>
-                    <field name="x_studio_old_taxable_salary" string="Previous Taxable Salary" groups="hr.group_hr_manager"/>
-                    <field name="x_studio_old_tax_deducted" groups="hr.group_hr_manager"/>
                     <field name="car_cost"/>
                 </group>
             </xpath>

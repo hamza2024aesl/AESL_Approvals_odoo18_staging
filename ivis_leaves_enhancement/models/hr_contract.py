@@ -268,20 +268,20 @@ class HrContractInherit(models.Model):
             total_days = (absent + lwp_negative) / 23 * 30
             return round(total_days)
 
-    def create_leaves(self, contract, duration, leave_type):
-        desc = ''
+    def create_leaves(self, contract, duration, leave_type, run_date=None):
+        run_date = run_date or date.today()
         # Get the previous month
-        prev_month = (date.today().replace(day=1) - timedelta(days=1)).month
+        prev_month = (run_date.replace(day=1) - timedelta(days=1)).month
         # Get the name of the previous month
         prev_month_name = calendar.month_name[prev_month]
-
-        desc = 'PL Allocation - ' + prev_month_name + ' ' + str(date.today().year)
+        desc = 'PL Allocation - ' + prev_month_name + ' ' + str(run_date.year)
 
         vals = {
             'employee_id': contract.employee_id.id,
             'name': desc,
             'number_of_days': str(duration),
             'holiday_status_id': leave_type,
+            'date_to': date(2050, 12, 31),
         }
         rec = self.env['hr.leave.allocation'].create(vals)
         rec.action_approve()
@@ -289,7 +289,9 @@ class HrContractInherit(models.Model):
     def get_total_leaves_types(self, company_id):
         return self.env['hr.leave.type'].search([('auto_allocate', '=', True), ('company_id', '=', company_id.id)])
 
-    def assign_probation_leaves(self, contract):
+    def assign_probation_leaves(self, contract, run_date=None):
+        run_date = run_date or date.today()
+
         probation_leaves = contract.env['hr.leave.type'].search(
             [('auto_allocate', '=', True), ('allowed_in_probation', '=', True),
              ('company_id','=', contract.company_id.id)])
@@ -297,16 +299,18 @@ class HrContractInherit(models.Model):
             duration = rdelta.relativedelta(contract.trial_date_end, contract.date_start)
             if probation_leave.leaves_quantity / 12.0 * duration.months > 0:
                 if probation_leave.prorate_basis:
-                    if date.today().day == contract.date_start.day:
+                    if run_date.day == contract.date_start.day:
                         leaves = probation_leave.leaves_quantity / 12.0
-                        self.create_leaves(contract, leaves, probation_leave.id)
-                    if date.today().month == 2 and date.today().day == 28:
+                        self.create_leaves(contract, leaves, probation_leave.id, run_date=run_date)
+                    if run_date.month == 2 and run_date.day == 28:
                         if contract.date_start.day in [29, 30, 31]:
                             leaves = probation_leave.leaves_quantity / 12.0
-                            self.create_leaves(contract, leaves, probation_leave.id)
+                            self.create_leaves(contract, leaves, probation_leave.id, run_date=run_date)
 
-    def assign_permanent_leaves(self, contract):
-        fiscal_year_end_str = str(date.today().year) + '-' + str(12) + '-' + str(31)
+    def assign_permanent_leaves(self, contract, run_date=None):
+        run_date = run_date or date.today()
+
+        fiscal_year_end_str = str(run_date.year) + '-' + str(12) + '-' + str(31)
         fiscal_year_end = (datetime.strptime(fiscal_year_end_str, '%Y-%m-%d').date())
         duration = rdelta.relativedelta(fiscal_year_end, contract.date_start)
         dur = duration.months
@@ -324,10 +328,12 @@ class HrContractInherit(models.Model):
                                     leaves = leave_type.leaves_quantity
                                 if leave_type.prorate_basis:
                                     leaves = (leave_type.leaves_quantity / 12) * dur
-                                self.create_leaves(contract, leaves, leave_type.id)
+                                self.create_leaves(contract, leaves, leave_type.id, run_date=run_date)
+
                         if 'PL' in leave_type.name:
                             leaves = leave_type.leaves_quantity / 12.0
-                            self.create_leaves(contract, leaves, leave_type.id)
+                            self.create_leaves(contract, leaves, leave_type.id, run_date=run_date)
+
                     else:
                         leaves = 0
                         previous_days = 0.0
@@ -343,20 +349,23 @@ class HrContractInherit(models.Model):
                                     leaves = leave_type.leaves_quantity
                                 if leave_type.prorate_basis:
                                     leaves = (leave_type.leaves_quantity / 12) * dur
-                                self.create_leaves(contract, leaves, leave_type.id)
+                                self.create_leaves(contract, leaves, leave_type.id, run_date=run_date)
+
                         if 'PL' in leave_type.name:
                             leaves = leave_type.leaves_quantity / 12.0
                             if leaves + previous_days >= leave_type.max_days:
                                 pass
                             else:
-                                self.create_leaves(contract, leaves, leave_type.id)
+                                self.create_leaves(contract, leaves, leave_type.id, run_date=run_date)
+
         contract.is_allocated = True
 
-    def leaves_scheduler(self):
+    def leaves_scheduler(self, run_date=None):
+        run_date = run_date or date.today()
+
         contracts = self.env['hr.contract'].search([('state', '=', 'open')])
         for contract in contracts:
             if contract.contract_type_id.code == 'Probation' and contract.date_start and contract.trial_date_end:
-                self.assign_probation_leaves(contract)
+                self.assign_probation_leaves(contract, run_date=run_date)
             elif contract.contract_type_id.code == 'Permanent':
-                if date.today().day == 1:
-                    self.assign_permanent_leaves(contract)
+                self.assign_permanent_leaves(contract, run_date=run_date)

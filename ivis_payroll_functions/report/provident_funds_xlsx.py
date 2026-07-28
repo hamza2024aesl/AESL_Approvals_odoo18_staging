@@ -4,7 +4,7 @@ from odoo import models
 
 
 class ProvidentFundsReport(models.AbstractModel):
-    _name = 'provident.funds.report'
+    _name = 'report.ivis_payroll_functions.provident_funds_xl_report'
     _description = 'Provident Fund Report'
     _inherit = 'report.report_xlsx.abstract'
 
@@ -47,8 +47,8 @@ class ProvidentFundsReport(models.AbstractModel):
             current_year_employer_contributions = 0
 
             for payslip in payslips_of_current_year:
-                current_year_employee_contributions += payslip.line_ids.filtered(lambda x: x.code == 'PF').total
-                current_year_employer_contributions += payslip.line_ids.filtered(lambda x: x.code == 'PFEC').total
+                current_year_employee_contributions += payslip.line_ids.filtered(lambda x: x.code == 'PF_EMPLOYEE').total
+                current_year_employer_contributions += payslip.line_ids.filtered(lambda x: x.code == 'PF_EMPLOYER').total
 
             opening_basic = 0
             opening_employee_contributions = employee.pf_employee + employee.employee_contribution - abs(
@@ -95,9 +95,9 @@ class ProvidentFundsReport(models.AbstractModel):
             for payslip in payslips_of_current_year:
                 month = calendar.month_name[payslip.date_from.month]
                 basic = payslip.line_ids.filtered(lambda x: x.code == 'BASIC').total
-                employee_contribution = abs(payslip.line_ids.filtered(lambda x: x.code == 'PF').total)
+                employee_contribution = abs(payslip.line_ids.filtered(lambda x: x.code == 'PF_EMPLOYEE').total)
                 total_employee_contribution += employee_contribution
-                employer_contribution = abs(payslip.line_ids.filtered(lambda x: x.code == 'PFEC').total)
+                employer_contribution = abs(payslip.line_ids.filtered(lambda x: x.code == 'PF_EMPLOYER').total)
                 total_employer_contribution += employer_contribution
                 total_contribution = total_employee_contribution + total_employer_contribution
 

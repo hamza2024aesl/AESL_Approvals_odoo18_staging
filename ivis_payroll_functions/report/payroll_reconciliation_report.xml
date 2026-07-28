@@ -91,7 +91,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:30%;" colspan="2">
                                             <p>Rs.
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;previous_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_gross&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -107,7 +107,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:30%;" colspan="2">
                                             <p>Rs.
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;current_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_gross&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -132,7 +132,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;previous_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_gross&apos;])"/>
                                             </p>
                                         </td>
                                         <td align="left" t-attf-style="width:35%;" colspan="2">
@@ -140,7 +140,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;current_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_gross&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -150,7 +150,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;previous_month_lwpa&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_month_lwpa&apos;])"/>
                                             </p>
                                         </td>
                                         <td align="left" t-attf-style="width:35%;" colspan="2">
@@ -158,7 +158,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;current_month_lwpa&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_month_lwpa&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -168,7 +168,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;arrears&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;arrears&apos;])"/>
                                             </p>
                                         </td>
                                         <td align="left" t-attf-style="width:35%;" colspan="2">
@@ -176,7 +176,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;current_month_total&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;current_month_total&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -186,7 +186,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;previous_month_total&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;previous_month_total&apos;])"/>
                                             </p>
                                         </td>
                                         <td align="left" t-attf-style="width:35%;" colspan="2">
@@ -210,7 +210,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -226,7 +226,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;sum_old_lwpa&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_old_lwpa&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -242,7 +242,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;outgoing_total&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_total&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -274,7 +274,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -290,7 +290,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;sum_new_lwpa&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_new_lwpa&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -306,7 +306,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(rec[&apos;sum_new_total&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;sum_new_total&apos;])"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -319,7 +319,7 @@
                                         <td align="right" t-attf-style="width:15%;" colspan="2">
                                             <t t-set="grand_previous" t-value="rec[&apos;previous_month_total&apos;]"/>
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(grand_previous)"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_previous)"/>
                                             </p>
                                         </td>
                                         <td align="left" t-attf-style="width:35%;" colspan="2">
@@ -331,7 +331,7 @@
                                             <t t-set="grand_current"
                                                t-value="rec[&apos;current_month_total&apos;] + rec[&apos;outgoing_total&apos;] - rec[&apos;sum_new_total&apos;]"/>
                                             <p>
-                                                <span t-esc="&apos;{:,}&apos;.format(grand_current)"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_current)"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -354,7 +354,7 @@
                                         </td>
                                         <td align="right" t-attf-style="width:30%;" colspan="2">
                                             <p>Rs.
-                                                <span t-esc="&apos;{:,}&apos;.format(grand_current - grand_previous)"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(grand_current - grand_previous)"/>
                                             </p>
                                         </td>
                                     </tr>
@@ -383,7 +383,37 @@
                                             </td>
                                             <td align="right" t-attf-style="width:30%;" colspan="2">
                                                 <p>Rs.
-                                                    <span t-esc="&apos;{:,}&apos;.format(recc[&apos;arrears&apos;])"/>
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(recc[&apos;arrears&apos;])"/>
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                            <br/>
+                            <table class="mw">
+                                <thead>
+                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; border:1px solid black; color: black;}">
+                                        <td align="left"
+                                            t-attf-style="width:70%; font-weight:bold;color:black;padding-right:20px;"
+                                            colspan="2">
+                                            <p>ADD: Bonus
+                                                <t t-esc="rec[&apos;month2&apos;]"/>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-as="recc" t-foreach="doc.get_current_month_bonus()">
+                                        <tr class="bb" style="font-size:13px; font-color: black;">
+                                            <td align="left" t-attf-style="width:70%;" colspan="2">
+                                                <p>Total No. of Employees:
+                                                    <span t-esc="recc[&apos;employees_bonus&apos;]"/>
+                                                </p>
+                                            </td>
+                                            <td align="right" t-attf-style="width:30%;" colspan="2">
+                                                <p>Rs.
+                                                    <span t-esc="&apos;{:,}&apos;.format(recc[&apos;bonus&apos;])"/>
                                                 </p>
                                             </td>
                                         </tr>
@@ -424,7 +454,7 @@
                                                 </td>
                                                 <td align="right" t-attf-style="width:30%;" colspan="2">
                                                     Rs.
-                                                    <span t-esc="&apos;{:,}&apos;.format(l[1])"/>
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(l[1])"/>
                                                 </td>
                                             </tr>
                                         </t>
@@ -439,7 +469,7 @@
                                         <td class="bb" align="right" t-attf-style="width:30%;font-weight:bold;"
                                             colspan="2">
                                             Rs.
-                                            <span t-esc="&apos;{:,}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
+                                            <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;new_emp_total_gross&apos;])"/>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -478,7 +508,7 @@
                                                 </td>
                                                 <td align="right" t-attf-style="width:30%;" colspan="2">
                                                     Rs.
-                                                    <span t-esc="&apos;{:,}&apos;.format(l[1])"/>
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(l[1])"/>
                                                 </td>
                                             </tr>
                                         </t>
@@ -493,7 +523,7 @@
                                         <td class="bb" align="right" t-attf-style="width:30%;font-weight:bold;"
                                             colspan="2">
                                             Rs.
-                                            <span t-esc="&apos;{:,}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
+                                            <span t-esc="&apos;{:,.2f}&apos;.format(rec[&apos;outgoing_emp_total_gross&apos;])"/>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -533,14 +563,14 @@
                                                         <span t-esc="l_index + 1"/>
                                                     </td>
                                                     <td align="left" t-attf-style="width:50%;" colspan="2">
-                                                        <span t-esc="l[0]"/>
+                                                        <span t-esc="l['name']"/>
                                                     </td>
                                                     <td align="right" t-attf-style="width:20%;" colspan="2">
-                                                        <span t-esc="l[2]"/>
+                                                        <span t-esc="l['emp_no']"/>
                                                     </td>
                                                     <td align="right" t-attf-style="width:20%;" colspan="2">
                                                         Rs.
-                                                        <span t-esc="&apos;{:,}&apos;.format(float(l[1]))"/>
+                                                        <span t-esc="&apos;{:,.2f}&apos;.format(float(l['amount']))"/>
                                                     </td>
                                                 </tr>
                                             </t>
@@ -577,7 +607,7 @@
                                         </td>
                                         <td align="center" t-attf-style="width:60%; font-weight:bold;color:black;"
                                             colspan="2">
-                                            <span>Employee Name</span>
+                                            <span>Name</span>
                                         </td>
                                         <td align="right" t-attf-style="width:30%; font-weight:bold;color:black;"
                                             colspan="2">
@@ -598,7 +628,7 @@
                                                     </td>
                                                     <td align="right" t-attf-style="width:30%;" colspan="2">
                                                         Rs.
-                                                        <span t-esc="&apos;{:,}&apos;.format(float(l[1]))"/>
+                                                        <span t-esc="&apos;{:,.2f}&apos;.format(float(l[1]))"/>
                                                     </td>
                                                 </tr>
                                             </t>
@@ -644,7 +674,7 @@
                                                 </td>
                                                 <td align="right" t-attf-style="width:20%;" colspan="2">
                                                     Rs.
-                                                    <span t-esc="&apos;{:,}&apos;.format(float(rec_gn[&apos;total&apos;]))"/>
+                                                    <span t-esc="&apos;{:,.2f}&apos;.format(float(rec_gn[&apos;total&apos;]))"/>
                                                 </td>
                                             </tr>
                                         </tr>
@@ -703,7 +733,7 @@
                                             <td class="bb" align="right" t-attf-style="width:20%;font-weight:bold;"
                                                 colspan="2">
                                                 Rs.
-                                                <span t-esc="&apos;{:,}&apos;.format(rec_gp[&apos;amount_sum&apos;])"/>
+                                                <span t-esc="&apos;{:,.2f}&apos;.format(rec_gp[&apos;amount_sum&apos;])"/>
                                             </td>
                                         </tr>
                                     </t>
@@ -747,48 +777,48 @@
                                     </t>
                                 </tbody>
                             </table>
-                            <span align="left" style="font-color: black">
-                                <h4>EOBI Non-Contributors for the month of
-                                    <span t-esc="rec[&apos;month2&apos;]"/>
-                                </h4>
-                            </span>
-                            <table class="mw">
-                                <thead>
-                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">
-                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"
-                                            colspan="2">
-                                            <span>S No.</span>
-                                        </td>
-                                        <td align="left" t-attf-style="width:60%; font-weight:bold;color:black;"
-                                            colspan="2">
-                                            <span>Employee Name</span>
-                                        </td>
-                                        <td align="center" t-attf-style="width:30%; font-weight:bold;color:black;"
-                                            colspan="2">
-                                            <span>City Name</span>
-                                        </td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-as="rec_ec" t-foreach="doc.get_eobi_non_contributors()">
-                                        <tr class="bb" style="font-size:13px; font-color: black;">
-                                            <t t-as="l" t-foreach="rec_ec[&apos;eobi&apos;]">
-                                                <tr class="bb" style="font-size:13px; font-color: black;">
-                                                    <td align="right" t-attf-style="width:10%;" colspan="2">
-                                                        <span t-esc="l_index+1"/>
-                                                    </td>
-                                                    <td align="left" t-attf-style="width:60%;" colspan="2">
-                                                        <span t-esc="l[1]"/>
-                                                    </td>
-                                                    <td align="center" t-attf-style="width:30%;" colspan="2">
-                                                        <span t-esc="l[0]"/>
-                                                    </td>
-                                                </tr>
-                                            </t>
-                                        </tr>
-                                    </t>
-                                </tbody>
-                            </table>
+<!--                            <span align="left" style="font-color: black">-->
+<!--                                <h4>EOBI Non-Contributors for the month of-->
+<!--                                    <span t-esc="rec[&apos;month2&apos;]"/>-->
+<!--                                </h4>-->
+<!--                            </span>-->
+<!--                            <table class="mw">-->
+<!--                                <thead>-->
+<!--                                    <tr t-attf-style="page-break-inside: avoid !important;padding:5px 10px; font-weight:bold; color: black};">-->
+<!--                                        <td align="right" t-attf-style="width:10%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>S No.</span>-->
+<!--                                        </td>-->
+<!--                                        <td align="left" t-attf-style="width:60%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>Employee Name</span>-->
+<!--                                        </td>-->
+<!--                                        <td align="center" t-attf-style="width:30%; font-weight:bold;color:black;"-->
+<!--                                            colspan="2">-->
+<!--                                            <span>City Name</span>-->
+<!--                                        </td>-->
+<!--                                    </tr>-->
+<!--                                </thead>-->
+<!--                                <tbody>-->
+<!--                                    <t t-as="rec_ec" t-foreach="doc.get_eobi_non_contributors()">-->
+<!--                                        <tr class="bb" style="font-size:13px; font-color: black;">-->
+<!--                                            <t t-as="l" t-foreach="rec_ec[&apos;eobi&apos;]">-->
+<!--                                                <tr class="bb" style="font-size:13px; font-color: black;">-->
+<!--                                                    <td align="right" t-attf-style="width:10%;" colspan="2">-->
+<!--                                                        <span t-esc="l_index+1"/>-->
+<!--                                                    </td>-->
+<!--                                                    <td align="left" t-attf-style="width:60%;" colspan="2">-->
+<!--                                                        <span t-esc="l[1]"/>-->
+<!--                                                    </td>-->
+<!--                                                    <td align="center" t-attf-style="width:30%;" colspan="2">-->
+<!--                                                        <span t-esc="l[0]"/>-->
+<!--                                                    </td>-->
+<!--                                                </tr>-->
+<!--                                            </t>-->
+<!--                                        </tr>-->
+<!--                                    </t>-->
+<!--                                </tbody>-->
+<!--                            </table>-->
                             <span align="left" style="font-color: black">
                                 <h4>Total EOBI and Non-EOBI Contributors for the month of
                                     <span t-esc="rec[&apos;month2&apos;]"/>

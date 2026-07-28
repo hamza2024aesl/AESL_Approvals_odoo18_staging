@@ -47,7 +47,7 @@
                     <!-- <field name="machine_check_in" readonly="state == 'done'"/>
                     <field name="machine_check_out" readonly="state == 'done'"/> -->
                     <field name="status" invisible="1"/>
-                    <field name="status2"/>
+                    <field name="status2" readonly="1"/>
                     <field name="on_leave"/>
                     <field name="previous_dates" invisible="not previous_dates"/>
                     <field name="in_status"/>
