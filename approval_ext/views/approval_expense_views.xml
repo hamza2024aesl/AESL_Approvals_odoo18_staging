@@ -86,13 +86,29 @@
                                     <field name="description" optional="hide"/>
                                     <field name="currency" optional="hide"/>
                                     <field name="fare"/>
+                                    <field name="fare_desc" optional="hide"/>
+                                    <field name="fare_curr" optional="hide"/>
                                     <field name="hotel_room"/>
+                                    <field name="hotel_desc" optional="hide"/>
+                                    <field name="hotel_curr" optional="hide"/>
                                     <field name="meals"/>
+                                    <field name="meals_desc" optional="hide"/>
+                                    <field name="meals_curr" optional="hide"/>
                                     <field name="taxi"/>
+                                    <field name="taxi_desc" optional="hide"/>
+                                    <field name="taxi_curr" optional="hide"/>
                                     <field name="laundry"/>
+                                    <field name="laundry_desc" optional="hide"/>
+                                    <field name="laundry_curr" optional="hide"/>
                                     <field name="telephone"/>
+                                    <field name="telephone_desc" optional="hide"/>
+                                    <field name="telephone_curr" optional="hide"/>
                                     <field name="other_expense"/>
+                                    <field name="other_desc" optional="hide"/>
+                                    <field name="other_curr" optional="hide"/>
                                     <field name="daily_allowance"/>
+                                    <field name="daily_desc" optional="hide"/>
+                                    <field name="daily_curr" optional="hide"/>
                                     <field name="total_amount" sum="Total"/>
                                 </list>
                             </field>
