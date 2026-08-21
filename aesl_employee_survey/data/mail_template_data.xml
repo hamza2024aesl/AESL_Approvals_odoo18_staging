@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Override Survey Invite Email Template for Mandatory Login -->
+        <record id="survey.mail_template_user_input_invite" model="mail.template">
+            <field name="name">Survey: Invite (Login Required)</field>
+            <field name="subject">Fill Your Survey Form: {{ object.survey_id.display_name }}</field>
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px; font-size: 14px; font-family: Arial, sans-serif;">
+    <p style="margin: 0px; padding: 0px; font-size: 14px; color: #333333;">
+        Dear <t t-out="object.partner_id.name or 'Employee'">Employee</t>,<br/><br/>
+        <t t-if="object.survey_id.certification">
+            You have been invited to complete a new certification assessment.
+        </t>
+        <t t-else="">
+            A survey form has been assigned to you by HR/Management. Your valuable response and feedback are requested.
+        </t>
+    </p>
+    <div style="margin: 24px 0px 24px 0px; text-align: left;">
+        <a t-att-href="(object.get_authenticated_start_url())"
+           style="background-color: #007bff; padding: 12px 24px; text-decoration: none; color: #ffffff; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block;">
+            <t t-if="object.survey_id.certification">
+                Fill Your Certification Form
+            </t>
+            <t t-else="">
+                Fill Your Survey Form
+            </t>
+        </a>
+    </div>
+    <p style="font-size: 12px; color: #666666;">
+        <em>Note: You will be prompted to log into your employee portal account before accessing the survey.</em>
+    </p>
+    <t t-if="object.deadline">
+        <p style="font-size: 13px; color: #d9534f; margin-top: 15px;">
+            <strong>Deadline:</strong> Please complete this survey before <t t-out="format_date(object.deadline) or ''">05/05/2026</t>.
+        </p>
+    </t>
+    <br/>
+    <p style="margin: 0px; font-size: 13px; color: #555555;">
+        Thank you,<br/>
+        <strong>Human Resources &amp; Administration</strong>
+    </p>
+</div>
+            </field>
+        </record>
+    </data>
+</odoo>

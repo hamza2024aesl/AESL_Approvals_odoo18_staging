@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pf_loan_config_list" model="ir.ui.view">
+        <field name="name">pf.loan.config.list</field>
+        <field name="model">pf.loan.config</field>
+        <field name="arch" type="xml">
+            <list string="PF Loan Approvers Configuration">
+                <field name="name"/>
+                <field name="hr_id"/>
+                <field name="hod_id"/>
+                <field name="finance_id"/>
+                <field name="trustee_id"/>
+                <field name="company_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_pf_loan_config_form" model="ir.ui.view">
+        <field name="name">pf.loan.config.form</field>
+        <field name="model">pf.loan.config</field>
+        <field name="arch" type="xml">
+            <form string="PF Loan Approvers Configuration">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Configuration Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Sequential Approval Configuration">
+                            <field name="hr_id" options="{'no_create': True}"/>
+                            <field name="hod_id" options="{'no_create': True}"/>
+                            <field name="finance_id" options="{'no_create': True}"/>
+                            <field name="trustee_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Company">
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pf_loan_config" model="ir.actions.act_window">
+        <field name="name">Loan Approvers</field>
+        <field name="res_model">pf.loan.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Set up the 4 sequential approvers for PF Loan Applications (1st HR, 2nd HOD, 3rd Finance Officer, 4th Trustee).
+            </p>
+        </field>
+    </record>
+
+    <!-- Menuitem under Loans -> Configuration -->
+    <menuitem id="menu_pf_loan_config"
+              name="Loan Approvers"
+              parent="ivis_hr_employee_loan.policy_configure"
+              action="action_pf_loan_config"
+              sequence="20"/>
+</odoo>

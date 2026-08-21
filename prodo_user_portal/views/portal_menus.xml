@@ -19,6 +19,13 @@
                     <t t-set="url" t-value="'/my/travel'"/>
                     <t t-set="config_card" t-value="True"/>
                 </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/icons8-performance-64.png'"/>
+                    <t t-set="title">PF Loan</t>
+                    <t t-set="text">Apply &amp; Track Provident Fund Loans</t>
+                    <t t-set="url" t-value="'/my/pf_loan'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
             </div>
         </xpath>
     </template>

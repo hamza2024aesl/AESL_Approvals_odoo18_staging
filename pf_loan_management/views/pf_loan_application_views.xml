@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pf_loan_application_list" model="ir.ui.view">
+        <field name="name">pf.loan.application.list</field>
+        <field name="model">pf.loan.application</field>
+        <field name="arch" type="xml">
+            <list string="PF Loan Applications" decoration-info="state=='draft'" decoration-warning="state in ('waiting_hod','waiting_finance','waiting_trustee')" decoration-success="state=='approved'" decoration-danger="state=='rejected'">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="employee_reg_no"/>
+                <field name="department_id"/>
+                <field name="loan_amount"/>
+                <field name="installments_count"/>
+                <field name="application_date"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_pf_loan_application_form" model="ir.ui.view">
+        <field name="name">pf.loan.application.form</field>
+        <field name="model">pf.loan.application</field>
+        <field name="arch" type="xml">
+            <form string="Provident Fund Loan Application">
+                <header>
+                    <button name="action_approve_hr" string="Approve (1st Step - HR)" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve_hod" string="Approve (2nd Step - HOD)" type="object" class="oe_highlight" invisible="state != 'waiting_hod'"/>
+                    <button name="action_open_voucher_wizard" string="Create GP Voucher &amp; Forward" type="object" class="oe_highlight fw-bold" invisible="state != 'waiting_finance'"/>
+                    <button name="action_approve_finance" string="Approve (3rd Step - Finance)" type="object" class="oe_highlight" invisible="state != 'waiting_finance'"/>
+                    <button name="action_approve_trustee" string="Approve (4th Step - Trustee)" type="object" class="oe_highlight" invisible="state != 'waiting_trustee'"/>
+                    <button name="action_return" string="Return" type="object" class="btn-warning" invisible="state in ('returned','approved','rejected','cancel')"/>
+                    <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state in ('approved','rejected','cancel')"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved','cancel')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,returned,waiting_hod,waiting_finance,waiting_trustee,approved"/>
+                </header>
+                <sheet>
+                    <field name="previous_loan_notice_html" widget="html" readonly="1" class="mb-3" invisible="not previous_loan_notice_html"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Employee Information">
+                            <field name="employee_id" options="{'no_create': True}"/>
+                            <field name="employee_reg_no"/>
+                            <field name="department_id"/>
+                            <field name="job_id"/>
+                            <field name="application_date"/>
+                        </group>
+                        <group string="Loan Request Details">
+                            <field name="loan_amount"/>
+                            <field name="loan_amount_words"/>
+                            <field name="installments_count"/>
+                            <field name="loan_purpose"/>
+                            <field name="is_interest_free" readonly="1"/>
+                            <field name="remarks" placeholder="Enter remarks or approval notes..."/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Payroll &amp; Dues Info" name="payroll_info">
+                            <group>
+                                <group string="Salary Breakdown">
+                                    <field name="gross_salary"/>
+                                    <field name="less_pf"/>
+                                    <field name="income_tax"/>
+                                    <field name="other_deductions"/>
+                                    <field name="net_pay"/>
+                                </group>
+                                <group string="Accounts Dues">
+                                    <field name="max_ded_allowed"/>
+                                    <field name="loan_outstanding"/>
+                                    <field name="loan_required"/>
+                                    <field name="total_loan_calc"/>
+                                    <field name="pf_balance_dues"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Sanction Statement" name="sanction_info">
+                            <group>
+                                <group>
+                                    <field name="sanctioned_amount"/>
+                                    <field name="total_sanctioned_loan"/>
+                                </group>
+                                <group>
+                                    <field name="repay_installments"/>
+                                    <field name="per_installment_amount"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="GP Voucher Details" name="gp_voucher_info" invisible="not is_voucher_created">
+                            <field name="is_voucher_created" invisible="1"/>
+                            <group>
+                                <group string="Voucher Header Info">
+                                    <field name="gp_audit_trail_code" readonly="1"/>
+                                    <field name="gp_date" readonly="1"/>
+                                    <field name="gp_journal_entry_no" readonly="1"/>
+                                    <field name="gp_posting_date" readonly="1"/>
+                                </group>
+                                <group string="Bank &amp; Cheque Info">
+                                    <field name="gp_check_book_id" readonly="1"/>
+                                    <field name="gp_cheque_number" readonly="1"/>
+                                    <field name="gp_paid_to_rcvd_from" readonly="1"/>
+                                    <field name="gp_description" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Designated Approvers" name="approvers_info">
+                            <group>
+                                <group>
+                                    <field name="hr_approver_id" readonly="1"/>
+                                    <field name="hod_approver_id" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="finance_approver_id" readonly="1"/>
+                                    <field name="trustee_approver_id" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pf_loan_application" model="ir.actions.act_window">
+        <field name="name">PF Loan Applications</field>
+        <field name="res_model">pf.loan.application</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menuitem under Loans main menu -->
+    <menuitem id="menu_pf_loan_application"
+              name="PF Loan Applications"
+              parent="ivis_hr_employee_loan.loan_loans"
+              action="action_pf_loan_application"
+              sequence="15"/>
+</odoo>

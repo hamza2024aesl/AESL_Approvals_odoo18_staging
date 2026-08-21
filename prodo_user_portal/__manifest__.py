@@ -9,10 +9,11 @@
     "summary": "User Portal",
     "description": """User Portal""",
     "version": "18.0",
-    "depends": ['portal','prodo_appraisal_ext'],
+    "depends": ['portal','prodo_appraisal_ext', 'pf_loan_management'],
     "data": [
         'views/appraisal_template.xml',
         'views/approval_template.xml',
+        'views/pf_loan_template.xml',
         'views/portal_menus.xml',
     ],
     "assets": {

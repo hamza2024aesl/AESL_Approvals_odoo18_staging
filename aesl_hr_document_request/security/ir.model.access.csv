@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_document_request_user,hr.document.request.user,model_hr_document_request,base.group_user,1,1,1,0
+access_hr_document_request_manager,hr.document.request.manager,model_hr_document_request,group_hr_document_request_manager,1,1,1,1
+access_hr_document_request_portal,hr.document.request.portal,model_hr_document_request,base.group_portal,1,1,0,0

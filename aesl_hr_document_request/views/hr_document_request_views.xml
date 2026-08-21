@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 1. Form View -->
+    <record id="view_hr_document_request_form" model="ir.ui.view">
+        <field name="name">hr.document.request.form</field>
+        <field name="model">hr.document.request</field>
+        <field name="arch" type="xml">
+            <form string="HR Document Request">
+                <header>
+                    <button name="action_send_request" string="Send Request to Employee" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve &amp; Sync to Documents" type="object" class="btn-success" invisible="state not in ['submitted', 'pending']"/>
+                    <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state not in ['pending', 'submitted']"/>
+                    <button name="action_reset_draft" string="Reset to Draft" type="object" invisible="state not in ['rejected', 'approved']"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,submitted,approved"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Document Title"/>
+                        <h1>
+                            <field name="name" placeholder="e.g., CNIC Copy / Medical Report / Degree Certificate"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="employee_id"/>
+                            <field name="partner_id"/>
+                            <field name="user_id"/>
+                            <field name="deadline"/>
+                        </group>
+                        <group string="Documents App Options">
+                            <field name="folder_id" options="{'no_create': True}"/>
+                            <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                            <field name="document_id" readonly="1" invisible="not document_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Instructions &amp; Description">
+                            <field name="instructions" placeholder="Enter instructions for the employee regarding this document request..."/>
+                        </page>
+                        <page string="Uploaded Document &amp; Signature" invisible="state == 'draft'">
+                            <group>
+                                <group string="Uploaded Attachment">
+                                    <field name="attachment_id" readonly="1"/>
+                                    <field name="attachment_file" filename="attachment_name" widget="binary"/>
+                                </group>
+                                <group string="Digital Signature Details">
+                                    <field name="signature" widget="image" options="{'size': [300, 100]}"/>
+                                    <field name="signed_by" readonly="1"/>
+                                    <field name="signed_on" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- 2. Tree View -->
+    <record id="view_hr_document_request_tree" model="ir.ui.view">
+        <field name="name">hr.document.request.tree</field>
+        <field name="model">hr.document.request</field>
+        <field name="arch" type="xml">
+            <list string="HR Document Requests">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="deadline"/>
+                <field name="folder_id"/>
+                <field name="signed_by"/>
+                <field name="signed_on"/>
+                <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-info="state == 'submitted'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 3. Search View -->
+    <record id="view_hr_document_request_search" model="ir.ui.view">
+        <field name="name">hr.document.request.search</field>
+        <field name="model">hr.document.request</field>
+        <field name="arch" type="xml">
+            <search string="Search Document Requests">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <filter string="Pending Upload" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Submitted" name="submitted" domain="[('state', '=', 'submitted')]"/>
+                <filter string="Approved" name="approved" domain="[('state', '=', 'approved')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Employee" name="group_by_employee" context="{'group_by': 'employee_id'}"/>
+                    <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
+                    <filter string="Workspace" name="group_by_folder" context="{'group_by': 'folder_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- 4. Action -->
+    <record id="action_hr_document_request" model="ir.actions.act_window">
+        <field name="name">Document Requests</field>
+        <field name="res_model">hr.document.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_hr_document_request_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Document Request for an Employee!
+            </p>
+            <p>
+                Request specific documents (e.g. CNIC, Degree, Signed Contracts) from employees. Employees can upload files and digitally sign them directly from their portal account.
+            </p>
+        </field>
+    </record>
+
+    <!-- 5. Menu Items -->
+    <menuitem id="menu_hr_document_request_root"
+              name="Document Requests"
+              parent="hr.menu_hr_root"
+              action="action_hr_document_request"
+              sequence="30"/>
+
+</odoo>

@@ -857,3 +857,391 @@ class ApprovalPortal(CustomerPortal):
             'state': 'outgoing',
         }
         request.env['mail.mail'].sudo().create(mail_values).send()
+
+
+class PFLoanPortal(CustomerPortal):
+
+    @http.route(["/my/pf_loan"], type="http", auth="user", website=True)
+    def portal_my_pf_loans(self, **kw):
+        user = request.env.user
+        employee = user.employee_id
+        loans = []
+        if "pf.loan.application" in request.env:
+            pf_model = request.env["pf.loan.application"].sudo()
+            if employee:
+                my_loans = pf_model.search([("employee_id", "=", employee.id)])
+                approver_loans = pf_model.search([
+                    '|', '|', '|',
+                    ('hr_approver_id', '=', employee.id),
+                    ('hod_approver_id', '=', employee.id),
+                    ('finance_approver_id', '=', employee.id),
+                    ('trustee_approver_id', '=', employee.id),
+                ])
+                relevant_ids = set(my_loans.ids)
+                for l in approver_loans:
+                    st = l.state
+                    if st == 'draft' and l.hr_approver_id == employee:
+                        relevant_ids.add(l.id)
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.hr_approver_id == employee:
+                        relevant_ids.add(l.id)
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.hod_approver_id == employee:
+                        relevant_ids.add(l.id)
+                    elif st in ['waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.finance_approver_id == employee:
+                        relevant_ids.add(l.id)
+                    elif st in ['waiting_trustee', 'approved', 'rejected'] and l.trustee_approver_id == employee:
+                        relevant_ids.add(l.id)
+
+                loans = pf_model.browse(list(relevant_ids)).sorted(key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
+            else:
+                loans = pf_model.search([('create_uid', '=', user.id)], order="create_date desc, id desc")
+        elif "hr.loan" in request.env:
+            loans = request.env["hr.loan"].sudo().search([("employee_id", "=", employee.id)])
+            
+        vals = {
+            "page_name": "pf_loan_list_page",
+            "loans": loans,
+            "user": user,
+        }
+        return request.render("prodo_user_portal.pf_loan_request_list_view_portal", vals)
+
+    @http.route(["/my/pf_loan/new"], type="http", auth="user", website=True)
+    def portal_pf_loan_new(self, **kw):
+        user = request.env.user
+        employee = user.employee_id
+        today_date = fields.Date.context_today(request.env.user).strftime("%Y-%m-%d")
+
+        gross_salary = 0.0
+        less_pf = 0.0
+        income_tax = 0.0
+        other_deductions = 0.0
+        net_pay = 0.0
+        pf_balance_dues = 0.0
+
+        if employee:
+            existing_active = request.env["pf.loan.application"].sudo().search([
+                ('employee_id', '=', employee.id),
+                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee']),
+            ], limit=1)
+            if existing_active:
+                request.session['pf_loan_active_modal'] = f"You already have an active/pending Provident Fund Loan Application (Ref: {existing_active.name}). You cannot submit a new loan request while an existing application is active."
+                return request.redirect("/my/pf_loan")
+
+            last_payslip = request.env['hr.payslip'].sudo().search([
+                ('employee_id', '=', employee.id),
+                ('state', 'in', ['done', 'paid']),
+            ], order='date_to desc', limit=1)
+
+            if not last_payslip:
+                last_payslip = request.env['hr.payslip'].sudo().search([
+                    ('employee_id', '=', employee.id),
+                ], order='date_to desc', limit=1)
+
+            if last_payslip:
+                for line in last_payslip.line_ids:
+                    code = (line.code or '').upper().strip()
+                    name = (line.name or '').lower().strip()
+                    val = line.total or line.amount or 0.0
+
+                    if code == 'GROSS' or name == 'gross':
+                        gross_salary = val
+                    elif code == 'OTHER_DEDUCTION_TAXABLE' or 'other deduction' in name:
+                        other_deductions = val
+                    elif code == 'CURRENT_INCOME_TAX' or 'income tax' in name or 'current month i tax' in name:
+                        income_tax = abs(val)
+                    elif code == 'NET' or name == 'net salary' or name == 'net pay':
+                        net_pay = val
+                    elif code in ['PF_EMPLOYEE', 'PF', 'PF_DED', 'LESS_PF'] or 'less p.f' in name or 'less pf' in name:
+                        less_pf = abs(val)
+
+                if hasattr(last_payslip, 'get_pf_balance_as_of'):
+                    pf_balance_dues = last_payslip.get_pf_balance_as_of()
+                elif hasattr(employee, 'total'):
+                    pf_balance_dues = (getattr(employee, 'total', 0.0) or 0.0) + (getattr(employee, 'pf_employee', 0.0) or 0.0) + (getattr(employee, 'pf_employer', 0.0) or 0.0) + (getattr(employee, 'pf_interest', 0.0) or 0.0)
+
+        max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
+        is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+        
+        vals = {
+            "page_name": "pf_loan_form_page",
+            "loan": False,
+            "employee_name": employee.name if employee else user.name,
+            "employee_reg_no": employee.identification_id if employee else "",
+            "designation_name": employee.job_id.name if employee and employee.job_id else "",
+            "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else (employee.create_date.strftime("%d-%m-%Y") if employee else ""),
+            "today_date": today_date,
+            "is_readonly": False,
+            "is_interest_free": is_interest_free,
+            "gross_salary": gross_salary,
+            "less_pf": less_pf,
+            "income_tax": income_tax,
+            "other_deductions": other_deductions,
+            "net_pay": net_pay,
+            "max_ded_allowed": max_ded_allowed,
+            "pf_balance_dues": pf_balance_dues,
+        }
+        return request.render("prodo_user_portal.pf_loan_request_form_portal", vals)
+
+    @http.route(["/my/pf_loan/view/<int:loan_id>"], type="http", auth="user", website=True)
+    def portal_pf_loan_view(self, loan_id, **kw):
+        user = request.env.user
+        loan = False
+        if "pf.loan.application" in request.env:
+            loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+        elif "hr.loan" in request.env:
+            loan = request.env["hr.loan"].sudo().browse(loan_id)
+            
+        employee = loan.employee_id if loan and hasattr(loan, "employee_id") and loan.employee_id else user.employee_id
+        today_date = fields.Date.context_today(request.env.user).strftime("%Y-%m-%d")
+
+        is_current_approver = False
+        if loan and user.employee_id and hasattr(loan, 'state'):
+            emp = user.employee_id
+            if loan.state == 'draft' and getattr(loan, 'hr_approver_id', False) == emp:
+                is_current_approver = True
+            elif loan.state == 'waiting_hod' and getattr(loan, 'hod_approver_id', False) == emp:
+                is_current_approver = True
+            elif loan.state == 'waiting_finance' and getattr(loan, 'finance_approver_id', False) == emp:
+                is_current_approver = True
+            elif loan.state == 'waiting_trustee' and getattr(loan, 'trustee_approver_id', False) == emp:
+                is_current_approver = True
+        
+        is_readonly = True
+        if loan and hasattr(loan, 'state') and loan.state == 'returned' and employee and loan.employee_id == employee:
+            is_readonly = False
+
+        hr_balance_modal_data = False
+        if loan and hasattr(loan, 'state') and loan.state == 'draft' and (getattr(loan, 'hr_approver_id', False) == user.employee_id or user.has_group('hr.group_hr_user') or user.has_group('hr.group_hr_manager')):
+            applicant = loan.employee_id if hasattr(loan, 'employee_id') and loan.employee_id else employee
+            if applicant:
+                t_amt = 0.0
+                p_amt = 0.0
+                d_amt = 0.0
+
+                # Option 1: Read Latest Active Loan (single record)
+                loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+                if not loan_records and "hr.loan" in request.env:
+                    loan_records = request.env["hr.loan"].sudo().search([
+                        ('employee_id', '=', applicant.id),
+                        ('state', '!=', 'cancel'),
+                    ], order='id desc')
+
+                if loan_records:
+                    latest = loan_records[0]  # Option 1: Latest active loan only
+                    t_amt = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+                    p_amt = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
+                    d_amt = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+                    if not d_amt and t_amt:
+                        d_amt = t_amt - p_amt if t_amt > p_amt else t_amt
+
+                if t_amt == 0.0:
+                    t_amt = getattr(loan, 'loan_amount', 0.0) or 0.0
+                    d_amt = getattr(loan, 'loan_amount', 0.0) or 0.0
+                    p_amt = 0.0
+
+                hr_balance_modal_data = {
+                    'applicant_name': applicant.name,
+                    'ref': getattr(loan, 'name', 'Application'),
+                    'total_loan': t_amt,
+                    'received_paid': p_amt,
+                    'balance_on_loan': d_amt,
+                }
+
+        vals = {
+            "page_name": "pf_loan_form_page",
+            "loan": loan,
+            "employee_name": employee.name if employee else user.name,
+            "employee_reg_no": employee.identification_id if employee else "",
+            "designation_name": employee.job_id.name if employee and employee.job_id else "",
+            "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else "",
+            "today_date": today_date,
+            "is_readonly": is_readonly,
+            "is_current_approver": is_current_approver,
+            "hr_balance_modal_data": hr_balance_modal_data,
+        }
+        return request.render("prodo_user_portal.pf_loan_request_form_portal", vals)
+
+    @http.route(["/my/pf_loan/approve/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+    def portal_pf_loan_approve(self, loan_id, **kw):
+        user = request.env.user
+        if "pf.loan.application" in request.env:
+            loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+            if loan and user.employee_id:
+                emp = user.employee_id
+                remarks = kw.get('remarks') or request.params.get('remarks')
+                if remarks:
+                    existing_remarks = loan.remarks or ""
+                    new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name}: {remarks}"
+                    loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+
+                try:
+                    if loan.state == 'draft' and loan.hr_approver_id == emp:
+                        inst = kw.get('repay_installments') or request.params.get('repay_installments')
+                        if inst:
+                            loan.write({'repay_installments': int(inst)})
+                        loan.action_approve_hr()
+                    elif loan.state == 'waiting_hod' and loan.hod_approver_id == emp:
+                        loan.action_approve_hod()
+                    elif loan.state == 'waiting_finance' and loan.finance_approver_id == emp:
+                        gp_code = kw.get('gp_audit_trail_code') or request.params.get('gp_audit_trail_code')
+                        if gp_code:
+                            loan.write({
+                                'is_voucher_created': True,
+                                'gp_audit_trail_code': gp_code,
+                                'gp_date': kw.get('gp_date') or request.params.get('gp_date') or fields.Date.today(),
+                                'gp_journal_entry_no': kw.get('gp_journal_entry_no') or request.params.get('gp_journal_entry_no'),
+                                'gp_posting_date': kw.get('gp_posting_date') or request.params.get('gp_posting_date') or fields.Date.today(),
+                                'gp_check_book_id': kw.get('gp_check_book_id') or request.params.get('gp_check_book_id'),
+                                'gp_cheque_number': kw.get('gp_cheque_number') or request.params.get('gp_cheque_number'),
+                                'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get('gp_paid_to_rcvd_from'),
+                                'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
+                            })
+                        loan.action_approve_finance()
+                    elif loan.state == 'waiting_trustee' and loan.trustee_approver_id == emp:
+                        loan.action_approve_trustee()
+                except Exception as e:
+                    request.session['pf_loan_error'] = str(e)
+        return request.redirect(f"/my/pf_loan/view/{loan_id}")
+
+    @http.route(["/my/pf_loan/reject/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+    def portal_pf_loan_reject(self, loan_id, **kw):
+        user = request.env.user
+        if "pf.loan.application" in request.env:
+            loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+            if loan and user.employee_id:
+                emp = user.employee_id
+                remarks = kw.get('remarks') or request.params.get('remarks')
+                if remarks:
+                    existing_remarks = loan.remarks or ""
+                    new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Rejected): {remarks}"
+                    loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+
+                loan.action_reject()
+        return request.redirect(f"/my/pf_loan/view/{loan_id}")
+
+    @http.route(["/my/pf_loan/return/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+    def portal_pf_loan_return(self, loan_id, **kw):
+        user = request.env.user
+        if "pf.loan.application" in request.env:
+            loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+            if loan and user.employee_id:
+                emp = user.employee_id
+                remarks = kw.get('remarks') or request.params.get('remarks')
+                if remarks:
+                    existing_remarks = loan.remarks or ""
+                    new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Returned): {remarks}"
+                    loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+
+                loan.action_return()
+        return request.redirect(f"/my/pf_loan/view/{loan_id}")
+
+    @http.route(["/my/pf_loan/save"], type="http", auth="user", website=True, methods=["POST"])
+    def portal_pf_loan_save(self, **post):
+        user = request.env.user
+        employee = user.employee_id
+
+        def safe_float(val):
+            if not val:
+                return 0.0
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return 0.0
+
+        try:
+            is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+            vals = {
+                "loan_amount": safe_float(post.get("loan_amount")),
+                "loan_amount_words": post.get("loan_amount_words", ""),
+                "installments_count": int(post.get("installments_count") or 1),
+                "application_date": post.get("application_date"),
+                "is_interest_free": is_interest_free,
+                "loan_purpose": post.get("loan_purpose", ""),
+                "gross_salary": safe_float(post.get("gross_salary")),
+                "less_pf": safe_float(post.get("less_pf")),
+                "income_tax": safe_float(post.get("income_tax")),
+                "other_deductions": safe_float(post.get("other_deductions")),
+                "net_pay": safe_float(post.get("net_pay")),
+                "max_ded_allowed": safe_float(post.get("max_ded_allowed")),
+                "loan_outstanding": safe_float(post.get("loan_outstanding")),
+                "loan_required": safe_float(post.get("loan_required")),
+                "total_loan_calc": safe_float(post.get("total_loan_calc")),
+                "pf_balance_dues": safe_float(post.get("pf_balance_dues")),
+                "sanctioned_amount": safe_float(post.get("sanctioned_amount")),
+                "total_sanctioned_loan": safe_float(post.get("total_sanctioned_loan")),
+                "repay_installments": int(post.get("repay_installments") or 1),
+                "per_installment_amount": safe_float(post.get("per_installment_amount")),
+            }
+            loan_rec = False
+            if "pf.loan.application" in request.env:
+                loan_id = post.get("loan_id")
+                if loan_id:
+                    loan_rec = request.env["pf.loan.application"].sudo().browse(int(loan_id))
+                    vals["state"] = "draft"
+                    loan_rec.write(vals)
+                    loan_rec._send_approver_email()
+                else:
+                    vals["employee_id"] = employee.id if employee else False
+                    loan_rec = request.env["pf.loan.application"].sudo().create(vals)
+
+            file_attachment = request.httprequest.files.get("attachment")
+            if file_attachment and file_attachment.filename and loan_rec:
+                import base64
+                file_content = file_attachment.read()
+                request.env["ir.attachment"].sudo().create({
+                    "name": file_attachment.filename,
+                    "datas": base64.b64encode(file_content),
+                    "res_model": "pf.loan.application",
+                    "res_id": loan_rec.id,
+                })
+
+            if loan_rec and employee:
+                current_requested_amount = loan_rec.loan_amount or 0.0
+                total_loan_orig = 0.0
+                balance_on_loan = 0.0
+                received_paid = 0.0
+
+                # 1. Read directly from employee.loan_ids (Loan Details tab on hr.employee)
+                loan_records = employee.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(employee, 'loan_ids') and employee.loan_ids else []
+                
+                # 2. Fallback to searching hr.loan model
+                if not loan_records and "hr.loan" in request.env:
+                    loan_records = request.env["hr.loan"].sudo().search([
+                        ('employee_id', '=', employee.id),
+                        ('state', '!=', 'cancel'),
+                    ], order='id desc')
+
+                if loan_records:
+                    latest = loan_records[0]  # Option 1: Latest active loan only
+                    total_loan_orig = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+                    received_paid = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
+                    balance_on_loan = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+                    if not balance_on_loan and total_loan_orig:
+                        balance_on_loan = total_loan_orig - received_paid if total_loan_orig > received_paid else total_loan_orig
+
+                if total_loan_orig == 0.0:
+                    approved_pf_loans = request.env["pf.loan.application"].sudo().search([
+                        ('employee_id', '=', employee.id),
+                        ('state', '=', 'approved'),
+                        ('id', '!=', loan_rec.id),
+                    ])
+                    for pf_l in approved_pf_loans:
+                        total_loan_orig += pf_l.loan_amount
+                        bal = pf_l.loan_outstanding if pf_l.loan_outstanding else pf_l.loan_amount
+                        balance_on_loan += bal
+                        received_paid += (pf_l.loan_amount - bal)
+
+                if total_loan_orig == 0.0:
+                    total_loan_orig = current_requested_amount
+                    balance_on_loan = current_requested_amount
+                    received_paid = 0.0
+
+                request.session['pf_loan_success'] = f"Your Provident Fund Loan Application ({loan_rec.name}) has been submitted successfully!"
+        except Exception as e:
+            msg = str(e)
+            if "already have an active" in msg:
+                request.session["pf_loan_active_modal"] = msg
+                return request.redirect("/my/pf_loan")
+            request.session["pf_loan_error"] = msg
+            return request.redirect("/my/pf_loan/new")
+            
+        return request.redirect("/my/pf_loan")

@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pf_loan_config_user,pf.loan.config.user,model_pf_loan_config,base.group_user,1,1,1,1
+access_pf_loan_application_user,pf.loan.application.user,model_pf_loan_application,base.group_user,1,1,1,1
+access_pf_loan_voucher_wizard_user,pf.loan.voucher.wizard.user,model_pf_loan_voucher_wizard,base.group_user,1,1,1,1
