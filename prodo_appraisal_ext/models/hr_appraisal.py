@@ -268,7 +268,7 @@ class HrAppraisal(models.Model):
                 md_user = rec._get_md_user(next_manager)
                 # md_state = rec._compute_dynamic_state(is_md=True)
                 rec.write({
-                    'state': 'md',
+                    'state': 'done',
                     'last_approver_id': rec.current_approver_id.id,  # MD stage
                     'current_approver_id': next_manager.id,
                 })
