@@ -107,7 +107,7 @@
                                             </td>
                                             <td>
                                                 <t t-if="survey_line.state == 'done'">
-                                                    <span t-esc="'%.1f%%' % survey_line.scoring_percentage"/>
+                                                    <span t-esc="str(round(survey_line.scoring_percentage, 1)) + '%'"/>
                                                 </t>
                                                 <t t-else="">
                                                     <span class="text-muted">-</span>

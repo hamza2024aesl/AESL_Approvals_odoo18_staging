@@ -23,13 +23,14 @@
         <field name="arch" type="xml">
             <form string="Provident Fund Loan Application">
                 <header>
-                    <button name="action_approve_hr" string="Approve (1st Step - HR)" type="object" class="oe_highlight" invisible="state != 'draft'"/>
-                    <button name="action_approve_hod" string="Approve (2nd Step - HOD)" type="object" class="oe_highlight" invisible="state != 'waiting_hod'"/>
-                    <button name="action_open_voucher_wizard" string="Create GP Voucher &amp; Forward" type="object" class="oe_highlight fw-bold" invisible="state != 'waiting_finance'"/>
-                    <button name="action_approve_finance" string="Approve (3rd Step - Finance)" type="object" class="oe_highlight" invisible="state != 'waiting_finance'"/>
-                    <button name="action_approve_trustee" string="Approve (4th Step - Trustee)" type="object" class="oe_highlight" invisible="state != 'waiting_trustee'"/>
-                    <button name="action_return" string="Return" type="object" class="btn-warning" invisible="state in ('returned','approved','rejected','cancel')"/>
-                    <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state in ('approved','rejected','cancel')"/>
+                    <field name="is_current_user_approver" invisible="1"/>
+                    <button name="action_approve_hr" string="Approve (1st Step - HR)" type="object" class="oe_highlight" invisible="state != 'draft' or not is_current_user_approver"/>
+                    <button name="action_approve_hod" string="Approve (2nd Step - HOD)" type="object" class="oe_highlight" invisible="state != 'waiting_hod' or not is_current_user_approver"/>
+                    <button name="action_open_voucher_wizard" string="Create GP Voucher &amp; Forward" type="object" class="oe_highlight fw-bold" invisible="state != 'waiting_finance' or not is_current_user_approver"/>
+                    <button name="action_approve_finance" string="Approve (3rd Step - Finance)" type="object" class="oe_highlight" invisible="state != 'waiting_finance' or not is_current_user_approver"/>
+                    <button name="action_approve_trustee" string="Approve (4th Step - Trustee)" type="object" class="oe_highlight" invisible="state != 'waiting_trustee' or not is_current_user_approver"/>
+                    <button name="action_return" string="Return" type="object" class="btn-warning" invisible="state in ('returned','approved','rejected','cancel') or not is_current_user_approver"/>
+                    <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state in ('approved','rejected','cancel') or not is_current_user_approver"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved','cancel')"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,returned,waiting_hod,waiting_finance,waiting_trustee,approved"/>
                 </header>

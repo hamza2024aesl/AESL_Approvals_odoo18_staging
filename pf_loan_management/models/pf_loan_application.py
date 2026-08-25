@@ -217,9 +217,29 @@ class PFLoanApplication(models.Model):
                 }
                 rec.env['mail.mail'].sudo().create(mail_values).send()
 
+    is_current_user_approver = fields.Boolean(string="Is Current Approver", compute="_compute_is_current_user_approver")
+
+    @api.depends('state', 'hr_approver_id', 'hod_approver_id', 'finance_approver_id', 'trustee_approver_id')
+    def _compute_is_current_user_approver(self):
+        current_emp = self.env.user.employee_id
+        for rec in self:
+            if rec.state == 'draft':
+                rec.is_current_user_approver = bool(current_emp and rec.hr_approver_id == current_emp)
+            elif rec.state == 'waiting_hod':
+                rec.is_current_user_approver = bool(current_emp and rec.hod_approver_id == current_emp)
+            elif rec.state == 'waiting_finance':
+                rec.is_current_user_approver = bool(current_emp and rec.finance_approver_id == current_emp)
+            elif rec.state == 'waiting_trustee':
+                rec.is_current_user_approver = bool(current_emp and rec.trustee_approver_id == current_emp)
+            else:
+                rec.is_current_user_approver = False
+
     def action_approve_hr(self):
         for rec in self:
             if rec.state == 'draft':
+                if rec.hr_approver_id and rec.env.user.employee_id != rec.hr_approver_id and not rec.env.is_admin():
+                    raise UserError(_("Only the designated HR Approver (%s) can approve this request at this stage.") % rec.hr_approver_id.name)
+
                 requester_dept = rec.employee_id.department_id if rec.employee_id else False
                 hod_emp = rec.hod_approver_id
                 hod_dept = hod_emp.department_id if hod_emp else False
@@ -239,12 +259,16 @@ class PFLoanApplication(models.Model):
     def action_approve_hod(self):
         for rec in self:
             if rec.state == 'waiting_hod':
+                if rec.hod_approver_id and rec.env.user.employee_id != rec.hod_approver_id:
+                    raise UserError(_("Only the designated HOD (%s) can approve this application at this step.") % rec.hod_approver_id.name)
                 rec.state = 'waiting_finance'
                 rec._send_approver_email()
 
     def action_approve_finance(self):
         for rec in self:
             if rec.state == 'waiting_finance':
+                if rec.finance_approver_id and rec.env.user.employee_id != rec.finance_approver_id:
+                    raise UserError(_("Only the designated Finance Officer (%s) can approve this application at this step.") % rec.finance_approver_id.name)
                 rec.state = 'waiting_trustee'
                 rec._send_approver_email()
 
@@ -264,6 +288,8 @@ class PFLoanApplication(models.Model):
     def action_approve_trustee(self):
         for rec in self:
             if rec.state == 'waiting_trustee':
+                if rec.trustee_approver_id and rec.env.user.employee_id != rec.trustee_approver_id:
+                    raise UserError(_("Only the designated Trustee (%s) can approve this application at this step.") % rec.trustee_approver_id.name)
                 rec.state = 'approved'
 
     def action_reject(self):
