@@ -135,7 +135,8 @@ class PFLoanApplication(models.Model):
     hr_approver_id = fields.Many2one('hr.employee', string='1st Approver (HR)', readonly=True)
     hod_approver_id = fields.Many2one('hr.employee', string='2nd Approver (HOD)', readonly=True)
     finance_approver_id = fields.Many2one('hr.employee', string='3rd Approver (Finance)', readonly=True)
-    trustee_approver_id = fields.Many2one('hr.employee', string='4th Approver (Trustee)', readonly=True)
+    trustee_approver_id = fields.Many2one('hr.employee', string='4th Approver (Trustee Main)', readonly=True)
+    trustee_ids = fields.Many2many('hr.employee', 'pf_loan_app_trustee_rel', 'app_id', 'employee_id', string='4th Approver (Trustees)', readonly=True)
 
     @api.onchange('net_pay')
     def _onchange_net_pay(self):
@@ -166,7 +167,9 @@ class PFLoanApplication(models.Model):
             vals['hr_approver_id'] = config.hr_id.id if config.hr_id else False
             vals['hod_approver_id'] = config.hod_id.id if config.hod_id else False
             vals['finance_approver_id'] = config.finance_id.id if config.finance_id else False
-            vals['trustee_approver_id'] = config.trustee_id.id if config.trustee_id else False
+            vals['trustee_approver_id'] = config.trustee_id.id if hasattr(config, 'trustee_id') and config.trustee_id else (config.trustee_ids[0].id if config.trustee_ids else False)
+            if config.trustee_ids:
+                vals['trustee_ids'] = [(6, 0, config.trustee_ids.ids)]
 
         res = super(PFLoanApplication, self).create(vals)
         res._send_approver_email()
@@ -175,51 +178,52 @@ class PFLoanApplication(models.Model):
     def _send_approver_email(self):
         """Send email notification strictly and exclusively to the configured approver for current state."""
         for rec in self:
-            recipient_emp = False
+            recipients = self.env['hr.employee']
             step_name = ""
 
             if rec.state == 'draft':
-                recipient_emp = rec.hr_approver_id
+                recipients = rec.hr_approver_id
                 step_name = "1st Step: HR Approval"
             elif rec.state == 'waiting_hod':
-                recipient_emp = rec.hod_approver_id
+                recipients = rec.hod_approver_id
                 step_name = "2nd Step: Head of Department (HOD) Approval"
             elif rec.state == 'waiting_finance':
-                recipient_emp = rec.finance_approver_id
+                recipients = rec.finance_approver_id
                 step_name = "3rd Step: Finance Officer Approval"
             elif rec.state == 'waiting_trustee':
-                recipient_emp = rec.trustee_approver_id
+                recipients = rec.trustee_ids if rec.trustee_ids else (rec.trustee_approver_id if rec.trustee_approver_id else self.env['hr.employee'])
                 step_name = "4th Step: Trustee Approval"
 
-            if recipient_emp and recipient_emp.work_email:
-                subject = f"PF Loan Approval Needed ({step_name}): {rec.name}"
-                body = f"""
-                <div style="font-family: Arial, sans-serif; font-size: 14px;">
-                    <h2 style="color: #8D0000;">PF Loan Application Pending Approval</h2>
-                    <p>Dear {recipient_emp.name},</p>
-                    <p>A new Provident Fund Loan Application (Ref: <strong>{rec.name}</strong>) submitted by <strong>{rec.employee_id.name}</strong> is awaiting your approval at: <strong>{step_name}</strong>.</p>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
-                        <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Employee:</td><td style="padding: 5px;">{rec.employee_id.name} ({rec.employee_reg_no})</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Requested Loan Amount:</td><td style="padding: 5px;">Rs. {rec.loan_amount:,.2f}</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Loan Purpose:</td><td style="padding: 5px;">{rec.loan_purpose or 'N/A'}</td></tr>
-                        <tr><td style="padding: 5px; font-weight: bold;">Application Date:</td><td style="padding: 5px;">{rec.application_date}</td></tr>
-                    </table>
-                    <p>Please log in to the system to review and process this application.</p>
-                    <p>Best Regards,<br/>AESL PF Loan System</p>
-                </div>
-                """
-                mail_values = {
-                    'subject': subject,
-                    'body_html': body,
-                    'email_to': recipient_emp.work_email,
-                    'email_from': rec.env.company.email or rec.env.user.email_formatted,
-                    'state': 'outgoing',
-                }
-                rec.env['mail.mail'].sudo().create(mail_values).send()
+            for recipient_emp in recipients:
+                if recipient_emp and recipient_emp.work_email:
+                    subject = f"PF Loan Approval Needed ({step_name}): {rec.name}"
+                    body = f"""
+                    <div style="font-family: Arial, sans-serif; font-size: 14px;">
+                        <h2 style="color: #8D0000;">PF Loan Application Pending Approval</h2>
+                        <p>Dear {recipient_emp.name},</p>
+                        <p>A new Provident Fund Loan Application (Ref: <strong>{rec.name}</strong>) submitted by <strong>{rec.employee_id.name}</strong> is awaiting your approval at: <strong>{step_name}</strong>.</p>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+                            <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Employee:</td><td style="padding: 5px;">{rec.employee_id.name} ({rec.employee_reg_no})</td></tr>
+                            <tr><td style="padding: 5px; font-weight: bold;">Requested Loan Amount:</td><td style="padding: 5px;">Rs. {rec.loan_amount:,.2f}</td></tr>
+                            <tr><td style="padding: 5px; font-weight: bold;">Loan Purpose:</td><td style="padding: 5px;">{rec.loan_purpose or 'N/A'}</td></tr>
+                            <tr><td style="padding: 5px; font-weight: bold;">Application Date:</td><td style="padding: 5px;">{rec.application_date}</td></tr>
+                        </table>
+                        <p>Please log in to the system to review and process this application.</p>
+                        <p>Best Regards,<br/>AESL PF Loan System</p>
+                    </div>
+                    """
+                    mail_values = {
+                        'subject': subject,
+                        'body_html': body,
+                        'email_to': recipient_emp.work_email,
+                        'email_from': rec.env.company.email or rec.env.user.email_formatted,
+                        'state': 'outgoing',
+                    }
+                    rec.env['mail.mail'].sudo().create(mail_values).send()
 
     is_current_user_approver = fields.Boolean(string="Is Current Approver", compute="_compute_is_current_user_approver")
 
-    @api.depends('state', 'hr_approver_id', 'hod_approver_id', 'finance_approver_id', 'trustee_approver_id')
+    @api.depends('state', 'hr_approver_id', 'hod_approver_id', 'finance_approver_id', 'trustee_approver_id', 'trustee_ids')
     def _compute_is_current_user_approver(self):
         current_emp = self.env.user.employee_id
         for rec in self:
@@ -230,7 +234,8 @@ class PFLoanApplication(models.Model):
             elif rec.state == 'waiting_finance':
                 rec.is_current_user_approver = bool(current_emp and rec.finance_approver_id == current_emp)
             elif rec.state == 'waiting_trustee':
-                rec.is_current_user_approver = bool(current_emp and rec.trustee_approver_id == current_emp)
+                is_trustee = (current_emp in rec.trustee_ids) or (current_emp == rec.trustee_approver_id)
+                rec.is_current_user_approver = bool(current_emp and is_trustee)
             else:
                 rec.is_current_user_approver = False
 
@@ -288,8 +293,9 @@ class PFLoanApplication(models.Model):
     def action_approve_trustee(self):
         for rec in self:
             if rec.state == 'waiting_trustee':
-                if rec.trustee_approver_id and rec.env.user.employee_id != rec.trustee_approver_id:
-                    raise UserError(_("Only the designated Trustee (%s) can approve this application at this step.") % rec.trustee_approver_id.name)
+                is_trustee = (rec.env.user.employee_id in rec.trustee_ids) or (rec.env.user.employee_id == rec.trustee_approver_id)
+                if not is_trustee and not rec.env.is_admin():
+                    raise UserError(_("Only the designated Trustees can approve this application at this step."))
                 rec.state = 'approved'
 
     def action_reject(self):

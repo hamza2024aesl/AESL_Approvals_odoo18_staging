@@ -9,7 +9,7 @@
                 <field name="hr_id"/>
                 <field name="hod_id"/>
                 <field name="finance_id"/>
-                <field name="trustee_id"/>
+                <field name="trustee_ids" widget="many2many_tags"/>
                 <field name="company_id"/>
             </list>
         </field>
@@ -31,7 +31,7 @@
                             <field name="hr_id" options="{'no_create': True}"/>
                             <field name="hod_id" options="{'no_create': True}"/>
                             <field name="finance_id" options="{'no_create': True}"/>
-                            <field name="trustee_id" options="{'no_create': True}"/>
+                            <field name="trustee_ids" widget="many2many_tags" options="{'no_create': True}"/>
                         </group>
                         <group string="Company">
                             <field name="company_id" groups="base.group_multi_company"/>

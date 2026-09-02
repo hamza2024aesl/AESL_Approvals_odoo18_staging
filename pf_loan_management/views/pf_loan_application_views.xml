@@ -116,6 +116,7 @@
                                 <group>
                                     <field name="finance_approver_id" readonly="1"/>
                                     <field name="trustee_approver_id" readonly="1"/>
+                                    <field name="trustee_ids" widget="many2many_tags" readonly="1"/>
                                 </group>
                             </group>
                         </page>

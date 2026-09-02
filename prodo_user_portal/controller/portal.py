@@ -871,11 +871,12 @@ class PFLoanPortal(CustomerPortal):
             if employee:
                 my_loans = pf_model.search([("employee_id", "=", employee.id)])
                 approver_loans = pf_model.search([
-                    '|', '|', '|',
+                    '|', '|', '|', '|',
                     ('hr_approver_id', '=', employee.id),
                     ('hod_approver_id', '=', employee.id),
                     ('finance_approver_id', '=', employee.id),
                     ('trustee_approver_id', '=', employee.id),
+                    ('trustee_ids', 'in', [employee.id]),
                 ])
                 relevant_ids = set(my_loans.ids)
                 for l in approver_loans:
@@ -888,7 +889,7 @@ class PFLoanPortal(CustomerPortal):
                         relevant_ids.add(l.id)
                     elif st in ['waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.finance_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_trustee', 'approved', 'rejected'] and l.trustee_approver_id == employee:
+                    elif st in ['waiting_trustee', 'approved', 'rejected'] and (l.trustee_approver_id == employee or employee in l.trustee_ids):
                         relevant_ids.add(l.id)
 
                 loans = pf_model.browse(list(relevant_ids)).sorted(key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
@@ -1002,7 +1003,7 @@ class PFLoanPortal(CustomerPortal):
                 is_current_approver = True
             elif loan.state == 'waiting_finance' and getattr(loan, 'finance_approver_id', False) == emp:
                 is_current_approver = True
-            elif loan.state == 'waiting_trustee' and getattr(loan, 'trustee_approver_id', False) == emp:
+            elif loan.state == 'waiting_trustee' and (getattr(loan, 'trustee_approver_id', False) == emp or emp in loan.trustee_ids):
                 is_current_approver = True
         
         is_readonly = True
@@ -1096,7 +1097,7 @@ class PFLoanPortal(CustomerPortal):
                                 'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
                             })
                         loan.action_approve_finance()
-                    elif loan.state == 'waiting_trustee' and loan.trustee_approver_id == emp:
+                    elif loan.state == 'waiting_trustee' and (loan.trustee_approver_id == emp or emp in loan.trustee_ids):
                         loan.action_approve_trustee()
                 except Exception as e:
                     request.session['pf_loan_error'] = str(e)

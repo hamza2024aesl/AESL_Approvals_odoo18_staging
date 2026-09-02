@@ -8,6 +8,7 @@
 AESL Employee Survey Customization
 ==================================
 - Email link redirecting to login page before opening survey form.
+- Direct selection of Employees (hr.employee) when sharing survey.
 - Portal notifications and list view for pending employee surveys.
     """,
     'author': 'AESL / PRODO',
@@ -16,11 +17,13 @@ AESL Employee Survey Customization
         'survey',
         'portal',
         'mail',
+        'hr',
         'prodo_user_portal',
     ],
     'data': [
         'data/mail_template_data.xml',
         'views/portal_survey_templates.xml',
+        'views/survey_invite_views.xml',
     ],
     'installable': True,
     'application': False,

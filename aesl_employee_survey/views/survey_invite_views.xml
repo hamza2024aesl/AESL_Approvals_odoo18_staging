@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Survey Invite Form View: Replace Recipients (res.partner) with Employees (hr.employee) -->
+    <record id="survey_invite_view_form_inherit_employee" model="ir.ui.view">
+        <field name="name">survey.invite.view.form.inherit.employee</field>
+        <field name="model">survey.invite</field>
+        <field name="inherit_id" ref="survey.survey_invite_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add employee_ids as the primary Recipients field -->
+            <xpath expr="//field[@name='partner_ids']" position="before">
+                <field name="employee_ids"
+                       widget="many2many_tags"
+                       string="Recipients"
+                       placeholder="Select employees (hr.employee)..."
+                       domain="[('user_id', '!=', False)]"
+                       options="{'no_create': True}"
+                       invisible="not send_email"/>
+            </xpath>
+
+            <!-- Hide original partner_ids field from UI -->
+            <xpath expr="//field[@name='partner_ids']" position="attributes">
+                <attribute name="invisible">1</attribute>
+                <attribute name="required">0</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
