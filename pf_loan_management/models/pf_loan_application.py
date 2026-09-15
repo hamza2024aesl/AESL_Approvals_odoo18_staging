@@ -126,6 +126,7 @@ class PFLoanApplication(models.Model):
         ('waiting_hod', 'Waiting HOD Approval'),
         ('waiting_finance', 'Waiting Finance Approval'),
         ('waiting_trustee', 'Waiting Trustee Approval'),
+        ('waiting_trustee_second', 'Waiting Trustee Second Approval'),
         ('approved', 'Fully Approved'),
         ('rejected', 'Rejected'),
         ('cancel', 'Cancelled'),
@@ -136,7 +137,9 @@ class PFLoanApplication(models.Model):
     hod_approver_id = fields.Many2one('hr.employee', string='2nd Approver (HOD)', readonly=True)
     finance_approver_id = fields.Many2one('hr.employee', string='3rd Approver (Finance)', readonly=True)
     trustee_approver_id = fields.Many2one('hr.employee', string='4th Approver (Trustee Main)', readonly=True)
+    second_trustee_approver_id = fields.Many2one('hr.employee', string='5th Approver (Trustee Main)', readonly=True)
     trustee_ids = fields.Many2many('hr.employee', 'pf_loan_app_trustee_rel', 'app_id', 'employee_id', string='4th Approver (Trustees)', readonly=True)
+    second_trustee_ids = fields.Many2many('hr.employee', 'pf_loan_app_trustee_rel', 'app_id', 'employee_id', string='5th Approver (Trustees)', readonly=True)
 
     @api.onchange('net_pay')
     def _onchange_net_pay(self):
@@ -148,7 +151,7 @@ class PFLoanApplication(models.Model):
         if vals.get('employee_id'):
             existing_active = self.search([
                 ('employee_id', '=', vals['employee_id']),
-                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee']),
+                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second']),
             ], limit=1)
             if existing_active:
                 raise UserError(_(
@@ -168,8 +171,12 @@ class PFLoanApplication(models.Model):
             vals['hod_approver_id'] = config.hod_id.id if config.hod_id else False
             vals['finance_approver_id'] = config.finance_id.id if config.finance_id else False
             vals['trustee_approver_id'] = config.trustee_id.id if hasattr(config, 'trustee_id') and config.trustee_id else (config.trustee_ids[0].id if config.trustee_ids else False)
+            vals['second_trustee_approver_id'] = config.second_trustee_id.id if hasattr(config, 'second_trustee_id') and config.second_trustee_id else (config.second_trustee_ids[0].id if config.second_trustee_ids else False)
             if config.trustee_ids:
                 vals['trustee_ids'] = [(6, 0, config.trustee_ids.ids)]
+            if config.second_trustee_ids:
+                vals['second_trustee_ids'] = [(6, 0, config.second_trustee_ids.ids)]
+
 
         res = super(PFLoanApplication, self).create(vals)
         res._send_approver_email()
@@ -193,6 +200,10 @@ class PFLoanApplication(models.Model):
             elif rec.state == 'waiting_trustee':
                 recipients = rec.trustee_ids if rec.trustee_ids else (rec.trustee_approver_id if rec.trustee_approver_id else self.env['hr.employee'])
                 step_name = "4th Step: Trustee Approval"
+            elif rec.state == 'waiting_trustee_second':
+                recipients = rec.second_trustee_ids if rec.second_trustee_ids else (rec.second_trustee_approver_id if rec.second_trustee_approver_id else self.env['hr.employee'])
+                step_name = "5th Step: Trustee Approval"
+
 
             for recipient_emp in recipients:
                 if recipient_emp and recipient_emp.work_email:
@@ -223,7 +234,7 @@ class PFLoanApplication(models.Model):
 
     is_current_user_approver = fields.Boolean(string="Is Current Approver", compute="_compute_is_current_user_approver")
 
-    @api.depends('state', 'hr_approver_id', 'hod_approver_id', 'finance_approver_id', 'trustee_approver_id', 'trustee_ids')
+    @api.depends('state', 'hr_approver_id', 'hod_approver_id', 'finance_approver_id', 'trustee_approver_id', 'trustee_ids','second_trustee_approver_id', 'second_trustee_ids')
     def _compute_is_current_user_approver(self):
         current_emp = self.env.user.employee_id
         for rec in self:
@@ -236,6 +247,9 @@ class PFLoanApplication(models.Model):
             elif rec.state == 'waiting_trustee':
                 is_trustee = (current_emp in rec.trustee_ids) or (current_emp == rec.trustee_approver_id)
                 rec.is_current_user_approver = bool(current_emp and is_trustee)
+            elif rec.state == 'waiting_trustee_second':
+                is_trustee_second = (current_emp in rec.second_trustee_ids) or (current_emp == rec.second_trustee_approver_id)
+                rec.is_current_user_approver = bool(current_emp and is_trustee_second)
             else:
                 rec.is_current_user_approver = False
 
@@ -296,6 +310,15 @@ class PFLoanApplication(models.Model):
                 is_trustee = (rec.env.user.employee_id in rec.trustee_ids) or (rec.env.user.employee_id == rec.trustee_approver_id)
                 if not is_trustee and not rec.env.is_admin():
                     raise UserError(_("Only the designated Trustees can approve this application at this step."))
+                rec.state = 'waiting_trustee_second'
+                rec._send_approver_email()
+
+    def action_approve_trustee2(self):
+        for rec in self:
+            if rec.state == 'waiting_trustee_second':
+                is_trustee_second = (rec.env.user.employee_id in rec.second_trustee_ids) or (rec.env.user.employee_id == rec.second_trustee_approver_id)
+                if not is_trustee_second and not rec.env.is_admin():
+                    raise UserError(_("Only the designated Trustees can approve this application at this step."))
                 rec.state = 'approved'
                 rec._send_final_approval_email()
 
@@ -333,6 +356,8 @@ class PFLoanApplication(models.Model):
                     'state': 'outgoing',
                 }
                 rec.env['mail.mail'].sudo().create(mail_values).send()
+
+
 
     def action_reject(self):
         for rec in self:

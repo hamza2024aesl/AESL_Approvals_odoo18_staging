@@ -7,6 +7,7 @@ from lxml import etree
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT
+from odoo.tools import float_is_zero
 
 
 class EmployeeLoanDetails(models.Model):
@@ -595,9 +596,13 @@ class EmployeeLoanDetails(models.Model):
             for loan in loans:
                 if self.employee_id.allow_multiple_loan == False:
                     if loan.state != "draft":
-                        if loan.total_amount_due != 0:
+                        if not float_is_zero(loan.total_amount_due, precision_digits=2):
                             raise ValidationError(
-                                "You are not eligible to apply for a loan. Please clear your unhandled balances first")
+                                _("You are not eligible to apply for a loan. Please clear your unhandled balances first.")
+                            )
+                        # if loan.total_amount_due != 0:
+                        #     raise ValidationError(
+                        #         "You are not eligible to apply for a loan. Please clear your unhandled balances first")
 
         for loan in self:
             if not loan.interest_mode:

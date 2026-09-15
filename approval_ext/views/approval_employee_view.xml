@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_employee_form_inherit_travel_department11" model="ir.ui.view">
+        <field name="name">hr.employee.form.inherit.travel.department11</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='department_id']" position="after">
+                <field name="travel_department_id"/>
+            </xpath>
+
+        </field>
+    </record>
+
+<!--<template id="login_hide_signup_link"-->
+<!--          inherit_id="web.login">-->
+
+<!--    <xpath expr="//div[contains(@class, 'oe_login_buttons')]" position="after">-->
+<!--        <style>-->
+<!--            a[href*="/web/signup"] {-->
+<!--                display: none !important;-->
+<!--            }-->
+<!--        </style>-->
+<!--    </xpath>-->
+
+<!--</template>-->
+</odoo>

@@ -30,4 +30,5 @@ class ApprovalConfigLine(models.Model):
     
     work_location_ids = fields.Many2many('hr.work.location', string='Regions')
     department_id = fields.Many2one('hr.department', string='Department')
+    travel_department_id = fields.Many2one('hr.department', string='Department')
     employee_id = fields.Many2one('hr.employee', string='Approver Employee')
