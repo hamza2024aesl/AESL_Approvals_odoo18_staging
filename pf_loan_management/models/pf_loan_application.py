@@ -297,6 +297,42 @@ class PFLoanApplication(models.Model):
                 if not is_trustee and not rec.env.is_admin():
                     raise UserError(_("Only the designated Trustees can approve this application at this step."))
                 rec.state = 'approved'
+                rec._send_final_approval_email()
+
+    def _send_final_approval_email(self):
+        """Send notification email to Finance Officer & Employee when Trustee approves loan."""
+        for rec in self:
+            recipients = []
+            if rec.finance_approver_id and rec.finance_approver_id.work_email:
+                recipients.append(rec.finance_approver_id.work_email)
+            if rec.employee_id and rec.employee_id.work_email and rec.employee_id.work_email not in recipients:
+                recipients.append(rec.employee_id.work_email)
+
+            if recipients:
+                subject = f"PF Loan Application FULLY APPROVED: {rec.name}"
+                body = f"""
+                <div style="font-family: Arial, sans-serif; font-size: 14px;">
+                    <h2 style="color: #28a745;">PF Loan Application Fully Approved</h2>
+                    <p>Dear Finance Team &amp; Employee,</p>
+                    <p>The Provident Fund Loan Application (Ref: <strong>{rec.name}</strong>) submitted by <strong>{rec.employee_id.name}</strong> has been <strong>FULLY APPROVED</strong> by the Trustee.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+                        <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Employee:</td><td style="padding: 5px;">{rec.employee_id.name} ({rec.employee_reg_no})</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">Sanctioned Loan Amount:</td><td style="padding: 5px;">Rs. {rec.loan_amount:,.2f}</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">GP Audit Trail Code:</td><td style="padding: 5px;">{rec.gp_audit_trail_code or 'N/A'}</td></tr>
+                        <tr><td style="padding: 5px; font-weight: bold;">GP Journal Entry No:</td><td style="padding: 5px;">{rec.gp_journal_entry_no or 'N/A'}</td></tr>
+                    </table>
+                    <p>Please log in to the system to view complete details.</p>
+                    <p>Best Regards,<br/>AESL PF Loan System</p>
+                </div>
+                """
+                mail_values = {
+                    'subject': subject,
+                    'body_html': body,
+                    'email_to': ','.join(recipients),
+                    'email_from': rec.env.company.email or rec.env.user.email_formatted,
+                    'state': 'outgoing',
+                }
+                rec.env['mail.mail'].sudo().create(mail_values).send()
 
     def action_reject(self):
         for rec in self:
