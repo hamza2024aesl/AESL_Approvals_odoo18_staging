@@ -4,7 +4,7 @@
         <field name="name">pf.loan.application.list</field>
         <field name="model">pf.loan.application</field>
         <field name="arch" type="xml">
-            <list string="PF Loan Applications" decoration-info="state=='draft'" decoration-warning="state in ('waiting_hod','waiting_finance','waiting_trustee')" decoration-success="state=='approved'" decoration-danger="state=='rejected'">
+            <list string="PF Loan Applications" decoration-info="state=='draft'" decoration-warning="state in ('waiting_hod','waiting_finance','waiting_trustee','waiting_trustee_second')" decoration-success="state=='approved'" decoration-danger="state=='rejected'">
                 <field name="name"/>
                 <field name="employee_id"/>
                 <field name="employee_reg_no"/>
@@ -29,10 +29,11 @@
                     <button name="action_open_voucher_wizard" string="Create GP Voucher &amp; Forward" type="object" class="oe_highlight fw-bold" invisible="state != 'waiting_finance' or not is_current_user_approver"/>
                     <button name="action_approve_finance" string="Approve (3rd Step - Finance)" type="object" class="oe_highlight" invisible="state != 'waiting_finance' or not is_current_user_approver"/>
                     <button name="action_approve_trustee" string="Approve (4th Step - Trustee)" type="object" class="oe_highlight" invisible="state != 'waiting_trustee' or not is_current_user_approver"/>
+                    <button name="action_approve_trustee2" string="Approve (5th Step - Trustee)" type="object" class="oe_highlight" invisible="state != 'waiting_trustee_second' or not is_current_user_approver"/>
                     <button name="action_return" string="Return" type="object" class="btn-warning" invisible="state in ('returned','approved','rejected','cancel') or not is_current_user_approver"/>
                     <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state in ('approved','rejected','cancel') or not is_current_user_approver"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('approved','cancel')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,returned,waiting_hod,waiting_finance,waiting_trustee,approved"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,returned,waiting_hod,waiting_finance,waiting_trustee,waiting_trustee_second,approved"/>
                 </header>
                 <sheet>
                     <field name="previous_loan_notice_html" widget="html" readonly="1" class="mb-3" invisible="not previous_loan_notice_html"/>
@@ -116,7 +117,9 @@
                                 <group>
                                     <field name="finance_approver_id" readonly="1"/>
                                     <field name="trustee_approver_id" readonly="1"/>
+                                    <field name="second_trustee_approver_id" readonly="1"/>
                                     <field name="trustee_ids" widget="many2many_tags" readonly="1"/>
+                                    <field name="second_trustee_ids" widget="many2many_tags" readonly="1"/>
                                 </group>
                             </group>
                         </page>
