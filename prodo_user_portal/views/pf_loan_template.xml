@@ -310,7 +310,7 @@
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="loan_id" t-att-value="loan.id if loan else ''"/>
 
-                        <!-- Header Stamp & Signatures Line -->
+<!-- Header Stamp & Signatures Line (Disabled per client requirement)
                         <div class="row text-center text-muted mb-3" style="font-size: 0.85rem;">
                             <div class="col-3">
                                 <div class="border-top pt-1">Prepared By</div>
@@ -324,7 +324,7 @@
                             <div class="col-3">
                                 <div class="border p-2 rounded bg-light fw-bold text-dark">Payment Received</div>
                             </div>
-                        </div>
+                        </div> -->
 
                         <!-- Main Document Header -->
                         <div class="text-center my-4">
