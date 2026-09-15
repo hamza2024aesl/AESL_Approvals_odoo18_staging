@@ -11,7 +11,9 @@ class PFLoanConfig(models.Model):
     hod_id = fields.Many2one('hr.employee', string="2nd Approver (Head of Department)", required=True, tracking=True)
     finance_id = fields.Many2one('hr.employee', string="3rd Approver (Finance Officer)", required=True, tracking=True)
     trustee_id = fields.Many2one('hr.employee', string="4th Approver (Trustee Main)", tracking=True)
+    second_trustee_id = fields.Many2one('hr.employee', string="5th Approver (Trustee Main)", tracking=True)
     trustee_ids = fields.Many2many('hr.employee', 'pf_loan_config_trustee_rel', 'config_id', 'employee_id', string="4th Approver (Trustees)", tracking=True)
+    second_trustee_ids = fields.Many2many('hr.employee', 'pf_loan_config_trustee_rel', 'config_id', 'employee_id', string="5th Approver (Trustees)", tracking=True)
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
 
     @api.model

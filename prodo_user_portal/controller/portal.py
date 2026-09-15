@@ -870,27 +870,42 @@ class PFLoanPortal(CustomerPortal):
             pf_model = request.env["pf.loan.application"].sudo()
             if employee:
                 my_loans = pf_model.search([("employee_id", "=", employee.id)])
+                # approver_loans = pf_model.search([
+                #     '|', '|', '|', '|',
+                #     ('hr_approver_id', '=', employee.id),
+                #     ('hod_approver_id', '=', employee.id),
+                #     ('finance_approver_id', '=', employee.id),
+                #     ('trustee_approver_id', '=', employee.id),
+                #     ('second_trustee_approver_id', '=', employee.id),
+                #     ('trustee_ids', 'in', [employee.id]),
+                #     ('second_trustee_ids', 'in', [employee.id]),
+                # ])
                 approver_loans = pf_model.search([
-                    '|', '|', '|', '|',
+                    '|', '|', '|', '|', '|', '|',
                     ('hr_approver_id', '=', employee.id),
                     ('hod_approver_id', '=', employee.id),
                     ('finance_approver_id', '=', employee.id),
                     ('trustee_approver_id', '=', employee.id),
+                    ('second_trustee_approver_id', '=', employee.id),
                     ('trustee_ids', 'in', [employee.id]),
+                    ('second_trustee_ids', 'in', [employee.id]),
                 ])
                 relevant_ids = set(my_loans.ids)
                 for l in approver_loans:
                     st = l.state
                     if st == 'draft' and l.hr_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.hr_approver_id == employee:
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hr_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.hod_approver_id == employee:
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hod_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_finance', 'waiting_trustee', 'approved', 'rejected'] and l.finance_approver_id == employee:
+                    elif st in ['waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.finance_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_trustee', 'approved', 'rejected'] and (l.trustee_approver_id == employee or employee in l.trustee_ids):
+                    elif st in ['waiting_trustee', 'waiting_trustee_Second', 'approved', 'rejected'] and (l.trustee_approver_id == employee or employee in l.trustee_ids):
                         relevant_ids.add(l.id)
+                    elif st in ['waiting_trustee_second', 'approved', 'rejected'] and (l.second_trustee_approver_id == employee or employee in l.second_trustee_ids):
+                        relevant_ids.add(l.id)
+
 
                 loans = pf_model.browse(list(relevant_ids)).sorted(key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
             else:
@@ -921,7 +936,7 @@ class PFLoanPortal(CustomerPortal):
         if employee:
             existing_active = request.env["pf.loan.application"].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee']),
+                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second']),
             ], limit=1)
             if existing_active:
                 request.session['pf_loan_active_modal'] = f"You already have an active/pending Provident Fund Loan Application (Ref: {existing_active.name}). You cannot submit a new loan request while an existing application is active."
@@ -1005,6 +1020,9 @@ class PFLoanPortal(CustomerPortal):
                 is_current_approver = True
             elif loan.state == 'waiting_trustee' and (getattr(loan, 'trustee_approver_id', False) == emp or emp in loan.trustee_ids):
                 is_current_approver = True
+            elif loan.state == 'waiting_trustee_second' and (getattr(loan, 'second_trustee_approver_id', False) == emp or emp in loan.second_trustee_ids):
+                is_current_approver = True
+
         
         is_readonly = True
         if loan and hasattr(loan, 'state') and loan.state == 'returned' and employee and loan.employee_id == employee:
@@ -1099,6 +1117,9 @@ class PFLoanPortal(CustomerPortal):
                         loan.action_approve_finance()
                     elif loan.state == 'waiting_trustee' and (loan.trustee_approver_id == emp or emp in loan.trustee_ids):
                         loan.action_approve_trustee()
+                    elif loan.state == 'waiting_trustee_second' and (loan.second_trustee_approver_id == emp or emp in loan.second_trustee_ids):
+                        loan.action_approve_trustee2()
+
                 except Exception as e:
                     request.session['pf_loan_error'] = str(e)
         return request.redirect(f"/my/pf_loan/view/{loan_id}")

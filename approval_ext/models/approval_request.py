@@ -10,6 +10,7 @@ class ApprovalRequest(models.Model):
     employee_reg_no = fields.Char(string='Employee Reg No', related='employee_id.identification_id', readonly=True)
     employee_location_id = fields.Many2one('hr.work.location', string='Region', related='employee_id.work_location_id', readonly=True)
     employee_department_id = fields.Many2one('hr.department', string='Department', related='employee_id.department_id', readonly=True)
+    employee_travel_department_id = fields.Many2one('hr.department', string='Travel Department', related='employee_id.travel_department_id', readonly=True)
     employee_cnic = fields.Char(string='CNIC', related='employee_id.identification_id', readonly=True)
     employee_dob = fields.Date(string='DOB', related='employee_id.birthday', readonly=True)
     employee_designation_id = fields.Many2one('hr.job', string='Designation', related='employee_id.job_id', readonly=True)

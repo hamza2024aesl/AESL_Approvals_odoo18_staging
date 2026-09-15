@@ -11,6 +11,7 @@
     'depends': ['approvals', 'hr', 'hr_holidays'],
     'data': [
         'security/ir.model.access.csv',
+        'views/approval_employee_view.xml',
         'views/approval_domestic_views.xml',
         'views/approval_expense_views.xml',
         'views/approval_menus.xml',
