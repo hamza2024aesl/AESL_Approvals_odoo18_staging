@@ -77,7 +77,6 @@
                                     <span class="badge rounded-pill text-bg-info" t-elif="loan.state == 'waiting_hod'">Waiting HOD</span>
                                     <span class="badge rounded-pill text-bg-info" t-elif="loan.state == 'waiting_finance'">Waiting Finance</span>
                                     <span class="badge rounded-pill text-bg-info" t-elif="loan.state == 'waiting_trustee'">Waiting Trustee</span>
-                                    <span class="badge rounded-pill text-bg-info" t-elif="loan.state == 'waiting_trustee_second'">Waiting Trustee Second</span>
                                     <span class="badge rounded-pill text-bg-success" t-elif="loan.state == 'approved'">Approved</span>
                                     <span class="badge rounded-pill text-bg-danger" t-elif="loan.state == 'rejected'">Rejected</span>
                                     <span class="badge rounded-pill text-bg-secondary" t-else="">Cancelled</span>
@@ -111,11 +110,11 @@
                     </a>
                     <h3 class="my-0 mt-1">
                         <t t-if="not loan">New Provident Fund Loan Application</t>
-                        <t t-else="">Provident Fund Loan Application: <t t-esc="loan.name"/></t><br/>
+                        <t t-else="">Provident Fund Loan Application: <t t-esc="loan.name"/></t>
                     </h3>
                 </div>
-                </div>
-                <div class="d-flex align-items-center my-3 justify-content-between">
+            </div>
+
             <!-- Error Alert Pop-Up Modal -->
             <t t-if="request.session.get('pf_loan_error')">
                 <div class="modal fade show d-block" id="pfLoanErrorModal" tabindex="-1" aria-labelledby="pfLoanErrorModalLabel" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.55);">
@@ -181,87 +180,97 @@
                 </div>
             </t>
 
-                <div t-if="is_current_approver" class="card border-warning my-3 shadow-sm w-100" style="float:left;">
-                    <div class="card-header bg-warning bg-opacity-25 fw-bold text-dark fs-6 d-flex justify-content-between align-items-center">
-                        <span><i class="fa fa-pencil-square-o me-1"/> Approver Decision &amp; Remarks Box</span>
-                        <span t-if="loan.state == 'waiting_finance'" class="badge bg-primary fs-7">Finance Officer: GP Voucher Required</span>
-                    </div>
-                    <div class="card-body bg-white p-3">
-                        <form method="post" action="">
-                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                            
-                            <!-- GP Voucher Fields for Finance Officer -->
-                            <t t-if="loan and loan.state == 'waiting_finance'">
-                                <div class="p-3 border border-primary rounded bg-light mb-3">
-                                    <h6 class="fw-bold text-primary mb-3"><i class="fa fa-file-text-o me-1"/> Create GP Voucher (Bank Transaction Posting Journal)</h6>
-                                    <div class="row g-2">
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold">Audit Trail Code :</label>
-                                            <input type="text" name="gp_audit_trail_code" class="form-control form-control-sm" placeholder="e.g. CMTRX00002049" required="1" t-att-value="loan.gp_audit_trail_code or ''"/>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold">Date :</label>
-                                            <input type="date" name="gp_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_date.strftime('%Y-%m-%d') if loan.gp_date else today_date"/>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold">Journal Entry No. :</label>
-                                            <input type="text" name="gp_journal_entry_no" class="form-control form-control-sm" placeholder="e.g. 2,480" required="1" t-att-value="loan.gp_journal_entry_no or ''"/>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-bold">Posting Date :</label>
-                                            <input type="date" name="gp_posting_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_posting_date.strftime('%Y-%m-%d') if loan.gp_posting_date else today_date"/>
-                                        </div>
+            <!-- Approver Decision & Remarks Box -->
+            <div t-if="is_current_approver" class="card border-warning my-4 shadow-sm" style="max-width: 950px; margin: 0 auto;">
+                <div class="card-header bg-warning bg-opacity-25 fw-bold text-dark fs-6 d-flex justify-content-between align-items-center py-2 px-3">
+                    <span><i class="fa fa-pencil-square-o me-1"/> Approver Decision &amp; Remarks Box</span>
+                    <span t-if="loan.state == 'waiting_finance'" class="badge bg-primary fs-7">Finance Officer: GP Voucher Required</span>
+                </div>
+                <div class="card-body bg-white p-3 p-md-4">
+                    <form method="post" action="" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        
+                        <!-- GP Voucher Fields for Finance Officer -->
+                        <t t-if="loan and loan.state == 'waiting_finance'">
+                            <div class="p-3 border border-primary rounded bg-light mb-3">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fa fa-file-text-o me-1"/> Create GP Voucher (Bank Transaction Posting Journal)</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Audit Trail Code :</label>
+                                        <input type="text" name="gp_audit_trail_code" class="form-control form-control-sm" placeholder="e.g. CMTRX00002049" required="1" t-att-value="loan.gp_audit_trail_code or ''"/>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Date :</label>
+                                        <input type="date" name="gp_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_date.strftime('%Y-%m-%d') if loan.gp_date else today_date"/>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Journal Entry No. :</label>
+                                        <input type="text" name="gp_journal_entry_no" class="form-control form-control-sm" placeholder="e.g. 2,480" required="1" t-att-value="loan.gp_journal_entry_no or ''"/>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold">Posting Date :</label>
+                                        <input type="date" name="gp_posting_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_posting_date.strftime('%Y-%m-%d') if loan.gp_posting_date else today_date"/>
+                                    </div>
 
-                                        <div class="col-md-3 mt-2">
-                                            <label class="form-label small fw-bold">Check Book ID :</label>
-                                            <input type="text" name="gp_check_book_id" class="form-control form-control-sm" placeholder="e.g. SBL-PLS-KIA" required="1" t-att-value="loan.gp_check_book_id or ''"/>
-                                        </div>
-                                        <div class="col-md-3 mt-2">
-                                            <label class="form-label small fw-bold">Cheque Number :</label>
-                                            <input type="text" name="gp_cheque_number" class="form-control form-control-sm" placeholder="e.g. 2560" required="1" t-att-value="loan.gp_cheque_number or ''"/>
-                                        </div>
-                                        <div class="col-md-3 mt-2">
-                                            <label class="form-label small fw-bold">Auto Amount (Rs.) :</label>
-                                            <input type="text" class="form-control form-control-sm bg-white fw-bold" readonly="1" t-att-value="'{:,.2f}'.format(loan.loan_amount) if loan else ''"/>
-                                        </div>
-                                        <div class="col-md-3 mt-2">
-                                            <label class="form-label small fw-bold">Auto Amount in Words :</label>
-                                            <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>
-                                        </div>
+                                    <div class="col-md-3 mt-2">
+                                        <label class="form-label small fw-bold">Check Book ID :</label>
+                                        <input type="text" name="gp_check_book_id" class="form-control form-control-sm" placeholder="e.g. SBL-PLS-KIA" required="1" t-att-value="loan.gp_check_book_id or ''"/>
+                                    </div>
+                                    <div class="col-md-3 mt-2">
+                                        <label class="form-label small fw-bold">Cheque Number :</label>
+                                        <input type="text" name="gp_cheque_number" class="form-control form-control-sm" placeholder="e.g. 2560" required="1" t-att-value="loan.gp_cheque_number or ''"/>
+                                    </div>
+                                    <div class="col-md-3 mt-2">
+                                        <label class="form-label small fw-bold">Auto Amount (Rs.) :</label>
+                                        <input type="text" class="form-control form-control-sm bg-white fw-bold" readonly="1" t-att-value="'{:,.2f}'.format(loan.loan_amount) if loan else ''"/>
+                                    </div>
+                                    <div class="col-md-3 mt-2">
+                                        <label class="form-label small fw-bold">Auto Amount in Words :</label>
+                                        <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>
+                                    </div>
 
-                                        <div class="col-md-6 mt-2">
-                                            <label class="form-label small fw-bold">Paid To / Received From :</label>
-                                            <input type="text" name="gp_paid_to_rcvd_from" class="form-control form-control-sm" placeholder="e.g. Employee Name CHQ#..." required="1" t-att-value="loan.gp_paid_to_rcvd_from or ((loan.employee_id.name + ' CHQ#') if loan and loan.employee_id else '')"/>
-                                        </div>
-                                        <div class="col-md-6 mt-2">
-                                            <label class="form-label small fw-bold">Description :</label>
-                                            <input type="text" name="gp_description" class="form-control form-control-sm" placeholder="e.g. Employee PF Loan AESL..." required="1" t-att-value="loan.gp_description or ((loan.employee_id.name + ' PF LOAN ' + (loan.employee_reg_no or '')) if loan and loan.employee_id else '')"/>
-                                        </div>
+                                    <div class="col-md-6 mt-2">
+                                        <label class="form-label small fw-bold">Paid To / Received From :</label>
+                                        <input type="text" name="gp_paid_to_rcvd_from" class="form-control form-control-sm" placeholder="e.g. Employee Name CHQ#..." required="1" t-att-value="loan.gp_paid_to_rcvd_from or ((loan.employee_id.name + ' CHQ#') if loan and loan.employee_id else '')"/>
+                                    </div>
+                                    <div class="col-md-6 mt-2">
+                                        <label class="form-label small fw-bold">Description :</label>
+                                        <input type="text" name="gp_description" class="form-control form-control-sm" placeholder="e.g. Employee PF Loan AESL..." required="1" t-att-value="loan.gp_description or ((loan.employee_id.name + ' PF LOAN ' + (loan.employee_reg_no or '')) if loan and loan.employee_id else '')"/>
                                     </div>
                                 </div>
-                            </t>
-
-                            <!-- Repay Installments Setup for HR -->
-                            <t t-if="loan and loan.state == 'draft'">
-                                <div class="p-3 border border-warning rounded bg-light mb-3">
-                                    <h6 class="fw-bold text-dark mb-2"><i class="fa fa-calculator me-1"/> HR Repayment Installments Setup</h6>
-                                    <div class="row g-2 align-items-center">
-                                        <div class="col-md-4">
-                                            <label class="form-label small fw-bold mb-1">Repay Installments Count :</label>
-                                            <input type="number" name="repay_installments" class="form-control form-control-sm" required="1" min="1" t-att-value="loan.repay_installments or 1"/>
-                                        </div>
-                                        <div class="col-md-8">
-                                            <small class="text-muted">Enter installments count to auto-calculate total loan &amp; monthly installment amount.</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </t>
-
-                             <div class="mb-3">
-                                <label class="form-label fw-bold">Enter Approver Remarks / Notes :</label>
-                                <textarea name="remarks" class="form-control" rows="2" placeholder="Write your approval, return, or rejection notes here..."></textarea>
                             </div>
-                            <div class="d-flex gap-2 justify-content-end">
+                        </t>
+
+                        <!-- Repay Installments Setup for HR -->
+                        <t t-if="loan and loan.state == 'draft'">
+                            <div class="p-3 border border-warning rounded bg-light mb-3">
+                                <h6 class="fw-bold text-dark mb-2"><i class="fa fa-calculator me-1"/> HR Repayment Installments Setup</h6>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold mb-1">Repay Installments Count :</label>
+                                        <input type="number" name="repay_installments" class="form-control form-control-sm" required="1" min="1" t-att-value="loan.repay_installments or 1"/>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <small class="text-muted">Enter installments count to auto-calculate total loan &amp; monthly installment amount.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Enter Approver Remarks / Notes :</label>
+                            <textarea name="remarks" class="form-control" rows="2" placeholder="Write your approval, return, or rejection notes here..."></textarea>
+                        </div>
+
+                        <!-- Attachment Input & Action Buttons Row -->
+                        <div class="row align-items-center g-2 pt-2 border-top">
+                            <div class="col-md-6 col-12">
+                                <div class="d-flex align-items-center">
+                                    <label class="form-label fw-bold mb-0 me-2 text-nowrap text-secondary small"><i class="fa fa-paperclip me-1"/> Attachment :</label>
+                                    <input type="file" name="attachment" class="form-control form-control-sm"/>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12 d-flex gap-2 justify-content-md-end justify-content-center mt-2 mt-md-0">
                                 <button type="submit" t-attf-formaction="/my/pf_loan/approve/{{loan.id}}" class="btn btn-success fw-bold px-3">
                                     <i class="fa fa-check me-1"/> <t t-if="loan and loan.state == 'waiting_finance'">Create GP Voucher &amp; Approve</t><t t-else="">Approve</t>
                                 </button>
@@ -272,8 +281,8 @@
                                     <i class="fa fa-times me-1"/> Reject
                                 </button>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -301,21 +310,21 @@
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="loan_id" t-att-value="loan.id if loan else ''"/>
 
-                        <!-- Header Stamp & Signatures Line -->
-<!--                        <div class="row text-center text-muted mb-3" style="font-size: 0.85rem;">-->
-<!--                            <div class="col-3">-->
-<!--                                <div class="border-top pt-1">Prepared By</div>-->
-<!--                            </div>-->
-<!--                            <div class="col-3">-->
-<!--                                <div class="border-top pt-1">Check By</div>-->
-<!--                            </div>-->
-<!--                            <div class="col-3">-->
-<!--                                <div class="border-top pt-1">Trustee</div>-->
-<!--                            </div>-->
-<!--                            <div class="col-3">-->
-<!--                                <div class="border p-2 rounded bg-light fw-bold text-dark">Payment Received</div>-->
-<!--                            </div>-->
-<!--                        </div>-->
+<!-- Header Stamp & Signatures Line (Disabled per client requirement)
+                        <div class="row text-center text-muted mb-3" style="font-size: 0.85rem;">
+                            <div class="col-3">
+                                <div class="border-top pt-1">Prepared By</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="border-top pt-1">Check By</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="border-top pt-1">Trustee</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="border p-2 rounded bg-light fw-bold text-dark">Payment Received</div>
+                            </div>
+                        </div> -->
 
                         <!-- Main Document Header -->
                         <div class="text-center my-4">
@@ -450,12 +459,6 @@
                                     <div class="d-flex justify-content-between border-top pt-2 mt-2 align-items-center">
                                         <span class="fw-bold fs-6 text-primary">Net Pay Rs.</span>
                                         <input type="number" step="0.01" name="net_pay" class="form-control form-control-sm w-50 text-end fw-bold bg-light" readonly="1" t-att-value="loan.net_pay if loan else (net_pay or 0.0)" placeholder="0.00"/>
-<!--                                        <input type="text"-->
-<!--                                               name="net_pay"-->
-<!--                                               class="form-control form-control-sm w-50 text-end fw-bold bg-light"-->
-<!--                                               readonly="1"-->
-<!--                                               t-att-value="'%.2f' % (loan.net_pay if loan else (net_pay or 0.0))"-->
-<!--                                               placeholder="0.00"/>-->
                                     </div>
                                 </div>
 
@@ -479,7 +482,7 @@
                                     </div>
                                     <div class="d-flex justify-content-between border-top pt-2 mt-2 align-items-center bg-warning bg-opacity-10 p-1 rounded">
                                         <span class="fw-bold text-danger">DUES: Provident Fund Balance</span>
-                                        <input type="number" step="0.01" name="pf_balance_dues" class="form-control form-control-sm w-50 text-end fw-bold text-danger bg-light" readonly="1" t-att-value="'{:.2f}'.format(loan.pf_balance_dues if loan else (pf_balance_dues or 0.0))" placeholder="0.00"/>
+                                        <input type="number" step="0.01" name="pf_balance_dues" class="form-control form-control-sm w-50 text-end fw-bold text-danger bg-light" readonly="1" t-att-value="loan.pf_balance_dues if loan else (pf_balance_dues or 0.0)" placeholder="0.00"/>
                                     </div>
                                 </div>
                             </div>
@@ -503,6 +506,20 @@
                                 <div class="col-md-6 mt-2"><strong>Description:</strong> <t t-esc="loan.gp_description"/></div>
                                 <div class="col-md-3 mt-2"><strong>Amount:</strong> Rs. <t t-esc="'{:,.2f}'.format(loan.loan_amount) if loan and loan.loan_amount else '0.00'"/></div>
                                 <div class="col-md-3 mt-2"><strong>Amount in Words:</strong> <t t-esc="loan.loan_amount_words if loan else ''"/></div>
+                            </div>
+                        </div>
+
+                        <!-- Attached Documents / Receipts Section -->
+                        <div class="border border-info rounded p-3 mb-4 bg-white shadow-sm" t-if="attachments">
+                            <h6 class="fw-bold text-info mb-2 border-bottom pb-2">
+                                <i class="fa fa-paperclip me-1"/> Attached Documents / Receipts (<t t-esc="len(attachments)"/>)
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2 pt-1">
+                                <t t-foreach="attachments" t-as="att">
+                                    <a t-attf-href="/web/content/{{att.id}}?download=true" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center me-2 mb-2">
+                                        <i class="fa fa-file-text-o me-1"/> <t t-esc="att.name"/>
+                                    </a>
+                                </t>
                             </div>
                         </div>
 

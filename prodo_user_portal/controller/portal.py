@@ -977,13 +977,16 @@ class PFLoanPortal(CustomerPortal):
         max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
         is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
         
+        appt_date = (getattr(employee, "appointment_date", False) or getattr(employee, "joining_date", False)) if employee else False
+        joining_date_str = appt_date.strftime("%d-%m-%Y") if appt_date else (employee.create_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "create_date") and employee.create_date else "")
+
         vals = {
             "page_name": "pf_loan_form_page",
             "loan": False,
             "employee_name": employee.name if employee else user.name,
             "employee_reg_no": employee.identification_id if employee else "",
             "designation_name": employee.job_id.name if employee and employee.job_id else "",
-            "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else (employee.create_date.strftime("%d-%m-%Y") if employee else ""),
+            "joining_date": joining_date_str,
             "today_date": today_date,
             "is_readonly": False,
             "is_interest_free": is_interest_free,
@@ -1065,19 +1068,42 @@ class PFLoanPortal(CustomerPortal):
                     'balance_on_loan': d_amt,
                 }
 
+        attachments = request.env["ir.attachment"].sudo().search([
+            ("res_model", "=", "pf.loan.application"),
+            ("res_id", "=", loan.id)
+        ]) if loan else []
+
+        target_emp = loan.employee_id if loan and loan.employee_id else employee
+        view_appt_date = (getattr(target_emp, "appointment_date", False) or getattr(target_emp, "joining_date", False)) if target_emp else False
+        view_joining_date_str = view_appt_date.strftime("%d-%m-%Y") if view_appt_date else ""
+
         vals = {
             "page_name": "pf_loan_form_page",
             "loan": loan,
             "employee_name": employee.name if employee else user.name,
             "employee_reg_no": employee.identification_id if employee else "",
             "designation_name": employee.job_id.name if employee and employee.job_id else "",
-            "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else "",
+            "joining_date": view_joining_date_str,
             "today_date": today_date,
             "is_readonly": is_readonly,
             "is_current_approver": is_current_approver,
             "hr_balance_modal_data": hr_balance_modal_data,
+            "attachments": attachments,
         }
         return request.render("prodo_user_portal.pf_loan_request_form_portal", vals)
+
+    def _save_portal_attachment(self, loan):
+        file_attachment = request.httprequest.files.get("attachment")
+        if file_attachment and file_attachment.filename and loan:
+            import base64
+            file_content = file_attachment.read()
+            if file_content:
+                request.env["ir.attachment"].sudo().create({
+                    "name": file_attachment.filename,
+                    "datas": base64.b64encode(file_content),
+                    "res_model": "pf.loan.application",
+                    "res_id": loan.id,
+                })
 
     @http.route(["/my/pf_loan/approve/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
     def portal_pf_loan_approve(self, loan_id, **kw):
@@ -1091,6 +1117,8 @@ class PFLoanPortal(CustomerPortal):
                     existing_remarks = loan.remarks or ""
                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name}: {remarks}"
                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+
+                self._save_portal_attachment(loan)
 
                 try:
                     if loan.state == 'draft' and loan.hr_approver_id == emp:
@@ -1137,6 +1165,8 @@ class PFLoanPortal(CustomerPortal):
                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Rejected): {remarks}"
                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
 
+                self._save_portal_attachment(loan)
+
                 loan.action_reject()
         return request.redirect(f"/my/pf_loan/view/{loan_id}")
 
@@ -1152,6 +1182,8 @@ class PFLoanPortal(CustomerPortal):
                     existing_remarks = loan.remarks or ""
                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Returned): {remarks}"
                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+
+                self._save_portal_attachment(loan)
 
                 loan.action_return()
         return request.redirect(f"/my/pf_loan/view/{loan_id}")
