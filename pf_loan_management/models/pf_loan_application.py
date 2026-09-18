@@ -168,7 +168,53 @@ class PFLoanApplication(models.Model):
         config = self.env['pf.loan.config'].sudo().get_config()
         if config:
             vals['hr_approver_id'] = config.hr_id.id if config.hr_id else False
-            vals['hod_approver_id'] = config.hod_id.id if config.hod_id else False
+            # vals['hod_approver_id'] = config.hod_id.id if config.hod_id else False
+            # hod = False
+            employee = self.env['hr.employee'].browse(
+                vals.get('employee_id')
+            )
+            # current_employee = employee
+            # while current_employee and current_employee.parent_id:
+            #     manager = current_employee.parent_id
+            #     # HOD identification condition
+            #     # if manager.job_id and manager.job_id.name == 'Head of Department':
+            #     if manager.job_id and manager.job_id.name in ['FINANCE MANAGER','','','']:
+            #         hod = manager
+            #         break
+            #     current_employee = manager
+            hierarchy = []
+            current = employee
+
+            while current and current.parent_id:
+                current = current.parent_id
+                hierarchy.append(current)
+
+            hod = False
+
+            if len(hierarchy) in (4, 5): # 0 - 4 = 5
+                if (
+                        hierarchy[-2].job_id
+                        and hierarchy[-2].job_id.name == 'Executive Director'
+                ):
+                    hod = hierarchy[-3]
+                else:
+                    hod = hierarchy[-2]
+
+            elif len(hierarchy) == 3: # 0 - 3 = 4
+                if (
+                        hierarchy[-2].job_id
+                        and hierarchy[-2].job_id.name == 'Executive Director'
+                ):
+                    hod = hierarchy[-3]
+                else:
+                    hod = hierarchy[-2]
+
+            elif len(hierarchy) == 2: # 0 - 2 = 3
+                hod = hierarchy[-2]
+            else:
+                hod = hierarchy[-1]
+
+            vals['hod_approver_id'] = hod.id if hod else False
             vals['finance_approver_id'] = config.finance_id.id if config.finance_id else False
             vals['trustee_approver_id'] = config.trustee_id.id if hasattr(config, 'trustee_id') and config.trustee_id else (config.trustee_ids[0].id if config.trustee_ids else False)
             vals['second_trustee_approver_id'] = config.second_trustee_id.id if hasattr(config, 'second_trustee_id') and config.second_trustee_id else (config.second_trustee_ids[0].id if config.second_trustee_ids else False)
@@ -263,14 +309,14 @@ class PFLoanApplication(models.Model):
                 hod_emp = rec.hod_approver_id
                 hod_dept = hod_emp.department_id if hod_emp else False
 
-                if not requester_dept or not hod_dept or requester_dept != hod_dept:
-                    req_dept_name = requester_dept.name if requester_dept else _("No Department")
-                    hod_dept_name = hod_dept.name if hod_dept else _("No Department")
-                    hod_name = hod_emp.name if hod_emp else _("Configured HOD")
-                    raise UserError(_(
-                        "Approval Blocked! Requester's Department (%s) does not match the configured HOD's Department (%s for HOD %s). "
-                        "Please ensure the HOD in Configuration belongs to the same department as the requester before approving."
-                    ) % (req_dept_name, hod_dept_name, hod_name))
+                # if not requester_dept or not hod_dept or requester_dept != hod_dept:
+                #     req_dept_name = requester_dept.name if requester_dept else _("No Department")
+                #     hod_dept_name = hod_dept.name if hod_dept else _("No Department")
+                #     hod_name = hod_emp.name if hod_emp else _("Configured HOD")
+                #     raise UserError(_(
+                #         "Approval Blocked! Requester's Department (%s) does not match the configured HOD's Department (%s for HOD %s). "
+                #         "Please ensure the HOD in Configuration belongs to the same department as the requester before approving."
+                #     ) % (req_dept_name, hod_dept_name, hod_name))
 
                 rec.state = 'waiting_hod'
                 rec._send_approver_email()
