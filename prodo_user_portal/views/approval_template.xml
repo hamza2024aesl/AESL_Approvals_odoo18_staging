@@ -748,7 +748,7 @@
 
             <div class="card shadow-sm mt-3">
                 <div class="card-body">
-                    <form action="/my/travel/expense/save" method="post" id="expense_form">
+                    <form action="/my/travel/expense/save" method="post" id="expense_form" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="request_id" t-att-value="request_rec.id"/>
                         <input type="hidden" name="total_expense" id="total_expense_input" value="0.0"/>
@@ -939,6 +939,61 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- ==================== ATTACHMENTS SECTION ==================== -->
+                        <div class="card mt-4 border">
+                            <div class="card-header bg-light fw-bold">
+                                <i class="fa fa-paperclip me-1"></i>
+                                Attachments
+                            </div>
+                            <div class="card-body">
+                                <!-- Existing attachments (view mode) -->
+                                <t t-if="expense and attachments">
+                                    <div class="mb-3">
+                                        <label class="fw-bold">Uploaded Files:</label>
+                                        <ul class="list-group mt-2">
+                                            <t t-foreach="attachments" t-as="att">
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <a t-attf-href="/web/content/{{att.id}}?download=true"
+                                                       target="_blank">
+                                                        <i class="fa fa-file me-1"></i>
+                                                        <t t-esc="att.name"/>
+                                                    </a>
+                                                    <span class="badge bg-secondary">
+                                                        <t t-esc="round(att.file_size / 1024, 2)"/>
+                                                        KB
+                                                    </span>
+                                                </li>
+                                            </t>
+                                        </ul>
+                                    </div>
+                                </t>
+
+                                <!-- Upload input (only in editable mode) -->
+                                <t t-if="not is_readonly">
+                                    <label class="fw-bold">Upload Attachments (Bills/Receipts):</label>
+                                    <input type="file"
+                                           name="attachments"
+                                           id="attachments_input"
+                                           class="form-control mt-2"
+                                           multiple="multiple"
+                                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"/>
+                                    <small class="text-muted">You can select multiple files (PDF, Images, Word, Excel).
+                                        Max 10MB per file.
+                                    </small>
+
+                                    <!-- Preview selected files -->
+                                    <div id="file_preview" class="mt-2"></div>
+                                </t>
+
+                                <!-- No attachments message in view mode -->
+                                <t t-if="is_readonly and not attachments">
+                                    <p class="text-muted mb-0">
+                                        <i>No attachments uploaded.</i>
+                                    </p>
+                                </t>
+                            </div>
+                        </div>
+                        <!-- ==================== END ATTACHMENTS SECTION ==================== -->
 
                         <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">
                             <a t-attf-href="/my/travel/view/{{request_rec.id}}" class="btn btn-secondary">Discard</a>
@@ -950,61 +1005,82 @@
 
             <!-- JavaScript for Calculation -->
             <script type="text/javascript">
-                document.addEventListener('DOMContentLoaded', function() {
-                    const cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily'];
-                    const rowCount = 7;
+            //<![CDATA[
+            document.addEventListener('DOMContentLoaded', function() {
+                const cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily'];
+                const rowCount = 7;
 
-                    function performCalculation() {
-                        let grandTotal = 0.0;
-                        let colTotals = { fare:0, hotel:0, meals:0, taxi:0, laundry:0, telephone:0, other:0, daily:0 };
+                function performCalculation() {
+                    let grandTotal = 0.0;
+                    let colTotals = { fare:0, hotel:0, meals:0, taxi:0, laundry:0, telephone:0, other:0, daily:0 };
 
-                        for(let i=1; i&lt;=rowCount; i++) {
-                            let rowTotal = 0.0;
-                            cols.forEach(col => {
-                                let input = document.querySelector(`input[name="${col}_${i}"]`);
-                                let val = input ? (parseFloat(input.value) || 0) : 0;
-                                rowTotal += val;
-                                colTotals[col] += val;
-                            });
-                            const rowTotElem = document.getElementById(`row_total_${i}`);
-                            if (rowTotElem) rowTotElem.innerText = rowTotal.toFixed(2);
-                            grandTotal += rowTotal;
-                        }
-
+                    for (let i = 1; i <= rowCount; i++) {
+                        let rowTotal = 0.0;
                         cols.forEach(col => {
-                            const colTotElem = document.getElementById(`col_total_${col}`);
-                            if (colTotElem) colTotElem.innerText = colTotals[col].toFixed(2);
+                            let input = document.querySelector('input[name="' + col + '_' + i + '"]');
+                            let val = input ? (parseFloat(input.value) || 0) : 0;
+                            rowTotal += val;
+                            colTotals[col] += val;
                         });
+                        const rowTotElem = document.getElementById('row_total_' + i);
+                        if (rowTotElem) rowTotElem.innerText = rowTotal.toFixed(2);
 
-                        const grandCol = document.getElementById('grand_total_col');
-                        if (grandCol) grandCol.innerText = grandTotal.toFixed(2);
-                        
-                        const sumTot = document.getElementById('summary_total_expense');
-                        if (sumTot) sumTot.innerText = grandTotal.toFixed(2);
-                        
-                        const totInp = document.getElementById('total_expense_input');
-                        if (totInp) totInp.value = grandTotal.toFixed(2);
-
-                        let adv = parseFloat(document.getElementById('input_advance').value) || 0;
-                        let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
-
-                        let balance = grandTotal - adv - direct;
-                        const balElem = document.getElementById('summary_balance_due');
-                        if (balElem) balElem.innerText = balance.toFixed(2);
+                        grandTotal += rowTotal;
                     }
 
-                    // Trigger initial calculation
-                    performCalculation();
-
-                    document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
-                        inp.addEventListener('change', performCalculation);
-                        inp.addEventListener('input', performCalculation);
+                    cols.forEach(col => {
+                        const colTotElem = document.getElementById('col_total_' + col);
+                        if (colTotElem) colTotElem.innerText = colTotals[col].toFixed(2);
                     });
 
-                    document.querySelectorAll('.calc-btn-row').forEach(btn => {
-                        btn.addEventListener('click', performCalculation);
-                    });
+                    const grandCol = document.getElementById('grand_total_col');
+                    if (grandCol) grandCol.innerText = grandTotal.toFixed(2);
+
+                    const sumTot = document.getElementById('summary_total_expense');
+                    if (sumTot) sumTot.innerText = grandTotal.toFixed(2);
+
+                    const totInp = document.getElementById('total_expense_input');
+                    if (totInp) totInp.value = grandTotal.toFixed(2);
+
+                    let adv = parseFloat(document.getElementById('input_advance').value) || 0;
+                    let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
+
+                    let balance = grandTotal - adv - direct;
+                    const balElem = document.getElementById('summary_balance_due');
+                    if (balElem) balElem.innerText = balance.toFixed(2);
+                }
+
+                performCalculation();
+
+                document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
+                    inp.addEventListener('change', performCalculation);
+                    inp.addEventListener('input', performCalculation);
                 });
+
+                document.querySelectorAll('.calc-btn-row').forEach(btn => {
+                    btn.addEventListener('click', performCalculation);
+                });
+
+                // ---- File preview ----
+                const fileInput = document.getElementById('attachments_input');
+                if (fileInput) {
+                    fileInput.addEventListener('change', function(e) {
+                        const preview = document.getElementById('file_preview');
+                        if (!preview) return;
+                        preview.innerHTML = '';
+                        const files = e.target.files;
+                        if (files.length === 0) return;
+                        let html = '<div class="alert alert-info py-2 mb-0"><strong>Selected Files:</strong><ul class="mb-0 mt-1">';
+                        for (let i = 0; i < files.length; i++) {
+                            const sizeKB = (files[i].size / 1024).toFixed(2);
+                            html += '<li>' + files[i].name + ' (' + sizeKB + ' KB)</li>';
+                        }
+                        html += '</ul></div>';
+                        preview.innerHTML = html;
+                    });
+                }
+            });
+            //]]>
             </script>
         </t>
     </template>

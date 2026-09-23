@@ -13,6 +13,9 @@ from odoo.tools import float_round
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request, Response
 import json
+import base64
+from odoo import http
+from odoo.http import request
 
 class AppraisalPortal(CustomerPortal):
 
@@ -660,7 +663,11 @@ class ApprovalPortal(CustomerPortal):
         expense = request.env["approval.travel.expense"].sudo().browse(expense_id)
         if not expense.exists():
             return request.redirect("/my/travel")
-            
+        attachments = request.env["ir.attachment"].sudo().search([
+            ("res_model", "=", "approval.travel.expense"),
+            ("res_id", "=", expense.id)
+        ]) if expense else []
+
         vals = {
             "page_name": "travel_expense_page",
             "request_rec": expense.request_id,
@@ -675,6 +682,7 @@ class ApprovalPortal(CustomerPortal):
             "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
             "is_readonly": True,
             "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
+            "attachments": attachments,
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
 
@@ -717,7 +725,21 @@ class ApprovalPortal(CustomerPortal):
                 'state': 'submitted',
             }
             expense = request.env['approval.travel.expense'].sudo().create(expense_vals)
-            
+
+            # ==================== ATTACHMENT HANDLING ====================
+            # Handle uploaded attachments
+            attachments = request.httprequest.files.getlist('attachments')
+            for file in attachments:
+                if file and file.filename:
+                    attachment = request.env['ir.attachment'].sudo().create({
+                        'name': file.filename,
+                        'datas': base64.b64encode(file.read()),
+                        'res_model': 'approval.travel.expense',
+                        'res_id': expense.id,
+                        'mimetype': file.content_type or 'application/octet-stream',
+                    })
+            # ==================== END ATTACHMENT HANDLING ====================
+
             # Lines
             cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']
             for i in range(1, 8):
