@@ -15,6 +15,8 @@ class ApprovalTravelExpense(models.Model):
     _name = 'approval.travel.expense'
     _description = 'Travel Expense Report'
     _rec_name = 'ref_no'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
 
     request_id = fields.Many2one('approval.request', string='Original Travel Request', required=True, ondelete='cascade')
     ref_no = fields.Char(string='Ref No', related='request_id.name', store=True)

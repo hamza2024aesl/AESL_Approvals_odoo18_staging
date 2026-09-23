@@ -8,7 +8,7 @@
         Custom configuration menus for Approvals.
     """,
     'author': 'AESL',
-    'depends': ['approvals', 'hr', 'hr_holidays'],
+    'depends': ['approvals', 'hr', 'hr_holidays','mail'],
     'data': [
         'security/ir.model.access.csv',
         'views/approval_employee_view.xml',

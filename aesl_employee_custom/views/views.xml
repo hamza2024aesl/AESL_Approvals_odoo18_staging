@@ -1,0 +1,47 @@
+<odoo>
+    <data>
+
+        <record id="hr_employee_custom_view_form_inherited" model="ir.ui.view">
+            <field name="name">hr.employee.custom.view.form.inherited</field>
+            <field name="model">hr.employee</field>
+            <field name="inherit_id" ref="hr.view_employee_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page[@name='hr_settings']/group" position="inside">
+                    <group name="allowances" string="Allowance">
+                        <field name="mobile_allowance"/>
+                    </group>
+<!--                    <group name="pec" string="PEC">-->
+<!--                        <field name="is_pec_certified"/>-->
+<!--                    </group>-->
+                </xpath>
+                <xpath expr="//page[@name='personal_information']/group" position="inside">
+                    <group name="pec" string="PEC">
+                        <field name="is_pec_certified"/>
+                        <field name="pec_certificate_expiry" invisible="not is_pec_certified"/>
+                    </group>
+                </xpath>
+
+            </field>
+        </record>
+
+        <record id="hr_payslip_list_custom_inherited" model="ir.ui.view">
+            <field name="name">hr.payslip.list.custom.inherited</field>
+            <field name="model">hr.payslip</field>
+            <field name="inherit_id" ref="hr_payroll.view_hr_payslip_tree"/>
+            <field name="arch" type="xml">
+
+                <!-- net_wage ke baad add karne ke liye -->
+                <xpath expr="//field[@name='net_wage']" position="before">
+                    <field name="bonus_wage" optional="show"/>
+                    <field name="pf_loan_wi_wage" optional="show"/>
+                    <field name="pf_interest_wage" optional="show"/>
+                    <field name="car_loan_wage" optional="show"/>
+                    <field name="pf_emp_cont_wage" optional="show"/>
+                    <field name="i_tax_wage" optional="show"/>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>
