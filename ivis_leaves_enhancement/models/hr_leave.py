@@ -1,12 +1,10 @@
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from datetime import datetime, timedelta, time
 import calendar
 from math import ceil
 from odoo.tools.float_utils import float_round
 from odoo.exceptions import ValidationError
-
-
 class HrLeaveInherit(models.Model):
     _inherit = 'hr.leave'
 
@@ -77,10 +75,23 @@ class HrLeaveInherit(models.Model):
                 for line in records:
                     rec.remaining_leaves += line.number_of_days
 
+    # @api.constrains('number_of_days', 'remaining_leaves')
+    # def _check_number_days(self):
+    #     for rec in self:
+    #         # if 'official visit' in rec.holiday_status_id.name.lower():
+    #         if rec.holiday_status_id.requires_allocation == 'no':
+    #             pass
+    #         else:
+    #             if rec.remaining_leaves < rec.number_of_days:
+    #                 raise ValidationError(
+    #                     _('The number of remaining time off is not sufficient for this time off type.\nPlease also check the time off waiting for validation.'))
+
     @api.constrains('number_of_days', 'remaining_leaves')
     def _check_number_days(self):
         for rec in self:
-            # if 'official visit' in rec.holiday_status_id.name.lower():
+            # Skip validation for auto-created PL / LWP leaves
+            if rec.name and rec.name.startswith('Auto Leave'):
+                continue
             if rec.holiday_status_id.requires_allocation == 'no':
                 pass
             else:
@@ -118,6 +129,35 @@ class HrLeaveInherit(models.Model):
             self.env.cr.commit()
         return res
 
+    # def _create_lwp_leave(self, employee, start_date, end_date, lwp_leave_type, half_day=False, day_period=None):
+    #     try:
+    #         overlapping_leave = self.env['hr.leave'].search([
+    #             ('employee_id', '=', employee.id),
+    #             ('request_date_from', '<=', end_date),
+    #             ('request_date_to', '>=', start_date),
+    #             ('state', 'not in', ['cancel', 'refuse']),
+    #         ], limit=1)
+    #         overlapping_leave
+    #         if overlapping_leave:
+    #             return False
+    #
+    #         leave = self.create({
+    #             # 'name': 'Auto Leave Without Pay',
+    #             'name': 'Auto Leave' if lwp_leave_type.name.startswith('PL') else 'Auto Leave Without Pay',
+    #             'employee_id': employee.id,
+    #             'date_from': fields.Datetime.to_string(start_date),
+    #             'date_to': fields.Datetime.to_string(end_date + timedelta(hours=23, minutes=59)),
+    #             'holiday_status_id': lwp_leave_type.id,
+    #             'request_date_from': start_date,
+    #             'request_date_to': end_date,
+    #             'request_unit_half': half_day,
+    #             'request_date_from_period': day_period,
+    #         })
+    #         leave.action_approve()
+    #         return leave
+    #     except Exception as e:
+    #         return False
+
     def _create_lwp_leave(self, employee, start_date, end_date, lwp_leave_type, half_day=False, day_period=None):
         try:
             overlapping_leave = self.env['hr.leave'].search([
@@ -126,12 +166,11 @@ class HrLeaveInherit(models.Model):
                 ('request_date_to', '>=', start_date),
                 ('state', 'not in', ['cancel', 'refuse']),
             ], limit=1)
-            overlapping_leave
             if overlapping_leave:
                 return False
 
             leave = self.create({
-                'name': 'Auto Leave Without Pay',
+                'name': 'Auto Leave' if lwp_leave_type.name.startswith('PL') else 'Auto Leave Without Pay',
                 'employee_id': employee.id,
                 'date_from': fields.Datetime.to_string(start_date),
                 'date_to': fields.Datetime.to_string(end_date + timedelta(hours=23, minutes=59)),
@@ -145,6 +184,21 @@ class HrLeaveInherit(models.Model):
             return leave
         except Exception as e:
             return False
+
+    def _get_pl_balance(self, employee, pl_leave_type):
+        """
+        Remaining PL = validated allocations - taken leaves.
+        Probation employees typically have no validated PL allocation,
+        so this returns 0.0 and the caller creates LWP instead of PL.
+        """
+        allocations = self.env['hr.leave.allocation'].search([
+            ('employee_id', '=', employee.id),
+            ('holiday_status_id', '=', pl_leave_type.id),
+            ('state', '=', 'validate'),
+        ])
+        total_allocated = sum(allocations.mapped('number_of_days'))
+        total_taken = sum(allocations.mapped('leaves_taken'))
+        return total_allocated - total_taken
 
     @api.model
     def create_lwp_for_absent_days(self, date_from=None, date_to=None):
@@ -168,65 +222,393 @@ class HrLeaveInherit(models.Model):
         if date_to > today:
             date_to = today
 
+        # Leave types
         lwp_leave_type = self.env['hr.leave.type'].search(
             [('name', '=', 'LWP')], limit=1
         )
         if not lwp_leave_type:
             raise UserError("Leave type 'LWP' not found.")
 
-        domain = ["&", "&",
-                  ("attendance_date", ">=", date_from),
-                  ("attendance_date", "<=", date_to),
-                  "&",
-                  ("on_leave", "=", False),
-                  "&",
-                  ("status2", "!=", "off_day"),
-                  "&",
-                  ("employee_id.x_studio_grade", "in", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
-                  "|", "|",
-                  ("status2", "=", "absent"),
-                  ("in_status", "=", "3"),
-                  ("in_status", "=", "5")
-                  ]
+        pl_type_aesl = self.env['hr.leave.type'].search(
+            [('name', '=', 'PL (AESL)')], limit=1
+        )
+        pl_type_apex = self.env['hr.leave.type'].search(
+            [('name', '=', 'PL (APEX)')], limit=1
+        )
+
+        # Domain — only relevant records
+        domain = [
+            ('attendance_date', '>=', date_from),
+            ('attendance_date', '<=', date_to),
+            ('on_leave', '=', False),
+            ('status2', '!=', 'off_day'),
+            ('employee_id.x_studio_grade', 'in',
+             ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
+            '|', '|', '|',
+            ('status2', '=', 'absent'),
+            ('status2', '=', 'missed_check_in'),
+            '&', ('status2', '=', 'missed_check_out'), ('in_status', '=', '3'),
+            '|', '|',
+            ('in_status', '=', '5'),
+            ('in_status', '=', '3'),
+            '&', ('in_status', '=', '0'), ('out_status', '=', '3'),
+        ]
 
         attendances = self.env['hr.attendance'].search(domain)
 
+        # Cache PL balance per employee to avoid recomputing for every day
+        pl_balance_cache = {}
+
         for attendance in attendances:
             leave_date = attendance.attendance_date
+            employee = attendance.employee_id
 
-            # 🔹 Ignore Saturday (5) and Sunday (6)
+            # Skip Saturday (5) and Sunday (6)
             if leave_date.weekday() in (5, 6):
                 continue
 
+            # Skip public holidays
             is_holiday = self.env['resource.calendar.leaves'].search([
-                                        ('date_from', '<=', attendance.attendance_date),
-                                        ('date_to', '>=', attendance.attendance_date),
-                                        ('resource_id', '=', False)
-                                    ], limit=1)
+                ('date_from', '<=', leave_date),
+                ('date_to', '>=', leave_date),
+                ('resource_id', '=', False)
+            ], limit=1)
             if is_holiday:
-                attendance.attendance_date += timedelta(days=1)
                 continue
 
+            # Skip if any leave already exists for that day
             overlapping = self.env['hr.leave'].search([
-                ('employee_id', '=', attendance.employee_id.id),
+                ('employee_id', '=', employee.id),
                 ('request_date_from', '<=', leave_date),
                 ('request_date_to', '>=', leave_date),
                 ('state', 'not in', ['cancel', 'refuse']),
             ], limit=1)
-
             if overlapping:
                 continue
 
-            status = attendance.status2 if attendance else None
-            in_status = attendance.in_status if attendance else None
+            status = attendance.status2
+            in_status = attendance.in_status or '0'
+            out_status = attendance.out_status or '0'
 
+            required = 0.0
+            half_day = False
+            day_period = None
+
+            # ---- Apply rules in priority order ----
             if status == 'absent':
-                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
-            elif in_status == '3':
-                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date,lwp_leave_type,half_day=True,day_period='am')
+                # Rule 1: Full day absent
+                required = 1.0
+
+            elif status == 'missed_check_in':
+                if out_status != '0':
+                    # Rule 2: Missed check-in + checkout issue → full day
+                    required = 1.0
+                else:
+                    # Rule 3: Missed check-in + checkout OK → half day (AM)
+                    required = 0.5
+                    half_day = True
+                    day_period = 'am'
+
+            elif status == 'missed_check_out':
+                if in_status == '3':
+                    # Rule 4: Missed check-out + half-day in → full day
+                    required = 1.0
+                else:
+                    # Rule 5: Missed check-out + full in → IGNORE
+                    continue
+
             elif in_status == '5':
-                self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
+                # Rule 6: Full-day in_status → full day
+                required = 1.0
+
+            elif in_status == '3':
+                # Rule 7: Half-day in_status → half day (AM)
+                required = 0.5
+                half_day = True
+                day_period = 'am'
+
+            elif in_status == '0' and out_status == '3':
+                # Rule 8: Full in + half-day out → half day (PM)
+                required = 0.5
+                half_day = True
+                day_period = 'pm'
+
+            else:
+                # Rule 9: Fully present → skip
+                continue
+
+            if required <= 0:
+                continue
+
+            # ---- Pick PL leave type based on company_id ----
+            if employee.company_id.id == 1:
+                pl_leave_type = pl_type_aesl
+            elif employee.company_id.id == 2:
+                pl_leave_type = pl_type_apex
+            else:
+                pl_leave_type = False
+
+            # ---- Get / compute PL balance ----
+            pl_balance = 0.0
+            if pl_leave_type:
+                key = (employee.id, pl_leave_type.id)
+                if key not in pl_balance_cache:
+                    pl_balance_cache[key] = self._get_pl_balance(employee, pl_leave_type)
+                pl_balance = pl_balance_cache[key]
+
+            # ---- Decide PL vs LWP ----
+            if pl_leave_type and pl_balance >= required:
+                # Create PL
+                created = self._create_lwp_leave(
+                    employee, leave_date, leave_date, pl_leave_type,
+                    half_day=half_day, day_period=day_period
+                )
+                if created:
+                    pl_balance_cache[(employee.id, pl_leave_type.id)] = pl_balance - required
+            else:
+                # Create LWP (no PL balance, or probation, or company not mapped)
+                self._create_lwp_leave(
+                    employee, leave_date, leave_date, lwp_leave_type,
+                    half_day=half_day, day_period=day_period
+                )
+
             self.env.cr.commit()
+
+        return True
+
+    # @api.model
+    # def create_lwp_for_absent_days(self, date_from=None, date_to=None):
+    #
+    #     today = fields.Date.today()
+    #
+    #     # Default previous month
+    #     if not date_from:
+    #         prev_month = today.month - 1 or 12
+    #         year = today.year if today.month > 1 else today.year - 1
+    #         date_from = fields.Date.from_string(f"{year}-{prev_month:02d}-01")
+    #
+    #     if not date_to:
+    #         last_day = calendar.monthrange(date_from.year, date_from.month)[1]
+    #         date_to = date_from.replace(day=last_day)
+    #
+    #     if isinstance(date_from, str):
+    #         date_from = fields.Date.from_string(date_from)
+    #     if isinstance(date_to, str):
+    #         date_to = fields.Date.from_string(date_to)
+    #     if date_to > today:
+    #         date_to = today
+    #
+    #     # Leave types
+    #     lwp_leave_type = self.env['hr.leave.type'].search(
+    #         [('name', '=', 'LWP')], limit=1
+    #     )
+    #     if not lwp_leave_type:
+    #         raise UserError("Leave type 'LWP' not found.")
+    #
+    #     pl_type_aesl = self.env['hr.leave.type'].search(
+    #         [('name', '=', 'PL (AESL)')], limit=1
+    #     )
+    #     pl_type_apex = self.env['hr.leave.type'].search(
+    #         [('name', '=', 'PL (APEX)')], limit=1
+    #     )
+    #
+    #     # domain = ["&", "&",
+    #     #           ("attendance_date", ">=", date_from),
+    #     #           ("attendance_date", "<=", date_to),
+    #     #           "&",
+    #     #           ("on_leave", "=", False),
+    #     #           "&",
+    #     #           ("status2", "!=", "off_day"),
+    #     #           "&",
+    #     #           ("employee_id.x_studio_grade", "in",
+    #     #            ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
+    #     #           "|", "|","|",
+    #     #           ("status2", "=", "absent"),
+    #     #           ("in_status", "=", "3"),
+    #     #           ("in_status", "=", "5"),
+    #     #           ("out_status", "=", "3")
+    #     #           ]
+    #     domain = [
+    #         ('attendance_date', '>=', date_from),
+    #         ('attendance_date', '<=', date_to),
+    #         ('on_leave', '=', False),
+    #         ('status2', '!=', 'off_day'),
+    #         ('employee_id.x_studio_grade', 'in',
+    #          ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
+    #         '|',
+    #         ('status2', '=', 'absent'),
+    #         '|',
+    #         ('in_status', '=', '3'),
+    #         '|',
+    #         ('in_status', '=', '5'),
+    #         ('out_status', '=', '3'),
+    #     ]
+    #     attendances = self.env['hr.attendance'].search(domain)
+    #
+    #     # Cache PL balance per employee to avoid recomputing for every day
+    #     pl_balance_cache = {}
+    #
+    #     for attendance in attendances:
+    #         leave_date = attendance.attendance_date
+    #         employee = attendance.employee_id
+    #
+    #         # Skip Saturday (5) and Sunday (6)
+    #         if leave_date.weekday() in (5, 6):
+    #             continue
+    #
+    #         # Skip public holidays
+    #         is_holiday = self.env['resource.calendar.leaves'].search([
+    #             ('date_from', '<=', leave_date),
+    #             ('date_to', '>=', leave_date),
+    #             ('resource_id', '=', False)
+    #         ], limit=1)
+    #         if is_holiday:
+    #             continue
+    #
+    #         # Skip if any leave already exists for that day
+    #         overlapping = self.env['hr.leave'].search([
+    #             ('employee_id', '=', employee.id),
+    #             ('request_date_from', '<=', leave_date),
+    #             ('request_date_to', '>=', leave_date),
+    #             ('state', 'not in', ['cancel', 'refuse']),
+    #         ], limit=1)
+    #         if overlapping:
+    #             continue
+    #
+    #         status = attendance.status2
+    #         in_status = attendance.in_status
+    #
+    #         # Decide day fraction
+    #         if status == 'absent' or in_status == '5':
+    #             required = 1.0
+    #             half_day = False
+    #             day_period = None
+    #         elif in_status == '3':
+    #             required = 0.5
+    #             half_day = True
+    #             day_period = 'am'
+    #         else:
+    #             continue
+    #
+    #         # Pick PL leave type based on company_id
+    #         if employee.company_id.id == 1:
+    #             pl_leave_type = pl_type_aesl
+    #         elif employee.company_id.id == 2:
+    #             pl_leave_type = pl_type_apex
+    #         else:
+    #             pl_leave_type = False
+    #
+    #         # Get / compute PL balance
+    #         pl_balance = 0.0
+    #         if pl_leave_type:
+    #             key = (employee.id, pl_leave_type.id)
+    #             if key not in pl_balance_cache:
+    #                 pl_balance_cache[key] = self._get_pl_balance(employee, pl_leave_type)
+    #             pl_balance = pl_balance_cache[key]
+    #
+    #         # Decide PL vs LWP
+    #         if pl_leave_type and pl_balance >= required:
+    #             # Create PL
+    #             created = self._create_lwp_leave(
+    #                 employee, leave_date, leave_date, pl_leave_type,
+    #                 half_day=half_day, day_period=day_period
+    #             )
+    #             if created:
+    #                 pl_balance_cache[(employee.id, pl_leave_type.id)] = pl_balance - required
+    #         else:
+    #             # Create LWP (no PL balance, or probation, or company not mapped)
+    #             self._create_lwp_leave(
+    #                 employee, leave_date, leave_date, lwp_leave_type,
+    #                 half_day=half_day, day_period=day_period
+    #             )
+    #
+    #         self.env.cr.commit()
+    #
+    #     return True
+
+
+    # Faisal Siddique wala code hai
+    # @api.model
+    # def create_lwp_for_absent_days(self, date_from=None, date_to=None):
+    #
+    #     today = fields.Date.today()
+    #
+    #     # Default previous month
+    #     if not date_from:
+    #         prev_month = today.month - 1 or 12
+    #         year = today.year if today.month > 1 else today.year - 1
+    #         date_from = fields.Date.from_string(f"{year}-{prev_month:02d}-01")
+    #
+    #     if not date_to:
+    #         last_day = calendar.monthrange(date_from.year, date_from.month)[1]
+    #         date_to = date_from.replace(day=last_day)
+    #
+    #     if isinstance(date_from, str):
+    #         date_from = fields.Date.from_string(date_from)
+    #     if isinstance(date_to, str):
+    #         date_to = fields.Date.from_string(date_to)
+    #     if date_to > today:
+    #         date_to = today
+    #
+    #     lwp_leave_type = self.env['hr.leave.type'].search(
+    #         [('name', '=', 'LWP')], limit=1
+    #     )
+    #     if not lwp_leave_type:
+    #         raise UserError("Leave type 'LWP' not found.")
+    #
+    #     domain = ["&", "&",
+    #               ("attendance_date", ">=", date_from),
+    #               ("attendance_date", "<=", date_to),
+    #               "&",
+    #               ("on_leave", "=", False),
+    #               "&",
+    #               ("status2", "!=", "off_day"),
+    #               "&",
+    #               ("employee_id.x_studio_grade", "in", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"]),
+    #               "|", "|",
+    #               ("status2", "=", "absent"),
+    #               ("in_status", "=", "3"),
+    #               ("in_status", "=", "5")
+    #               ]
+    #
+    #     attendances = self.env['hr.attendance'].search(domain)
+    #
+    #     for attendance in attendances:
+    #         leave_date = attendance.attendance_date
+    #
+    #         # 🔹 Ignore Saturday (5) and Sunday (6)
+    #         if leave_date.weekday() in (5, 6):
+    #             continue
+    #
+    #         is_holiday = self.env['resource.calendar.leaves'].search([
+    #                                     ('date_from', '<=', attendance.attendance_date),
+    #                                     ('date_to', '>=', attendance.attendance_date),
+    #                                     ('resource_id', '=', False)
+    #                                 ], limit=1)
+    #         if is_holiday:
+    #             attendance.attendance_date += timedelta(days=1)
+    #             continue
+    #
+    #         overlapping = self.env['hr.leave'].search([
+    #             ('employee_id', '=', attendance.employee_id.id),
+    #             ('request_date_from', '<=', leave_date),
+    #             ('request_date_to', '>=', leave_date),
+    #             ('state', 'not in', ['cancel', 'refuse']),
+    #         ], limit=1)
+    #
+    #         if overlapping:
+    #             continue
+    #
+    #         status = attendance.status2 if attendance else None
+    #         in_status = attendance.in_status if attendance else None
+    #
+    #         if status == 'absent':
+    #             self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
+    #         elif in_status == '3':
+    #             self._create_lwp_leave(attendance.employee_id, leave_date, leave_date,lwp_leave_type,half_day=True,day_period='am')
+    #         elif in_status == '5':
+    #             self._create_lwp_leave(attendance.employee_id, leave_date, leave_date, lwp_leave_type)
+    #         self.env.cr.commit()
 
     @api.depends('date_from', 'date_to', 'resource_calendar_id', 'holiday_status_id.request_unit', 'request_unit_half')
     def _compute_duration(self):
