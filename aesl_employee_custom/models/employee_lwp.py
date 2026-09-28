@@ -1,4 +1,4 @@
-from odoo import fields, models, tools
+from odoo import fields, models, tools,api,_
 
 
 class LwpReport(models.Model):
@@ -34,6 +34,7 @@ class LwpReport(models.Model):
         string='In Status',
         readonly=True,
     )
+    out_status = fields.Char(string='Out Status', readonly=True)
 
     on_leave = fields.Boolean(
         string='On Leave',
@@ -112,12 +113,50 @@ class LwpReport(models.Model):
     #         )
     #     """)
 
+# OLD 25092026
+#     def init(self):
+#         tools.drop_view_if_exists(self.env.cr, self._table)
+#
+#         self.env.cr.execute("""
+#             CREATE OR REPLACE VIEW aesl_lwp_report AS (
+#
+#                 SELECT
+#                     a.id AS id,
+#                     a.id AS attendance_id,
+#                     a.employee_id AS employee_id,
+#                     a.attendance_date AS attendance_date,
+#                     a.status2 AS status2,
+#                     a.in_status AS in_status,
+#                     a.on_leave AS on_leave,
+#
+#                     'lwp' AS deduction_status
+#
+#                 FROM hr_attendance a
+#
+#                 WHERE
+#                     a.status2 IN ('absent', 'missed_check_in')
+#
+#                     AND NOT EXISTS (
+#                         SELECT 1
+#                         FROM hr_leave l
+#                         WHERE l.employee_id = a.employee_id
+#                           AND a.attendance_date BETWEEN
+#                                 l.request_date_from::date
+#                                 AND l.request_date_to::date
+#                           AND l.state IN (
+#                               'confirm',
+#                               'validate1',
+#                               'validate'
+#                           )
+#                     )
+#             )
+#         """)
+
     def init(self):
         tools.drop_view_if_exists(self.env.cr, self._table)
 
         self.env.cr.execute("""
             CREATE OR REPLACE VIEW aesl_lwp_report AS (
-
                 SELECT
                     a.id AS id,
                     a.id AS attendance_id,
@@ -125,15 +164,25 @@ class LwpReport(models.Model):
                     a.attendance_date AS attendance_date,
                     a.status2 AS status2,
                     a.in_status AS in_status,
+                    a.out_status AS out_status,
                     a.on_leave AS on_leave,
-
                     'lwp' AS deduction_status
 
                 FROM hr_attendance a
 
                 WHERE
-                    a.status2 IN ('absent', 'missed_check_in')
+                    a.on_leave = False
+                    AND a.status2 != 'off_day'
 
+                    -- LWP conditions
+                    AND (
+                        a.status2 IN ('absent', 'missed_check_in')
+                        OR (a.status2 = 'missed_check_out' AND a.in_status = '3')
+                        OR a.in_status IN ('5', '3')
+                        OR (a.in_status = '0' AND a.out_status = '3')
+                    )
+
+                    -- ❌ Leave check (agar leave apply hai to LWP nahi)
                     AND NOT EXISTS (
                         SELECT 1
                         FROM hr_leave l
@@ -147,5 +196,37 @@ class LwpReport(models.Model):
                               'validate'
                           )
                     )
+
+                    -- ❌ Public Holiday check (agar public holiday hai to LWP nahi)
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM resource_calendar_leaves rcl
+                        WHERE a.attendance_date BETWEEN
+                                rcl.date_from::date
+                                AND COALESCE(rcl.date_to::date, rcl.date_from::date)
+                          AND (
+                              rcl.resource_id IS NULL
+                              OR rcl.resource_id = a.employee_id
+                          )
+                    )
             )
         """)
+
+    @api.model
+    def action_refresh_lwp(self):
+        """Button click pe view ko drop + recreate karein (real-time force)."""
+        tools.drop_view_if_exists(self.env.cr, self._table)
+        self.init()
+        self.env.cr.commit()
+        # Odoo ORM cache clear
+        self.env.invalidate_all()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'LWP Report Refreshed',
+                'message': 'Latest LWP data load ho gaya hai.',
+                'type': 'success',
+                'sticky': False,
+            }
+        }

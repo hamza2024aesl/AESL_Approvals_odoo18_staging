@@ -355,7 +355,8 @@ class ApprovalPortal(CustomerPortal):
                 finance_domain = [
                     ('travel_request_type', '=', line.config_id.config_type),
                     ('employee_location_id', 'in', line.work_location_ids.ids),
-                    ('employee_department_id', '=', line.department_id.id),
+                    # ('employee_department_id', '=', line.department_id.id),
+                    ('employee_travel_department_id', '=', line.travel_department_id.id),
                     ('request_status', '=', 'approved'),
                     ('request_owner_id', '!=', user.id)
                 ]
@@ -398,9 +399,15 @@ class ApprovalPortal(CustomerPortal):
             "categories": categories,
             "employee_name": employee.name,
             "employee_identification_id": employee.identification_id,
-            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_cnic": employee.ssnid if employee.ssnid else "",
+            "employee_mobile": employee.mobile_phone if employee.mobile_phone else "",
+            "employee_dob": employee.birthday if employee.birthday else "",
+            # "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_travel_department_id": employee.travel_department_id.name if employee.travel_department_id else "",
             "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
             "employee_job_id": employee.job_id.name if employee.job_id else "",
+            "currencies": request.env['res.currency'].sudo().search([('active', '=', True)]),
+            "default_currency_id": request.env.company.currency_id.id,
         }
         return request.render("prodo_user_portal.travel_request_form_portal", vals)
 
@@ -551,7 +558,11 @@ class ApprovalPortal(CustomerPortal):
             "request_rec": request_rec,
             "employee_name": employee.name,
             "employee_identification_id": employee.identification_id,
-            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_cnic": employee.ssnid if employee.ssnid else "",
+            "employee_mobile": employee.mobile_phone if employee.mobile_phone else "",
+            "employee_dob": employee.birthday if employee.birthday else "",
+            # "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_travel_department_id": employee.travel_department_id.name if employee.travel_department_id else "",
             "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
             "employee_job_id": employee.job_id.name if employee.job_id else "",
             "is_approver": is_approver,
@@ -836,25 +847,24 @@ class ApprovalPortal(CustomerPortal):
         return request.redirect(f"/my/travel/expense/view/{expense.id}")
 
     def _send_expense_notification(self, expense):
-        # Find region specific config, fallback to first config if none matches exactly
         region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
         domain = [('region_id', '=', region_id)] if region_id else []
         config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
         if not config:
             config = request.env['approval.expense.config'].sudo().search([], limit=1)
-            
         if not config:
             return
-            
         recipients = []
         if config.expense_payable_id and config.expense_payable_id.work_email:
             recipients.append(config.expense_payable_id.work_email)
         if config.hr_id and config.hr_id.work_email:
             recipients.append(config.hr_id.work_email)
-            
         if not recipients:
             return
-            
+        base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+            base_url = 'http://odoo.aesl.com.pk:8018'
+        travel_url = f"{base_url}/my/travel/expense/view/{expense.id}"
         subject = f"Travel Expense Submitted: {expense.ref_no}"
         body = f"""
         <div style="font-family: Arial, sans-serif; font-size: 14px;">
@@ -866,11 +876,15 @@ class ApprovalPortal(CustomerPortal):
                 <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
                 <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
             </table>
+            <p style="margin-top: 15px;">
+                <a href="{travel_url}" style="background-color: #8D0000; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                    View Expense Report
+                </a>
+            </p>
             <p>Please check the backend system to view the full details.</p>
-            <p>Best Regards,<br/>AESL System</p>
+            <p>Best Regards,</p>
         </div>
         """
-        
         mail_values = {
             'subject': subject,
             'body_html': body,
@@ -879,6 +893,51 @@ class ApprovalPortal(CustomerPortal):
             'state': 'outgoing',
         }
         request.env['mail.mail'].sudo().create(mail_values).send()
+
+    # def _send_expense_notification(self, expense):
+    #     # Find region specific config, fallback to first config if none matches exactly
+    #     region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
+    #     domain = [('region_id', '=', region_id)] if region_id else []
+    #     config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
+    #     if not config:
+    #         config = request.env['approval.expense.config'].sudo().search([], limit=1)
+    #
+    #     if not config:
+    #         return
+    #
+    #     recipients = []
+    #     if config.expense_payable_id and config.expense_payable_id.work_email:
+    #         recipients.append(config.expense_payable_id.work_email)
+    #     if config.hr_id and config.hr_id.work_email:
+    #         recipients.append(config.hr_id.work_email)
+    #
+    #     if not recipients:
+    #         return
+    #
+    #     subject = f"Travel Expense Submitted: {expense.ref_no}"
+    #     body = f"""
+    #     <div style="font-family: Arial, sans-serif; font-size: 14px;">
+    #         <h2 style="color: #8D0000;">Travel Expense Report Submitted</h2>
+    #         <p>Dear Team,</p>
+    #         <p>A new Travel Expense report has been submitted by <strong>{expense.employee_name}</strong> for Travel Request: <strong>{expense.ref_no}</strong>.</p>
+    #         <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+    #             <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
+    #         </table>
+    #         <p>Please check the backend system to view the full details.</p>
+    #         <p>Best Regards,<br/>AESL System</p>
+    #     </div>
+    #     """
+    #
+    #     mail_values = {
+    #         'subject': subject,
+    #         'body_html': body,
+    #         'email_to': ','.join(recipients),
+    #         'email_from': request.env.company.email or request.env.user.email_formatted,
+    #         'state': 'outgoing',
+    #     }
+    #     request.env['mail.mail'].sudo().create(mail_values).send()
 
 
 class PFLoanPortal(CustomerPortal):

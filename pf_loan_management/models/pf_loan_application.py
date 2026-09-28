@@ -250,7 +250,10 @@ class PFLoanApplication(models.Model):
                 recipients = rec.second_trustee_ids if rec.second_trustee_ids else (rec.second_trustee_approver_id if rec.second_trustee_approver_id else self.env['hr.employee'])
                 step_name = "5th Step: Trustee Approval"
 
-
+            base_url = rec.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+                base_url = 'http://odoo.aesl.com.pk:8018'
+            PFLoan_url = f"{base_url}/my/travel/expense/view/{rec.id}"
             for recipient_emp in recipients:
                 if recipient_emp and recipient_emp.work_email:
                     subject = f"PF Loan Approval Needed ({step_name}): {rec.name}"
@@ -266,7 +269,12 @@ class PFLoanApplication(models.Model):
                             <tr><td style="padding: 5px; font-weight: bold;">Application Date:</td><td style="padding: 5px;">{rec.application_date}</td></tr>
                         </table>
                         <p>Please log in to the system to review and process this application.</p>
-                        <p>Best Regards,<br/>AESL PF Loan System</p>
+                        <p style="margin-top: 15px;">
+                            <a href="{PFLoan_url}" style="background-color: #8D0000; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                                View Expense Report
+                            </a>
+                        </p>
+                        <p>Best Regards,</p>
                     </div>
                     """
                     mail_values = {
