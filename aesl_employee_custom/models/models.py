@@ -6,6 +6,31 @@ from odoo import models, fields, api,_
 from server.odoo.exceptions import UserError
 
 
+class HrAttendance(models.Model):
+    _inherit = 'hr.attendance'
+
+
+    on_leave_apply = fields.Boolean('On Leave Apply', compute='check_if_on_leave_apply', default=False, store=True)
+
+    @api.depends('state', 'status', 'toggle')
+    def check_if_on_leave_apply(self):
+        for rec in self:
+            if rec.state == 'done':
+                rec._cr.execute('''SELECT id, request_unit_half FROM hr_leave
+                                WHERE employee_id = %s AND DATE(date_from) <= to_date('%s', 'YYYY-MM-DD')
+                                AND DATE(date_to) >= to_date('%s', 'YYYY-MM-DD') AND state in ('validate','confirm');''' % (rec.employee_id.id, rec.attendance_date, rec.attendance_date))
+                result = rec._cr.dictfetchall()
+                if result:
+                    rec.on_leave = True
+                    # half_leave_ids = [row['id'] for row in result if row.get('request_unit_half')]
+                    # if half_leave_ids and rec.check_in and rec.check_out:
+                    #     half_leaves = self.env['hr.leave'].browse(half_leave_ids)
+                    #     half_leaves.write({
+                    #         'check_in': rec.check_in,
+                    #         'check_out': rec.check_out,
+                    #     })
+
+
 class HrPayslipInherit(models.Model):
     _inherit = 'hr.payslip'
 

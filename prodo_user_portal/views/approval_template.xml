@@ -729,11 +729,65 @@
             </div>
         </t>
     </template>
+<template id="travel_expense_list_portal">
+    <t t-call="portal.portal_layout" t-if="page_name == 'travel_expense_list_page'">
+        <t t-set="no_breadcrumbs" t-value="1"/>
+        <div class="d-flex align-items-center my-3 justify-content-between">
+            <div class="d-flex align-items-center">
+                <a href="/my" title="Go Back" class="btn btn-light px-2 mx-2"><i class="oi oi-chevron-left"/></a>
+                <h3 class="my-0 mt-1">Travel Expenses</h3>
+            </div>
+            <a href="/my/travel/expense/new" class="btn btn-primary">New Expense</a>
+        </div>
+
+        <t t-if="expenses">
+            <t t-call="portal.portal_table">
+                <thead>
+                    <tr class="active">
+                        <th>Ref No</th>
+                        <th t-if="is_expense_manager">Employee</th>
+                        <th>Trip To</th>
+                        <th>Date</th>
+                        <th>Travel Request</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Balance Due</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="expenses" t-as="exp">
+                        <tr>
+                            <td><t t-esc="exp.ref_no"/></td>
+                            <td t-if="is_expense_manager"><t t-esc="exp.employee_name"/></td>
+                            <td><t t-esc="exp.trip_to"/></td>
+                            <td><t t-esc="exp.date"/></td>
+                            <td>
+                                <t t-if="exp.request_id"><t t-esc="exp.request_id.name"/></t>
+                                <span t-else="" class="text-muted">-</span>
+                            </td>
+                            <td class="text-end"><t t-esc="'%.2f' % exp.total_expense"/></td>
+                            <td class="text-end"><t t-esc="'%.2f' % exp.balance_due"/></td>
+<!--                            <td><span class="badge rounded-pill bg-success">Submitted</span></td>-->
+                            <td>
+                                <span t-attf-class="badge rounded-pill {{ 'bg-success' if exp.state == 'approved' else 'bg-danger' if exp.state == 'refused' else 'bg-warning text-dark' }}">
+                                    <t t-esc="dict(exp._fields['state'].selection).get(exp.state)"/>
+                                </span>
+                            </td>
+                            <td><a t-attf-href="/my/travel/expense/view/{{exp.id}}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+        </t>
+        <p t-else="" class="alert alert-warning mt-4">There are currently no Travel Expenses.</p>
+    </t>
+</template>
     <template id="travel_expense_form_portal">
         <t t-call="portal.portal_layout" t-if="page_name == 'travel_expense_page'">
             <t t-set="no_breadcrumbs" t-value="1"/>
             <div class="d-flex gap-2 my-3">
-                <a t-attf-href="/my/travel/view/{{request_rec.id}}" title="Go Back" class="btn btn-light px-2 mx-2">
+                <a t-attf-href="{{'/my/travel/expense/view/%s' % request_rec.id if request_rec else '/my/travel/expenses' }}" title="Go Back" class="btn btn-light px-2 mx-2">
                     <i class="oi oi-chevron-left"/>
                 </a>
                 <h3 class="my-0 mt-1">Travel Expense Report</h3>
@@ -750,16 +804,33 @@
                 <div class="card-body">
                     <form action="/my/travel/expense/save" method="post" id="expense_form" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                        <input type="hidden" name="request_id" t-att-value="request_rec.id"/>
+                        <input type="hidden" name="request_id" t-att-value="request_rec.id if request_rec else 0"/>
                         <input type="hidden" name="total_expense" id="total_expense_input" value="0.0"/>
 
                         <div class="bg-primary text-white p-2 text-center fw-bold mb-3">Allied Engineering &amp; Services Ltd.<br/>TRAVEL EXPENSE REPORT</div>
                         <div class="bg-light p-2 mb-3 fw-bold border">Please enter the following details :</div>
 
+                        <!-- Optional: link an approved Travel Request (details get fetched) -->
+                        <div class="mb-3 p-2 border rounded" t-if="not is_readonly and not request_rec and linkable_requests">
+                            <label class="fw-bold me-2">Link an approved Travel Request (optional):</label>
+                            <select class="form-select form-select-sm d-inline-block w-auto"
+                                    onchange="if (this.value) window.location = '/my/travel/expense/new/' + this.value;">
+                                <option value="">-- Not linked / enter manually --</option>
+                                <t t-foreach="linkable_requests" t-as="lr">
+                                    <option t-att-value="lr.id"><t t-esc="lr.name"/> - <t t-esc="lr.category_id.name"/></option>
+                                </t>
+                            </select>
+                        </div>
+
                         <!-- Header Info -->
                         <div class="row mb-4">
                             <div class="col-md-6 mb-2">
-                                <strong>Ref No :</strong> <span class="ms-2"><t t-esc="request_rec.name"/></span>
+                                <strong>Ref No :</strong>
+                                <span class="ms-2">
+                                    <t t-if="expense"><t t-esc="expense.ref_no"/></t>
+                                    <t t-elif="request_rec"><t t-esc="request_rec.name"/></t>
+                                    <em t-else="" class="text-muted">Generated on submit</em>
+                                </span>
                             </div>
                             <div class="col-md-6 mb-2"></div>
 
@@ -779,18 +850,30 @@
                             </div>
 
                             <div class="col-md-6 mb-2">
-                                <strong>Trip To :</strong> <span class="ms-2"><t t-esc="trip_to"/></span>
+                                <strong>Trip To :</strong>
+                                <input t-if="is_manual" type="text" name="trip_to" class="form-control form-control-sm d-inline-block w-50 ms-2" required="1"/>
+                                <span t-else="" class="ms-2"><t t-esc="trip_to"/></span>
                             </div>
                             <div class="col-md-6 mb-2">
                                 <strong>Department :</strong> <span class="ms-2"><t t-esc="department_name"/></span>
                             </div>
 
                             <div class="col-md-6 mb-2">
-                                <strong>Purpose of Trip :</strong> <span class="ms-2"><t t-esc="purpose_of_trip"/></span>
+                                <strong>Purpose of Trip :</strong>
+                                <input t-if="is_manual" type="text" name="purpose_of_trip" class="form-control form-control-sm d-inline-block w-50 ms-2" required="1"/>
+                                <span t-else="" class="ms-2"><t t-esc="purpose_of_trip"/></span>
                             </div>
                             <div class="col-md-6 mb-2">
-                                <strong>Period From :</strong> <span class="ms-2"><t t-esc="period_from"/></span>
-                                <strong class="ms-3">To :</strong> <span class="ms-2"><t t-esc="period_to"/></span>
+                                <t t-if="is_manual">
+                                    <strong>Period From :</strong>
+                                    <input type="datetime-local" name="period_from" class="form-control form-control-sm d-inline-block w-auto ms-2" required="1"/>
+                                    <strong class="ms-3">To :</strong>
+                                    <input type="datetime-local" name="period_to" class="form-control form-control-sm d-inline-block w-auto ms-2" required="1"/>
+                                </t>
+                                <t t-else="">
+                                    <strong>Period From :</strong> <span class="ms-2"><t t-esc="period_from"/></span>
+                                    <strong class="ms-3">To :</strong> <span class="ms-2"><t t-esc="period_to"/></span>
+                                </t>
                             </div>
                         </div>
 
@@ -815,11 +898,13 @@
                                         <th style="width: 5%;" t-if="not is_readonly">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="expense_tbody">
                                     <t t-set="cols" t-value="['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']"/>
-                                    <t t-foreach="range(1, 8)" t-as="i">
+                                    <t t-set="line_list" t-value="list(expense.expense_line_ids) if expense else []"/>
+                                    <t t-set="row_count" t-value="len(line_list) if is_readonly else max(len(line_list), 1)"/>
+                                    <t t-foreach="range(1, row_count + 1)" t-as="i">
                                         <tr class="expense-row">
-                                            <t t-set="line" t-value="expense.expense_line_ids[i-1] if expense and len(expense.expense_line_ids) >= i else False"/>
+                                            <t t-set="line" t-value="line_list[i-1] if i &lt;= len(line_list) else False"/>
                                             <td class="text-start p-0" style="min-width: 220px;">
                                                 <div class="input-group input-group-sm border-bottom">
                                                     <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">From :</span>
@@ -889,7 +974,7 @@
                                                 </t>
                                                 <td class="p-1 align-middle">
                                                     <div class="mb-1">
-                                                        <input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" placeholder="Amount" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/>
+                                                        <input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" t-att-data-col="col" placeholder="Amount" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/>
                                                     </div>
                                                     <div class="mb-1">
                                                         <input type="text" t-attf-name="{{col}}_desc_{{i}}" placeholder="Description" class="form-control form-control-sm text-center" style="font-size: 0.75rem;" t-att-readonly="is_readonly" t-att-value="col_desc"/>
@@ -900,7 +985,10 @@
                                                 </td>
                                             </t>
                                             <td class="align-middle" t-if="not is_readonly">
-                                                <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row" title="Calculate Row">Calc</button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row mb-1" title="Calculate Row">Calc</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn" title="Remove Line">
+                                                    <i class="fa fa-trash"/>
+                                                </button>
                                             </td>
                                         </tr>
                                     </t>
@@ -918,8 +1006,13 @@
                             </table>
                         </div>
 
-                        <div class="d-flex justify-content-end align-items-center mt-3">
+                        <div class="mt-2" t-if="not is_readonly">
+                            <button type="button" id="btn_add_line" class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-plus me-1"/> Add a Line
+                            </button>
+                        </div>
 
+                        <div class="d-flex justify-content-end align-items-center mt-3">
                             <div class="text-end" style="width: 450px;">
                                 <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">
                                     <span>Total Expense :</span>
@@ -939,6 +1032,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <!-- ==================== ATTACHMENTS SECTION ==================== -->
                         <div class="card mt-4 border">
                             <div class="card-header bg-light fw-bold">
@@ -980,8 +1074,6 @@
                                     <small class="text-muted">You can select multiple files (PDF, Images, Word, Excel).
                                         Max 10MB per file.
                                     </small>
-
-                                    <!-- Preview selected files -->
                                     <div id="file_preview" class="mt-2"></div>
                                 </t>
 
@@ -994,72 +1086,178 @@
                             </div>
                         </div>
                         <!-- ==================== END ATTACHMENTS SECTION ==================== -->
+                        <!-- ==================== APPROVAL SECTION ==================== -->
+                        <t t-if="is_readonly and expense">
+                            <div class="card mt-4 border">
+                                <div class="card-header bg-light fw-bold d-flex justify-content-between">
+                                    <span>Approval</span>
+                                    <span t-attf-class="badge rounded-pill {{ 'bg-success' if expense.state == 'approved' else 'bg-danger' if expense.state == 'refused' else 'bg-warning text-dark' }}">
+                                        <t t-esc="dict(expense._fields['state'].selection).get(expense.state)"/>
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2" t-if="expense.hr_approver_id">
+                                        <b>HR:</b>
+                                        <t t-esc="expense.hr_approver_id.name"/>
+                                        <span class="text-muted" t-if="expense.hr_date">
+                                            (<t t-esc="expense.hr_date.strftime('%d/%m/%Y %I:%M %p')"/>)
+                                        </span>
+                                        <div class="text-muted" t-if="expense.hr_remarks">Remarks:
+                                            <t t-esc="expense.hr_remarks"/>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2" t-if="expense.payable_approver_id">
+                                        <b>Payable Officer:</b>
+                                        <t t-esc="expense.payable_approver_id.name"/>
+                                        <span class="text-muted" t-if="expense.payable_date">
+                                            (<t t-esc="expense.payable_date.strftime('%d/%m/%Y %I:%M %p')"/>)
+                                        </span>
+                                        <div class="text-muted" t-if="expense.payable_remarks">Remarks:
+                                            <t t-esc="expense.payable_remarks"/>
+                                        </div>
+                                    </div>
+
+                                    <!-- Approver action (separate form, because the main form is readonly) -->
+                                    <t t-if="is_hr_approver or is_payable_approver">
+                                        <hr/>
+                                        <label class="fw-bold">Remarks</label>
+                                        <textarea id="approval_remarks" class="form-control mb-3" rows="2"
+                                                  placeholder="Remarks (required for refuse)"></textarea>
+                                        <button type="button" class="btn btn-success px-4 me-2"
+                                                onclick="submitExpenseAction('approve')">Approve
+                                        </button>
+                                        <button type="button" class="btn btn-danger px-4"
+                                                onclick="submitExpenseAction('refuse')">Refuse
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+                        <!-- ==================== END APPROVAL SECTION ==================== -->
 
                         <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">
-                            <a t-attf-href="/my/travel/view/{{request_rec.id}}" class="btn btn-secondary">Discard</a>
+                            <a t-attf-href="{{ '/my/travel/view/%s' % request_rec.id if request_rec else '/my/travel/expenses' }}" class="btn btn-secondary">Discard</a>
                             <button type="submit" class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>
                         </div>
                     </form>
+                    <form t-if="is_readonly and expense and (is_hr_approver or is_payable_approver)"
+                          id="expense_action_form" method="post"
+                          t-attf-action="/my/travel/expense/action/{{expense.id}}">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" id="action_input"/>
+                        <input type="hidden" name="remarks" id="action_remarks"/>
+                    </form>
+                    <script type="text/javascript">
+                        //<![CDATA[
+                        function submitExpenseAction(action) {
+                            var remarksEl = document.getElementById('approval_remarks');
+                            var remarks = remarksEl ? remarksEl.value.trim() : '';
+                            if (action === 'refuse') {
+                                if (!remarks) {
+                                    alert('Please enter remarks to refuse.');
+                                    return;
+                                }
+                            }
+                            if (!confirm('Are you sure you want to ' + action + ' this expense?')) return;
+                            document.getElementById('action_input').value = action;
+                            document.getElementById('action_remarks').value = remarks;
+                            document.getElementById('expense_action_form').submit();
+                        }
+                        //]]>
+                    </script>
                 </div>
             </div>
 
-            <!-- JavaScript for Calculation -->
+            <!-- JavaScript for Calculation + dynamic lines -->
             <script type="text/javascript">
             //<![CDATA[
             document.addEventListener('DOMContentLoaded', function() {
                 const cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily'];
-                const rowCount = 7;
+                const tbody = document.getElementById('expense_tbody');
+                if (!tbody) return;
 
                 function performCalculation() {
                     let grandTotal = 0.0;
-                    let colTotals = { fare:0, hotel:0, meals:0, taxi:0, laundry:0, telephone:0, other:0, daily:0 };
+                    let colTotals = {};
+                    cols.forEach(c => colTotals[c] = 0);
 
-                    for (let i = 1; i <= rowCount; i++) {
+                    tbody.querySelectorAll('tr.expense-row').forEach(row => {
                         let rowTotal = 0.0;
-                        cols.forEach(col => {
-                            let input = document.querySelector('input[name="' + col + '_' + i + '"]');
-                            let val = input ? (parseFloat(input.value) || 0) : 0;
+                        row.querySelectorAll('input.calc-input').forEach(inp => {
+                            const val = parseFloat(inp.value) || 0;
                             rowTotal += val;
-                            colTotals[col] += val;
+                            colTotals[inp.dataset.col] += val;
                         });
-                        const rowTotElem = document.getElementById('row_total_' + i);
+                        const rowTotElem = row.querySelector('.row-total');
                         if (rowTotElem) rowTotElem.innerText = rowTotal.toFixed(2);
-
                         grandTotal += rowTotal;
-                    }
-
-                    cols.forEach(col => {
-                        const colTotElem = document.getElementById('col_total_' + col);
-                        if (colTotElem) colTotElem.innerText = colTotals[col].toFixed(2);
                     });
 
-                    const grandCol = document.getElementById('grand_total_col');
-                    if (grandCol) grandCol.innerText = grandTotal.toFixed(2);
-
-                    const sumTot = document.getElementById('summary_total_expense');
-                    if (sumTot) sumTot.innerText = grandTotal.toFixed(2);
-
+                    cols.forEach(col => {
+                        const el = document.getElementById('col_total_' + col);
+                        if (el) el.innerText = colTotals[col].toFixed(2);
+                    });
+                    const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+                    set('grand_total_col', grandTotal.toFixed(2));
+                    set('summary_total_expense', grandTotal.toFixed(2));
                     const totInp = document.getElementById('total_expense_input');
                     if (totInp) totInp.value = grandTotal.toFixed(2);
 
-                    let adv = parseFloat(document.getElementById('input_advance').value) || 0;
-                    let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
-
-                    let balance = grandTotal - adv - direct;
-                    const balElem = document.getElementById('summary_balance_due');
-                    if (balElem) balElem.innerText = balance.toFixed(2);
+                    const adv = parseFloat(document.getElementById('input_advance').value) || 0;
+                    const direct = parseFloat(document.getElementById('input_items_direct').value) || 0;
+                    set('summary_balance_due', (grandTotal - adv - direct).toFixed(2));
                 }
 
-                performCalculation();
+                // Blank template row, cloned before the user types anything
+                const firstRow = tbody.querySelector('tr.expense-row');
+                const rowTemplate = firstRow ? firstRow.cloneNode(true) : null;
+                if (rowTemplate) {
+                    rowTemplate.querySelectorAll('input').forEach(i => { i.value = ''; });
+                }
+                let nextIndex = tbody.querySelectorAll('tr.expense-row').length + 1;
 
-                document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {
-                    inp.addEventListener('change', performCalculation);
+                function renumber(row, idx) {
+                    row.querySelectorAll('input[name]').forEach(inp => {
+                        inp.name = inp.name.replace(/_\d+$/, '_' + idx);
+                    });
+                    const tot = row.querySelector('.row-total');
+                    if (tot) { tot.id = 'row_total_' + idx; tot.innerText = '0.00'; }
+                }
+
+                const addBtn = document.getElementById('btn_add_line');
+                if (addBtn && rowTemplate) {
+                    addBtn.addEventListener('click', function() {
+                        const newRow = rowTemplate.cloneNode(true);
+                        renumber(newRow, nextIndex++);
+                        tbody.appendChild(newRow);
+                        performCalculation();
+                    });
+                }
+
+                // Event delegation: works for rows added later too
+                tbody.addEventListener('input', function(e) {
+                    if (e.target.classList.contains('calc-input')) performCalculation();
+                });
+                tbody.addEventListener('click', function(e) {
+                    if (e.target.closest('.calc-btn-row')) {
+                        performCalculation();
+                    } else if (e.target.closest('.remove-row-btn')) {
+                        const rows = tbody.querySelectorAll('tr.expense-row');
+                        if (rows.length > 1) {
+                            e.target.closest('tr.expense-row').remove();
+                            performCalculation();
+                        } else {
+                            alert('At least one line is required.');
+                        }
+                    }
+                });
+
+                document.querySelectorAll('.calc-input-summary').forEach(inp => {
                     inp.addEventListener('input', performCalculation);
+                    inp.addEventListener('change', performCalculation);
                 });
 
-                document.querySelectorAll('.calc-btn-row').forEach(btn => {
-                    btn.addEventListener('click', performCalculation);
-                });
+                performCalculation();
 
                 // ---- File preview ----
                 const fileInput = document.getElementById('attachments_input');
@@ -1072,8 +1270,7 @@
                         if (files.length === 0) return;
                         let html = '<div class="alert alert-info py-2 mb-0"><strong>Selected Files:</strong><ul class="mb-0 mt-1">';
                         for (let i = 0; i < files.length; i++) {
-                            const sizeKB = (files[i].size / 1024).toFixed(2);
-                            html += '<li>' + files[i].name + ' (' + sizeKB + ' KB)</li>';
+                            html += '<li>' + files[i].name + ' (' + (files[i].size / 1024).toFixed(2) + ' KB)</li>';
                         }
                         html += '</ul></div>';
                         preview.innerHTML = html;
@@ -1084,5 +1281,361 @@
             </script>
         </t>
     </template>
+
+<!--    <template id="travel_expense_form_portal">-->
+<!--        <t t-call="portal.portal_layout" t-if="page_name == 'travel_expense_page'">-->
+<!--            <t t-set="no_breadcrumbs" t-value="1"/>-->
+<!--            <div class="d-flex gap-2 my-3">-->
+<!--                <a t-attf-href="/my/travel/view/{{request_rec.id}}" title="Go Back" class="btn btn-light px-2 mx-2">-->
+<!--                    <i class="oi oi-chevron-left"/>-->
+<!--                </a>-->
+<!--                <h3 class="my-0 mt-1">Travel Expense Report</h3>-->
+<!--            </div>-->
+
+<!--            <t t-if="request.session.get('expense_error')">-->
+<!--                <div class="alert alert-danger alert-dismissible fade show" role="alert">-->
+<!--                    <t t-esc="request.session.pop('expense_error')"/>-->
+<!--                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>-->
+<!--                </div>-->
+<!--            </t>-->
+
+<!--            <div class="card shadow-sm mt-3">-->
+<!--                <div class="card-body">-->
+<!--                    <form action="/my/travel/expense/save" method="post" id="expense_form" enctype="multipart/form-data">-->
+<!--                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>-->
+<!--                        <input type="hidden" name="request_id" t-att-value="request_rec.id"/>-->
+<!--                        <input type="hidden" name="total_expense" id="total_expense_input" value="0.0"/>-->
+
+<!--                        <div class="bg-primary text-white p-2 text-center fw-bold mb-3">Allied Engineering &amp; Services Ltd.<br/>TRAVEL EXPENSE REPORT</div>-->
+<!--                        <div class="bg-light p-2 mb-3 fw-bold border">Please enter the following details :</div>-->
+
+<!--                        &lt;!&ndash; Header Info &ndash;&gt;-->
+<!--                        <div class="row mb-4">-->
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Ref No :</strong> <span class="ms-2"><t t-esc="request_rec.name"/></span>-->
+<!--                            </div>-->
+<!--                            <div class="col-md-6 mb-2"></div>-->
+
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Emp No. :</strong> <span class="ms-2"><t t-esc="employee_reg_no"/></span>-->
+<!--                            </div>-->
+<!--                            <div class="col-md-6 mb-2 d-flex align-items-center">-->
+<!--                                <strong class="me-2" style="min-width:100px;">Date :</strong>-->
+<!--                                <input type="date" name="expense_date" class="form-control form-control-sm w-50" required="1" t-att-readonly="is_readonly" t-att-value="expense.date.strftime('%Y-%m-%d') if expense and expense.date else ''"/>-->
+<!--                            </div>-->
+
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Name :</strong> <span class="ms-2"><t t-esc="employee_name"/></span>-->
+<!--                            </div>-->
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Designation :</strong> <span class="ms-2"><t t-esc="designation_name"/></span>-->
+<!--                            </div>-->
+
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Trip To :</strong> <span class="ms-2"><t t-esc="trip_to"/></span>-->
+<!--                            </div>-->
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Department :</strong> <span class="ms-2"><t t-esc="department_name"/></span>-->
+<!--                            </div>-->
+
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Purpose of Trip :</strong> <span class="ms-2"><t t-esc="purpose_of_trip"/></span>-->
+<!--                            </div>-->
+<!--                            <div class="col-md-6 mb-2">-->
+<!--                                <strong>Period From :</strong> <span class="ms-2"><t t-esc="period_from"/></span>-->
+<!--                                <strong class="ms-3">To :</strong> <span class="ms-2"><t t-esc="period_to"/></span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+
+<!--                        &lt;!&ndash; Items Table &ndash;&gt;-->
+<!--                        <div class="table-responsive">-->
+<!--                            <table class="table table-bordered table-sm align-middle text-center" style="font-size: 0.85rem; min-width: 1500px;" id="expense_table">-->
+<!--                                <thead class="bg-dark text-white">-->
+<!--                                    <tr>-->
+<!--                                        <th colspan="12" class="py-1">ITEMS</th>-->
+<!--                                    </tr>-->
+<!--                                    <tr class="bg-light text-dark">-->
+<!--                                        <th style="width: 18%; min-width: 220px;">STATION</th>-->
+<!--                                        <th class="bg-primary text-white" style="width: 10%; min-width: 110px;">Total</th>-->
+<!--                                        <th>Fare</th>-->
+<!--                                        <th>Hotel<br/>Room</th>-->
+<!--                                        <th>Meals</th>-->
+<!--                                        <th>Taxi</th>-->
+<!--                                        <th>Laundry</th>-->
+<!--                                        <th>Telephone</th>-->
+<!--                                        <th>Other<br/>Expense</th>-->
+<!--                                        <th class="bg-secondary text-white">DAILY<br/>ALLOWANCE</th>-->
+<!--                                        <th style="width: 5%;" t-if="not is_readonly">Action</th>-->
+<!--                                    </tr>-->
+<!--                                </thead>-->
+<!--                                <tbody>-->
+<!--                                    <t t-set="cols" t-value="['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']"/>-->
+<!--                                    <t t-foreach="range(1, 8)" t-as="i">-->
+<!--                                        <tr class="expense-row">-->
+<!--                                            <t t-set="line" t-value="expense.expense_line_ids[i-1] if expense and len(expense.expense_line_ids) >= i else False"/>-->
+<!--                                            <td class="text-start p-0" style="min-width: 220px;">-->
+<!--                                                <div class="input-group input-group-sm border-bottom">-->
+<!--                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">From :</span>-->
+<!--                                                    <input type="text" t-attf-name="station_from_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.station_from if line else ''"/>-->
+<!--                                                </div>-->
+<!--                                                <div class="input-group input-group-sm border-bottom">-->
+<!--                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">To :</span>-->
+<!--                                                    <input type="text" t-attf-name="station_to_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.station_to if line else ''"/>-->
+<!--                                                </div>-->
+<!--                                                <div class="input-group input-group-sm border-bottom">-->
+<!--                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">Date :</span>-->
+<!--                                                    <input type="date" t-attf-name="date_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.date_str if line else ''"/>-->
+<!--                                                </div>-->
+<!--                                                <div class="input-group input-group-sm">-->
+<!--                                                    <span class="input-group-text bg-light border-0 border-end rounded-0" style="width: 65px; justify-content: flex-end;">Time :</span>-->
+<!--                                                    <input type="time" t-attf-name="time_{{i}}" class="form-control border-0 rounded-0 bg-transparent" t-att-readonly="is_readonly" t-att-value="line.time_str if line else ''"/>-->
+<!--                                                </div>-->
+<!--                                            </td>-->
+<!--                                            <td class="bg-light text-center align-middle p-2" style="min-width: 110px;">-->
+<!--                                                <span class="fw-bold fs-6 row-total text-primary" t-attf-id="row_total_{{i}}">0.00</span>-->
+<!--                                            </td>-->
+<!--                                            <t t-foreach="cols" t-as="col">-->
+<!--                                                <t t-set="col_val" t-value="0.00"/>-->
+<!--                                                <t t-set="col_desc" t-value="''"/>-->
+<!--                                                <t t-set="col_curr" t-value="''"/>-->
+<!--                                                <t t-if="line">-->
+<!--                                                    <t t-if="col == 'fare'">-->
+<!--                                                        <t t-set="col_val" t-value="line.fare"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.fare_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.fare_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'hotel'">-->
+<!--                                                        <t t-set="col_val" t-value="line.hotel_room"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.hotel_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.hotel_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'meals'">-->
+<!--                                                        <t t-set="col_val" t-value="line.meals"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.meals_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.meals_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'taxi'">-->
+<!--                                                        <t t-set="col_val" t-value="line.taxi"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.taxi_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.taxi_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'laundry'">-->
+<!--                                                        <t t-set="col_val" t-value="line.laundry"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.laundry_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.laundry_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'telephone'">-->
+<!--                                                        <t t-set="col_val" t-value="line.telephone"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.telephone_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.telephone_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'other'">-->
+<!--                                                        <t t-set="col_val" t-value="line.other_expense"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.other_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.other_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                    <t t-if="col == 'daily'">-->
+<!--                                                        <t t-set="col_val" t-value="line.daily_allowance"/>-->
+<!--                                                        <t t-set="col_desc" t-value="line.daily_desc or ''"/>-->
+<!--                                                        <t t-set="col_curr" t-value="line.daily_curr or ''"/>-->
+<!--                                                    </t>-->
+<!--                                                </t>-->
+<!--                                                <td class="p-1 align-middle">-->
+<!--                                                    <div class="mb-1">-->
+<!--                                                        <input type="number" step="0.01" t-attf-name="{{col}}_{{i}}" placeholder="Amount" class="form-control form-control-sm text-center calc-input" t-att-readonly="is_readonly" t-att-value="col_val"/>-->
+<!--                                                    </div>-->
+<!--                                                    <div class="mb-1">-->
+<!--                                                        <input type="text" t-attf-name="{{col}}_desc_{{i}}" placeholder="Description" class="form-control form-control-sm text-center" style="font-size: 0.75rem;" t-att-readonly="is_readonly" t-att-value="col_desc"/>-->
+<!--                                                    </div>-->
+<!--                                                    <div>-->
+<!--                                                        <input type="text" t-attf-name="{{col}}_curr_{{i}}" placeholder="Currency" class="form-control form-control-sm text-center" style="font-size: 0.75rem;" t-att-readonly="is_readonly" t-att-value="col_curr"/>-->
+<!--                                                    </div>-->
+<!--                                                </td>-->
+<!--                                            </t>-->
+<!--                                            <td class="align-middle" t-if="not is_readonly">-->
+<!--                                                <button type="button" class="btn btn-sm btn-outline-primary calc-btn-row" title="Calculate Row">Calc</button>-->
+<!--                                            </td>-->
+<!--                                        </tr>-->
+<!--                                    </t>-->
+<!--                                </tbody>-->
+<!--                                <tfoot>-->
+<!--                                    <tr class="bg-light fw-bold text-primary">-->
+<!--                                        <td class="text-end pe-3">TOTAL</td>-->
+<!--                                        <td id="grand_total_col">0.00</td>-->
+<!--                                        <t t-foreach="cols" t-as="col">-->
+<!--                                            <td t-attf-id="col_total_{{col}}">0.00</td>-->
+<!--                                        </t>-->
+<!--                                        <td t-if="not is_readonly"></td>-->
+<!--                                    </tr>-->
+<!--                                </tfoot>-->
+<!--                            </table>-->
+<!--                        </div>-->
+
+<!--                        <div class="d-flex justify-content-end align-items-center mt-3">-->
+
+<!--                            <div class="text-end" style="width: 450px;">-->
+<!--                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">-->
+<!--                                    <span>Total Expense :</span>-->
+<!--                                    <span id="summary_total_expense" class="pe-2">0.00</span>-->
+<!--                                </div>-->
+<!--                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">-->
+<!--                                    <span>Less : Advance by Company :</span>-->
+<!--                                    <input type="number" step="0.01" name="advance_by_company" id="input_advance" class="form-control form-control-sm w-25 text-end calc-input-summary" t-att-readonly="is_readonly" t-att-value="expense.advance_by_company if expense else 0"/>-->
+<!--                                </div>-->
+<!--                                <div class="d-flex justify-content-between mb-1 fw-bold align-items-center">-->
+<!--                                    <span>Items to be paid direct by the Company :</span>-->
+<!--                                    <input type="number" step="0.01" name="items_paid_direct" id="input_items_direct" class="form-control form-control-sm w-25 text-end calc-input-summary" t-att-readonly="is_readonly" t-att-value="expense.items_paid_direct if expense else 0"/>-->
+<!--                                </div>-->
+<!--                                <div class="d-flex justify-content-between mt-2 fw-bold border-top pt-2 align-items-center">-->
+<!--                                    <span>Balance Due to Company/Me :</span>-->
+<!--                                    <span id="summary_balance_due" class="pe-2">0.00</span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        &lt;!&ndash; ==================== ATTACHMENTS SECTION ==================== &ndash;&gt;-->
+<!--                        <div class="card mt-4 border">-->
+<!--                            <div class="card-header bg-light fw-bold">-->
+<!--                                <i class="fa fa-paperclip me-1"></i>-->
+<!--                                Attachments-->
+<!--                            </div>-->
+<!--                            <div class="card-body">-->
+<!--                                &lt;!&ndash; Existing attachments (view mode) &ndash;&gt;-->
+<!--                                <t t-if="expense and attachments">-->
+<!--                                    <div class="mb-3">-->
+<!--                                        <label class="fw-bold">Uploaded Files:</label>-->
+<!--                                        <ul class="list-group mt-2">-->
+<!--                                            <t t-foreach="attachments" t-as="att">-->
+<!--                                                <li class="list-group-item d-flex justify-content-between align-items-center">-->
+<!--                                                    <a t-attf-href="/web/content/{{att.id}}?download=true"-->
+<!--                                                       target="_blank">-->
+<!--                                                        <i class="fa fa-file me-1"></i>-->
+<!--                                                        <t t-esc="att.name"/>-->
+<!--                                                    </a>-->
+<!--                                                    <span class="badge bg-secondary">-->
+<!--                                                        <t t-esc="round(att.file_size / 1024, 2)"/>-->
+<!--                                                        KB-->
+<!--                                                    </span>-->
+<!--                                                </li>-->
+<!--                                            </t>-->
+<!--                                        </ul>-->
+<!--                                    </div>-->
+<!--                                </t>-->
+
+<!--                                &lt;!&ndash; Upload input (only in editable mode) &ndash;&gt;-->
+<!--                                <t t-if="not is_readonly">-->
+<!--                                    <label class="fw-bold">Upload Attachments (Bills/Receipts):</label>-->
+<!--                                    <input type="file"-->
+<!--                                           name="attachments"-->
+<!--                                           id="attachments_input"-->
+<!--                                           class="form-control mt-2"-->
+<!--                                           multiple="multiple"-->
+<!--                                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"/>-->
+<!--                                    <small class="text-muted">You can select multiple files (PDF, Images, Word, Excel).-->
+<!--                                        Max 10MB per file.-->
+<!--                                    </small>-->
+
+<!--                                    &lt;!&ndash; Preview selected files &ndash;&gt;-->
+<!--                                    <div id="file_preview" class="mt-2"></div>-->
+<!--                                </t>-->
+
+<!--                                &lt;!&ndash; No attachments message in view mode &ndash;&gt;-->
+<!--                                <t t-if="is_readonly and not attachments">-->
+<!--                                    <p class="text-muted mb-0">-->
+<!--                                        <i>No attachments uploaded.</i>-->
+<!--                                    </p>-->
+<!--                                </t>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        &lt;!&ndash; ==================== END ATTACHMENTS SECTION ==================== &ndash;&gt;-->
+
+<!--                        <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">-->
+<!--                            <a t-attf-href="/my/travel/view/{{request_rec.id}}" class="btn btn-secondary">Discard</a>-->
+<!--                            <button type="submit" class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>-->
+<!--                        </div>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; JavaScript for Calculation &ndash;&gt;-->
+<!--            <script type="text/javascript">-->
+<!--            //<![CDATA[-->
+<!--            document.addEventListener('DOMContentLoaded', function() {-->
+<!--                const cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily'];-->
+<!--                const rowCount = 7;-->
+
+<!--                function performCalculation() {-->
+<!--                    let grandTotal = 0.0;-->
+<!--                    let colTotals = { fare:0, hotel:0, meals:0, taxi:0, laundry:0, telephone:0, other:0, daily:0 };-->
+
+<!--                    for (let i = 1; i <= rowCount; i++) {-->
+<!--                        let rowTotal = 0.0;-->
+<!--                        cols.forEach(col => {-->
+<!--                            let input = document.querySelector('input[name="' + col + '_' + i + '"]');-->
+<!--                            let val = input ? (parseFloat(input.value) || 0) : 0;-->
+<!--                            rowTotal += val;-->
+<!--                            colTotals[col] += val;-->
+<!--                        });-->
+<!--                        const rowTotElem = document.getElementById('row_total_' + i);-->
+<!--                        if (rowTotElem) rowTotElem.innerText = rowTotal.toFixed(2);-->
+
+<!--                        grandTotal += rowTotal;-->
+<!--                    }-->
+
+<!--                    cols.forEach(col => {-->
+<!--                        const colTotElem = document.getElementById('col_total_' + col);-->
+<!--                        if (colTotElem) colTotElem.innerText = colTotals[col].toFixed(2);-->
+<!--                    });-->
+
+<!--                    const grandCol = document.getElementById('grand_total_col');-->
+<!--                    if (grandCol) grandCol.innerText = grandTotal.toFixed(2);-->
+
+<!--                    const sumTot = document.getElementById('summary_total_expense');-->
+<!--                    if (sumTot) sumTot.innerText = grandTotal.toFixed(2);-->
+
+<!--                    const totInp = document.getElementById('total_expense_input');-->
+<!--                    if (totInp) totInp.value = grandTotal.toFixed(2);-->
+
+<!--                    let adv = parseFloat(document.getElementById('input_advance').value) || 0;-->
+<!--                    let direct = parseFloat(document.getElementById('input_items_direct').value) || 0;-->
+
+<!--                    let balance = grandTotal - adv - direct;-->
+<!--                    const balElem = document.getElementById('summary_balance_due');-->
+<!--                    if (balElem) balElem.innerText = balance.toFixed(2);-->
+<!--                }-->
+
+<!--                performCalculation();-->
+
+<!--                document.querySelectorAll('.calc-input, .calc-input-summary').forEach(inp => {-->
+<!--                    inp.addEventListener('change', performCalculation);-->
+<!--                    inp.addEventListener('input', performCalculation);-->
+<!--                });-->
+
+<!--                document.querySelectorAll('.calc-btn-row').forEach(btn => {-->
+<!--                    btn.addEventListener('click', performCalculation);-->
+<!--                });-->
+
+<!--                // &#45;&#45;&#45;&#45; File preview &#45;&#45;&#45;&#45;-->
+<!--                const fileInput = document.getElementById('attachments_input');-->
+<!--                if (fileInput) {-->
+<!--                    fileInput.addEventListener('change', function(e) {-->
+<!--                        const preview = document.getElementById('file_preview');-->
+<!--                        if (!preview) return;-->
+<!--                        preview.innerHTML = '';-->
+<!--                        const files = e.target.files;-->
+<!--                        if (files.length === 0) return;-->
+<!--                        let html = '<div class="alert alert-info py-2 mb-0"><strong>Selected Files:</strong><ul class="mb-0 mt-1">';-->
+<!--                        for (let i = 0; i < files.length; i++) {-->
+<!--                            const sizeKB = (files[i].size / 1024).toFixed(2);-->
+<!--                            html += '<li>' + files[i].name + ' (' + sizeKB + ' KB)</li>';-->
+<!--                        }-->
+<!--                        html += '</ul></div>';-->
+<!--                        preview.innerHTML = html;-->
+<!--                    });-->
+<!--                }-->
+<!--            });-->
+<!--            //]]>-->
+<!--            </script>-->
+<!--        </t>-->
+<!--    </template>-->
 </odoo>
 

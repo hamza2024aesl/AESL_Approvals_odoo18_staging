@@ -1,6 +1,30 @@
 <odoo>
     <data>
 
+        <record id="hr_attendance_form_view_inherited" model="ir.ui.view">
+            <field name="name">Inherited Form view of Attendance</field>
+            <field name="model">hr.attendance</field>
+            <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='employee_id']" position="after">
+                <field name="on_leave_apply" invisible="1"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="hr_attendance_tree_view_inherited" model="ir.ui.view">
+            <field name="name">Inherited Tree view of Attendance</field>
+            <field name="model">hr.attendance</field>
+            <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+            <field name="arch" type="xml">
+              <xpath expr="//field[@name='employee_id']" position="after">
+                <field name="on_leave_apply" invisible="1"/>
+              </xpath>
+            </field>
+        </record>
+
+
         <record id="hr_employee_custom_view_form_inherited" model="ir.ui.view">
             <field name="name">hr.employee.custom.view.form.inherited</field>
             <field name="model">hr.employee</field>
