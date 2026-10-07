@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_approval_travel_expense" model="ir.sequence">
+        <field name="name">Travel Expense</field>
+        <field name="code">approval.travel.expense</field>
+        <field name="prefix">TEXP/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+</odoo>

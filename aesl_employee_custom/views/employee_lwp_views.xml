@@ -1,120 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <odoo>
-    <record id="view_aesl_lwp_report_search" model="ir.ui.view">
-        <field name="name">aesl.lwp.report.search</field>
-        <field name="model">aesl.lwp.report</field>
-        <field name="arch" type="xml">
-            <search string="LWP Report">
-                <field name="employee_id"/>
-                <field name="attendance_date"/>
-                <field name="status2"/>
-                <field name="in_status"/>
-                <field name="out_status"/>
+<!--    <record id="view_aesl_lwp_report_search" model="ir.ui.view">-->
+<!--        <field name="name">aesl.lwp.report.search</field>-->
+<!--        <field name="model">aesl.lwp.report</field>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <search string="LWP Report">-->
+<!--                <field name="employee_id"/>-->
+<!--                <field name="attendance_date"/>-->
+<!--                <field name="status2"/>-->
+<!--                <field name="in_status"/>-->
+<!--                <field name="out_status"/>-->
 
-                <filter name="filter_my_lwp" string="My LWP"
-                        domain="[('employee_id.user_id', '=', uid)]"/>
+<!--                <filter name="filter_my_lwp" string="My LWP"-->
+<!--                        domain="[('employee_id.user_id', '=', uid)]"/>-->
 
-                <filter name="filter_absent" string="Absent"
-                        domain="[('status2', '=', 'absent')]"/>
+<!--                <filter name="filter_absent" string="Absent"-->
+<!--                        domain="[('status2', '=', 'absent')]"/>-->
 
-                <filter name="filter_missed_in" string="Missed Check In"
-                        domain="[('status2', '=', 'missed_check_in')]"/>
+<!--                <filter name="filter_missed_in" string="Missed Check In"-->
+<!--                        domain="[('status2', '=', 'missed_check_in')]"/>-->
 
-                <group expand="0" string="Group By">
-                    <filter name="group_employee" string="Employee"
-                            context="{'group_by': 'employee_id'}"/>
-                    <filter name="group_date" string="Date"
-                            context="{'group_by': 'attendance_date'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
+<!--                <group expand="0" string="Group By">-->
+<!--                    <filter name="group_employee" string="Employee"-->
+<!--                            context="{'group_by': 'employee_id'}"/>-->
+<!--                    <filter name="group_date" string="Date"-->
+<!--                            context="{'group_by': 'attendance_date'}"/>-->
+<!--                </group>-->
+<!--            </search>-->
+<!--        </field>-->
+<!--    </record>-->
 
 
-    <record id="view_aesl_lwp_report_tree" model="ir.ui.view">
-        <field name="name">aesl.lwp.report.tree</field>
-        <field name="model">aesl.lwp.report</field>
-        <field name="arch" type="xml">
-            <list string="LWP Report">
-                <field name="employee_id"/>
-                <field name="attendance_date"/>
-                <field name="status2"/>
-                <field name="in_status"/>
-                <field name="out_status"/>
-                <field name="on_leave"/>
-                <field name="deduction_status"
-                       widget="badge"
-                       decoration-danger="deduction_status == 'lwp'"
-                       decoration-success="deduction_status == 'present'"
-                       decoration-warning="deduction_status == 'leave'"/>
+<!--    <record id="view_aesl_lwp_report_tree" model="ir.ui.view">-->
+<!--        <field name="name">aesl.lwp.report.tree</field>-->
+<!--        <field name="model">aesl.lwp.report</field>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <list string="LWP Report">-->
+<!--                <field name="employee_id"/>-->
+<!--                <field name="attendance_date"/>-->
+<!--                <field name="status2"/>-->
+<!--                <field name="in_status"/>-->
+<!--                <field name="out_status"/>-->
+<!--                <field name="on_leave"/>-->
+<!--                <field name="deduction_status"-->
+<!--                       widget="badge"-->
+<!--                       decoration-danger="deduction_status == 'lwp'"-->
+<!--                       decoration-success="deduction_status == 'present'"-->
+<!--                       decoration-warning="deduction_status == 'leave'"/>-->
 
-            </list>
-        </field>
-    </record>
+<!--            </list>-->
+<!--        </field>-->
+<!--    </record>-->
+
+<!--&lt;!&ndash;    <record id="action_aesl_lwp_report" model="ir.actions.act_window">&ndash;&gt;-->
+<!--&lt;!&ndash;        <field name="name">LWP Report</field>&ndash;&gt;-->
+<!--&lt;!&ndash;        <field name="res_model">aesl.lwp.report</field>&ndash;&gt;-->
+<!--&lt;!&ndash;        <field name="view_mode">list</field>&ndash;&gt;-->
+<!--&lt;!&ndash;        <field name="view_id" ref="view_aesl_lwp_report_tree"/>&ndash;&gt;-->
+<!--&lt;!&ndash;        <field name="search_view_id" ref="view_aesl_lwp_report_search"/>&ndash;&gt;-->
+<!--&lt;!&ndash;    </record>&ndash;&gt;-->
 
 <!--    <record id="action_aesl_lwp_report" model="ir.actions.act_window">-->
 <!--        <field name="name">LWP Report</field>-->
 <!--        <field name="res_model">aesl.lwp.report</field>-->
 <!--        <field name="view_mode">list</field>-->
-<!--        <field name="view_id" ref="view_aesl_lwp_report_tree"/>-->
+<!--                <field name="view_id" ref="view_aesl_lwp_report_tree"/>-->
 <!--        <field name="search_view_id" ref="view_aesl_lwp_report_search"/>-->
+<!--        <field name="context">{'cache': False}</field>-->
+<!--        <field name="domain">[-->
+<!--            ('on_leave', '=', False),-->
+<!--            ('status2', '!=', 'off_day'),-->
+<!--            ('employee_id.x_studio_grade', 'in',-->
+<!--             ['0','1','2','3','4','5','6','7','8','9','10','11','12','13']),-->
+<!--            '|', '|', '|',-->
+<!--            ('status2', '=', 'absent'),-->
+<!--            ('status2', '=', 'missed_check_in'),-->
+<!--            '&amp;', ('status2', '=', 'missed_check_out'), ('in_status', '=', '3'),-->
+<!--            '|', '|',-->
+<!--            ('in_status', '=', '5'),-->
+<!--            ('in_status', '=', '3'),-->
+<!--            '&amp;', ('in_status', '=', '0'), ('out_status', '=', '3'),-->
+<!--        ]</field>-->
 <!--    </record>-->
 
-    <record id="action_aesl_lwp_report" model="ir.actions.act_window">
-        <field name="name">LWP Report</field>
-        <field name="res_model">aesl.lwp.report</field>
-        <field name="view_mode">list</field>
-                <field name="view_id" ref="view_aesl_lwp_report_tree"/>
-        <field name="search_view_id" ref="view_aesl_lwp_report_search"/>
-        <field name="context">{'cache': False}</field>
-        <field name="domain">[
-            ('on_leave', '=', False),
-            ('status2', '!=', 'off_day'),
-            ('employee_id.x_studio_grade', 'in',
-             ['0','1','2','3','4','5','6','7','8','9','10','11','12','13']),
-            '|', '|', '|',
-            ('status2', '=', 'absent'),
-            ('status2', '=', 'missed_check_in'),
-            '&amp;', ('status2', '=', 'missed_check_out'), ('in_status', '=', '3'),
-            '|', '|',
-            ('in_status', '=', '5'),
-            ('in_status', '=', '3'),
-            '&amp;', ('in_status', '=', '0'), ('out_status', '=', '3'),
-        ]</field>
-    </record>
+<!--&lt;!&ndash;    <menuitem&ndash;&gt;-->
+<!--&lt;!&ndash;    id="menu_aesl_lwp_report11"&ndash;&gt;-->
+<!--&lt;!&ndash;    name="LWP Report"&ndash;&gt;-->
+<!--&lt;!&ndash;    parent="hr_attendance.view_attendance_tree"&ndash;&gt;-->
+<!--&lt;!&ndash;    action="aesl_employee_custom.action_aesl_lwp_report"&ndash;&gt;-->
+<!--&lt;!&ndash;    sequence="50"/>&ndash;&gt;-->
+
+<!--    <record id="action_refresh_lwp_server" model="ir.actions.server">-->
+<!--        <field name="name">Refresh LWP</field>-->
+<!--        <field name="model_id" ref="model_aesl_lwp_report"/>-->
+<!--        <field name="binding_model_id" ref="model_aesl_lwp_report"/>-->
+<!--        <field name="binding_view_types">list</field>-->
+<!--        <field name="state">code</field>-->
+<!--        <field name="code">-->
+<!--               action = model.action_refresh_lwp()-->
+<!--        </field>-->
+<!--    </record>-->
 
 <!--    <menuitem-->
-<!--    id="menu_aesl_lwp_report11"-->
+<!--    id="menu_aesl_lwp_root"-->
 <!--    name="LWP Report"-->
-<!--    parent="hr_attendance.view_attendance_tree"-->
+<!--    web_icon="aesl_employee_custom,static/description/lwp_menu.jpg"-->
 <!--    action="aesl_employee_custom.action_aesl_lwp_report"-->
 <!--    sequence="50"/>-->
 
-    <record id="action_refresh_lwp_server" model="ir.actions.server">
-        <field name="name">Refresh LWP</field>
-        <field name="model_id" ref="model_aesl_lwp_report"/>
-        <field name="binding_model_id" ref="model_aesl_lwp_report"/>
-        <field name="binding_view_types">list</field>
-        <field name="state">code</field>
-        <field name="code">
-               action = model.action_refresh_lwp()
-        </field>
-    </record>
-
-    <menuitem
-    id="menu_aesl_lwp_root"
-    name="LWP Report"
-    web_icon="aesl_employee_custom,static/description/lwp_menu.jpg"
-    action="aesl_employee_custom.action_aesl_lwp_report"
-    sequence="50"/>
-
-    <menuitem
-    id="menu_aesl_lwp_process"
-    name="LWP Update"
-    parent="aesl_employee_custom.menu_aesl_lwp_root"
-    action="aesl_employee_custom.action_aesl_lwp_report"
-    sequence="50"/>
+<!--    <menuitem-->
+<!--    id="menu_aesl_lwp_process"-->
+<!--    name="LWP Update"-->
+<!--    parent="aesl_employee_custom.menu_aesl_lwp_root"-->
+<!--    action="aesl_employee_custom.action_aesl_lwp_report"-->
+<!--    sequence="50"/>-->
 
 
 

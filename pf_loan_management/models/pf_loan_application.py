@@ -253,7 +253,9 @@ class PFLoanApplication(models.Model):
             base_url = rec.env['ir.config_parameter'].sudo().get_param('web.base.url')
             if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
                 base_url = 'http://odoo.aesl.com.pk:8018'
-            PFLoan_url = f"{base_url}/my/travel/expense/view/{rec.id}"
+            PFLoan_url = f"{base_url}/my/pf_loan/view/{rec.id}"
+            PFLoanHR_url = f"{base_url}/odoo/action-964{rec.id}"
+
             for recipient_emp in recipients:
                 if recipient_emp and recipient_emp.work_email:
                     subject = f"PF Loan Approval Needed ({step_name}): {rec.name}"
@@ -271,9 +273,15 @@ class PFLoanApplication(models.Model):
                         <p>Please log in to the system to review and process this application.</p>
                         <p style="margin-top: 15px;">
                             <a href="{PFLoan_url}" style="background-color: #8D0000; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                                View Expense Report
+                                View PF Loan request
                             </a>
                         </p>
+                        <p style="margin-top: 15px;">
+                            <a href="{PFLoanHR_url}" style="background-color: #8D0000; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                                HR View PF Loan request
+                            </a>
+                        </p>
+                        
                         <p>Best Regards,</p>
                     </div>
                     """
