@@ -442,6 +442,10 @@ class PFLoanApplication(models.Model):
             elif rec.state == 'waiting_trustee':
                 rec.state = 'waiting_finance'
                 rec._send_return_email(rec.finance_approver_id, "Returned to Finance Officer")
+            elif rec.state == 'waiting_trustee_second':
+                rec.state = 'waiting_trustee'
+                rec._send_return_email(rec.trustee_approver_id, "Returned to 1st Trustee")
+
 
     def _send_return_email(self, recipient_emp, stage_label):
         for rec in self:

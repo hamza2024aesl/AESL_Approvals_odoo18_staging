@@ -1365,8 +1365,9 @@ class PFLoanPortal(CustomerPortal):
                     pf_balance_dues = (getattr(employee, 'total', 0.0) or 0.0) + (getattr(employee, 'pf_employee', 0.0) or 0.0) + (getattr(employee, 'pf_employer', 0.0) or 0.0) + (getattr(employee, 'pf_interest', 0.0) or 0.0)
 
         max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
-        is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
-        
+        # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+        is_interest_free = False if employee.exclude_pf_interest else True
+
         vals = {
             "page_name": "pf_loan_form_page",
             "loan": False,
@@ -1560,7 +1561,8 @@ class PFLoanPortal(CustomerPortal):
                 return 0.0
 
         try:
-            is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+            # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+            is_interest_free = False if employee.exclude_pf_interest else True
             vals = {
                 "loan_amount": safe_float(post.get("loan_amount")),
                 "loan_amount_words": post.get("loan_amount_words", ""),
