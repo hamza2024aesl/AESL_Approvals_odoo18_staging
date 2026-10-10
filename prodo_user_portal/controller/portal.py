@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager
 from pytz import timezone
-
+import re
 from odoo import http, _, fields
 from odoo.exceptions import AccessDenied, UserError
 from odoo.http import request
@@ -13,6 +13,9 @@ from odoo.tools import float_round
 from odoo.exceptions import UserError, ValidationError
 from odoo.http import request, Response
 import json
+import base64
+from odoo import http
+from odoo.http import request
 
 class AppraisalPortal(CustomerPortal):
 
@@ -352,7 +355,8 @@ class ApprovalPortal(CustomerPortal):
                 finance_domain = [
                     ('travel_request_type', '=', line.config_id.config_type),
                     ('employee_location_id', 'in', line.work_location_ids.ids),
-                    ('employee_department_id', '=', line.department_id.id),
+                    # ('employee_department_id', '=', line.department_id.id),
+                    ('employee_travel_department_id', '=', line.travel_department_id.id),
                     ('request_status', '=', 'approved'),
                     ('request_owner_id', '!=', user.id)
                 ]
@@ -395,9 +399,15 @@ class ApprovalPortal(CustomerPortal):
             "categories": categories,
             "employee_name": employee.name,
             "employee_identification_id": employee.identification_id,
-            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_cnic": employee.ssnid if employee.ssnid else "",
+            "employee_mobile": employee.mobile_phone if employee.mobile_phone else "",
+            "employee_dob": employee.birthday if employee.birthday else "",
+            # "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_travel_department_id": employee.travel_department_id.name if employee.travel_department_id else "",
             "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
             "employee_job_id": employee.job_id.name if employee.job_id else "",
+            "currencies": request.env['res.currency'].sudo().search([('active', '=', True)]),
+            "default_currency_id": request.env.company.currency_id.id,
         }
         return request.render("prodo_user_portal.travel_request_form_portal", vals)
 
@@ -548,7 +558,11 @@ class ApprovalPortal(CustomerPortal):
             "request_rec": request_rec,
             "employee_name": employee.name,
             "employee_identification_id": employee.identification_id,
-            "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_cnic": employee.ssnid if employee.ssnid else "",
+            "employee_mobile": employee.mobile_phone if employee.mobile_phone else "",
+            "employee_dob": employee.birthday if employee.birthday else "",
+            # "employee_department_id": employee.department_id.name if employee.department_id else "",
+            "employee_travel_department_id": employee.travel_department_id.name if employee.travel_department_id else "",
             "employee_work_location_id": employee.work_location_id.name if employee.work_location_id else "",
             "employee_job_id": employee.job_id.name if employee.job_id else "",
             "is_approver": is_approver,
@@ -629,41 +643,327 @@ class ApprovalPortal(CustomerPortal):
         
         return {"success": True, "count": count}
 
-    @http.route("/my/travel/expense/new/<int:request_id>", type="http", auth="user", website=True)
-    def portal_travel_expense_new(self, request_id):
-        request_rec = request.env["approval.request"].sudo().browse(request_id)
-        if not request_rec.exists() or request_rec.request_status != 'approved':
-            return request.redirect("/my/travel")
-            
-        employee = request_rec.employee_id
-        
-        trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
-        
+    # @http.route("/my/travel/expense/new/<int:request_id>", type="http", auth="user", website=True)
+    # def portal_travel_expense_new(self, request_id):
+    #     request_rec = request.env["approval.request"].sudo().browse(request_id)
+    #     if not request_rec.exists() or request_rec.request_status != 'approved':
+    #         return request.redirect("/my/travel")
+    #
+    #     employee = request_rec.employee_id
+    #
+    #     trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
+    #
+    #     vals = {
+    #         "page_name": "travel_expense_page",
+    #         "request_rec": request_rec,
+    #         "employee_name": employee.name if employee else "",
+    #         "employee_reg_no": employee.identification_id if employee else "",
+    #         "department_name": employee.department_id.name if employee and employee.department_id else "",
+    #         "designation_name": employee.job_id.name if employee and employee.job_id else "",
+    #         "trip_to": trip_to,
+    #         "purpose_of_trip": request_rec.category_id.name or "",
+    #         "period_from": request_rec.date_start.strftime("%Y-%m-%d %H:%M") if request_rec.date_start else "",
+    #         "period_to": request_rec.date_end.strftime("%Y-%m-%d %H:%M") if request_rec.date_end else "",
+    #         "is_readonly": False,
+    #         "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
+    #     }
+    #     return request.render("prodo_user_portal.travel_expense_form_portal", vals)
+    #
+    # @http.route("/my/travel/expense/view/<int:expense_id>", type="http", auth="user", website=True)
+    # def portal_travel_expense_view(self, expense_id):
+    #     expense = request.env["approval.travel.expense"].sudo().browse(expense_id)
+    #     if not expense.exists():
+    #         return request.redirect("/my/travel")
+    #     attachments = request.env["ir.attachment"].sudo().search([
+    #         ("res_model", "=", "approval.travel.expense"),
+    #         ("res_id", "=", expense.id)
+    #     ]) if expense else []
+    #
+    #     vals = {
+    #         "page_name": "travel_expense_page",
+    #         "request_rec": expense.request_id,
+    #         "expense": expense,
+    #         "employee_name": expense.employee_name,
+    #         "employee_reg_no": expense.employee_reg_no,
+    #         "department_name": expense.department_name,
+    #         "designation_name": expense.designation_name,
+    #         "trip_to": expense.trip_to,
+    #         "purpose_of_trip": expense.purpose_of_trip,
+    #         "period_from": expense.period_from.strftime("%Y-%m-%d %H:%M") if expense.period_from else "",
+    #         "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
+    #         "is_readonly": True,
+    #         "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
+    #         "attachments": attachments,
+    #     }
+    #     return request.render("prodo_user_portal.travel_expense_form_portal", vals)
+    #
+    # @http.route("/my/travel/expense/save", type="http", auth="user", website=True, methods=["POST"])
+    # def portal_travel_expense_save(self, **post):
+    #     request_id = int(post.get('request_id', 0))
+    #     request_rec = request.env["approval.request"].sudo().browse(request_id)
+    #
+    #     if not request_rec.exists():
+    #         return request.redirect("/my/travel")
+    #
+    #     employee = request_rec.employee_id
+    #
+    #     def safe_float(val):
+    #         if not val:
+    #             return 0.0
+    #         try:
+    #             return float(val)
+    #         except (ValueError, TypeError):
+    #             return 0.0
+    #
+    #     try:
+    #         trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
+    #
+    #         # Main Expense Record
+    #         expense_vals = {
+    #             'request_id': request_rec.id,
+    #             'employee_id': employee.id if employee else False,
+    #             'employee_name': employee.name if employee else "",
+    #             'employee_reg_no': employee.identification_id if employee else "",
+    #             'department_name': employee.department_id.name if employee and employee.department_id else "",
+    #             'designation_name': employee.job_id.name if employee and employee.job_id else "",
+    #             'trip_to': trip_to,
+    #             'purpose_of_trip': request_rec.category_id.name or "",
+    #             'period_from': request_rec.date_start,
+    #             'period_to': request_rec.date_end,
+    #             'date': post.get('expense_date'),
+    #             'advance_by_company': safe_float(post.get('advance_by_company')),
+    #             'items_paid_direct': safe_float(post.get('items_paid_direct')),
+    #             'state': 'submitted',
+    #         }
+    #         expense = request.env['approval.travel.expense'].sudo().create(expense_vals)
+    #
+    #         # ==================== ATTACHMENT HANDLING ====================
+    #         # Handle uploaded attachments
+    #         attachments = request.httprequest.files.getlist('attachments')
+    #         for file in attachments:
+    #             if file and file.filename:
+    #                 attachment = request.env['ir.attachment'].sudo().create({
+    #                     'name': file.filename,
+    #                     'datas': base64.b64encode(file.read()),
+    #                     'res_model': 'approval.travel.expense',
+    #                     'res_id': expense.id,
+    #                     'mimetype': file.content_type or 'application/octet-stream',
+    #                 })
+    #         # ==================== END ATTACHMENT HANDLING ====================
+    #
+    #         # Lines
+    #         cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']
+    #         for i in range(1, 8):
+    #             station_from = post.get(f'station_from_{i}')
+    #             station_to = post.get(f'station_to_{i}')
+    #             date_str = post.get(f'date_{i}')
+    #             time_str = post.get(f'time_{i}')
+    #
+    #             fare_amt = safe_float(post.get(f'fare_{i}'))
+    #             fare_desc = post.get(f'fare_desc_{i}', '')
+    #             fare_curr = post.get(f'fare_curr_{i}', '')
+    #
+    #             hotel_amt = safe_float(post.get(f'hotel_{i}'))
+    #             hotel_desc = post.get(f'hotel_desc_{i}', '')
+    #             hotel_curr = post.get(f'hotel_curr_{i}', '')
+    #
+    #             meals_amt = safe_float(post.get(f'meals_{i}'))
+    #             meals_desc = post.get(f'meals_desc_{i}', '')
+    #             meals_curr = post.get(f'meals_curr_{i}', '')
+    #
+    #             taxi_amt = safe_float(post.get(f'taxi_{i}'))
+    #             taxi_desc = post.get(f'taxi_desc_{i}', '')
+    #             taxi_curr = post.get(f'taxi_curr_{i}', '')
+    #
+    #             laundry_amt = safe_float(post.get(f'laundry_{i}'))
+    #             laundry_desc = post.get(f'laundry_desc_{i}', '')
+    #             laundry_curr = post.get(f'laundry_curr_{i}', '')
+    #
+    #             telephone_amt = safe_float(post.get(f'telephone_{i}'))
+    #             telephone_desc = post.get(f'telephone_desc_{i}', '')
+    #             telephone_curr = post.get(f'telephone_curr_{i}', '')
+    #
+    #             other_amt = safe_float(post.get(f'other_{i}'))
+    #             other_desc = post.get(f'other_desc_{i}', '')
+    #             other_curr = post.get(f'other_curr_{i}', '')
+    #
+    #             daily_amt = safe_float(post.get(f'daily_{i}'))
+    #             daily_desc = post.get(f'daily_desc_{i}', '')
+    #             daily_curr = post.get(f'daily_curr_{i}', '')
+    #
+    #             # Check if row has any data
+    #             has_data = any([
+    #                 station_from, station_to, date_str, time_str,
+    #                 fare_amt, fare_desc, fare_curr,
+    #                 hotel_amt, hotel_desc, hotel_curr,
+    #                 meals_amt, meals_desc, meals_curr,
+    #                 taxi_amt, taxi_desc, taxi_curr,
+    #                 laundry_amt, laundry_desc, laundry_curr,
+    #                 telephone_amt, telephone_desc, telephone_curr,
+    #                 other_amt, other_desc, other_curr,
+    #                 daily_amt, daily_desc, daily_curr,
+    #             ])
+    #
+    #             if has_data:
+    #                 request.env['approval.travel.expense.line'].sudo().create({
+    #                     'expense_id': expense.id,
+    #                     'station_from': station_from,
+    #                     'station_to': station_to,
+    #                     'date_str': date_str,
+    #                     'time_str': time_str,
+    #                     'fare': fare_amt,
+    #                     'fare_desc': fare_desc,
+    #                     'fare_curr': fare_curr,
+    #                     'hotel_room': hotel_amt,
+    #                     'hotel_desc': hotel_desc,
+    #                     'hotel_curr': hotel_curr,
+    #                     'meals': meals_amt,
+    #                     'meals_desc': meals_desc,
+    #                     'meals_curr': meals_curr,
+    #                     'taxi': taxi_amt,
+    #                     'taxi_desc': taxi_desc,
+    #                     'taxi_curr': taxi_curr,
+    #                     'laundry': laundry_amt,
+    #                     'laundry_desc': laundry_desc,
+    #                     'laundry_curr': laundry_curr,
+    #                     'telephone': telephone_amt,
+    #                     'telephone_desc': telephone_desc,
+    #                     'telephone_curr': telephone_curr,
+    #                     'other_expense': other_amt,
+    #                     'other_desc': other_desc,
+    #                     'other_curr': other_curr,
+    #                     'daily_allowance': daily_amt,
+    #                     'daily_desc': daily_desc,
+    #                     'daily_curr': daily_curr,
+    #                 })
+    #
+    #         # Trigger Email
+    #         self._send_expense_notification(expense)
+    #
+    #     except Exception as e:
+    #         request.session['expense_error'] = str(e)
+    #         return request.redirect(f"/my/travel/expense/new/{request_id}")
+    #
+    #     return request.redirect(f"/my/travel/expense/view/{expense.id}")
+
+
+    LINE_COLS = [
+        # (post prefix, model amount field, desc field, curr field)
+        ('fare', 'fare', 'fare_desc', 'fare_curr'),
+        ('hotel', 'hotel_room', 'hotel_desc', 'hotel_curr'),
+        ('meals', 'meals', 'meals_desc', 'meals_curr'),
+        ('taxi', 'taxi', 'taxi_desc', 'taxi_curr'),
+        ('laundry', 'laundry', 'laundry_desc', 'laundry_curr'),
+        ('telephone', 'telephone', 'telephone_desc', 'telephone_curr'),
+        ('other', 'other_expense', 'other_desc', 'other_curr'),
+        ('daily', 'daily_allowance', 'daily_desc', 'daily_curr'),
+    ]
+    CURRENCIES = ["PKR", "USD", "EUR", "GBP", "AED"]
+
+    # ---------------------------- helpers ----------------------------
+    def _get_current_employee(self):
+        return request.env['hr.employee'].sudo().search(
+            [('user_id', '=', request.env.user.id)], limit=1)
+
+    def _is_expense_manager(self):
+        """Users configured as payable/HR in approval.expense.config see all expenses."""
+        emp = self._get_current_employee()
+        if not emp:
+            return False
+        return bool(request.env['approval.expense.config'].sudo().search_count(
+            ['|', ('expense_payable_id', '=', emp.id), ('hr_id', '=', emp.id)]))
+
+    def _expense_domain(self):
+        if self._is_expense_manager():
+            return []
+        return [('employee_id.user_id', '=', request.env.user.id)]
+
+    def _linkable_requests(self):
+        """Approved requests of this user that don't have an expense yet.
+        Add the same extra domain you use on the /my/travel list if needed."""
+        used = request.env['approval.travel.expense'].sudo().search(
+            [('request_id', '!=', False)]).mapped('request_id').ids
+        return request.env['approval.request'].sudo().search([
+            ('request_owner_id', '=', request.env.user.id),
+            ('request_status', '=', 'approved'),
+            ('id', 'not in', used),
+        ], order='id desc')
+
+    def _parse_dt(self, val):
+        try:
+            return datetime.datetime.strptime(val, '%Y-%m-%dT%H:%M') if val else False
+        except (ValueError, TypeError):
+            return False
+
+    # ---------------------------- list ----------------------------
+    @http.route("/my/travel/expenses", type="http", auth="user", website=True)
+    def portal_travel_expense_list(self, **kw):
+        expenses = request.env['approval.travel.expense'].sudo().search(
+            self._expense_domain(), order='id desc')
+        return request.render("prodo_user_portal.travel_expense_list_portal", {
+            "page_name": "travel_expense_list_page",
+            "expenses": expenses,
+            "is_expense_manager": self._is_expense_manager(),
+        })
+
+    # ---------------------------- new ----------------------------
+    @http.route(["/my/travel/expense/new", "/my/travel/expense/new/<int:request_id>"],
+                type="http", auth="user", website=True)
+    def portal_travel_expense_new(self, request_id=None, **kw):
+        request_rec = request.env["approval.request"]
+        if request_id:
+            request_rec = request_rec.sudo().browse(request_id)
+            if (not request_rec.exists()
+                    or request_rec.request_status != 'approved'
+                    or request_rec.request_owner_id != request.env.user):
+                return request.redirect("/my/travel/expenses")
+            existing = request.env['approval.travel.expense'].sudo().search(
+                [('request_id', '=', request_rec.id)], limit=1)
+            if existing:
+                return request.redirect(f"/my/travel/expense/view/{existing.id}")
+            employee = request_rec.employee_id
+            trip_to = (request_rec.travel_schedule_ids[0].arrival_destination
+                       if request_rec.travel_schedule_ids else (request_rec.location or ""))
+            purpose = request_rec.category_id.name or ""
+            p_from = request_rec.date_start.strftime("%Y-%m-%d %H:%M") if request_rec.date_start else ""
+            p_to = request_rec.date_end.strftime("%Y-%m-%d %H:%M") if request_rec.date_end else ""
+        else:
+            employee = self._get_current_employee()
+            trip_to = purpose = p_from = p_to = ""
+
         vals = {
             "page_name": "travel_expense_page",
-            "request_rec": request_rec,
+            "request_rec": request_rec,           # empty recordset when standalone
+            "expense": False,
+            "linkable_requests": self._linkable_requests() if not request_id else [],
             "employee_name": employee.name if employee else "",
             "employee_reg_no": employee.identification_id if employee else "",
             "department_name": employee.department_id.name if employee and employee.department_id else "",
             "designation_name": employee.job_id.name if employee and employee.job_id else "",
             "trip_to": trip_to,
-            "purpose_of_trip": request_rec.category_id.name or "",
-            "period_from": request_rec.date_start.strftime("%Y-%m-%d %H:%M") if request_rec.date_start else "",
-            "period_to": request_rec.date_end.strftime("%Y-%m-%d %H:%M") if request_rec.date_end else "",
+            "purpose_of_trip": purpose,
+            "period_from": p_from,
+            "period_to": p_to,
+            "is_manual": not request_id,          # manual header fields when no request
             "is_readonly": False,
-            "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
+            "currencies": self.CURRENCIES,
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
 
+    # ---------------------------- view ----------------------------
     @http.route("/my/travel/expense/view/<int:expense_id>", type="http", auth="user", website=True)
-    def portal_travel_expense_view(self, expense_id):
-        expense = request.env["approval.travel.expense"].sudo().browse(expense_id)
-        if not expense.exists():
-            return request.redirect("/my/travel")
-            
+    def portal_travel_expense_view(self, expense_id, **kw):
+        expense = request.env["approval.travel.expense"].sudo().search(
+            [('id', '=', expense_id)] + self._expense_domain(), limit=1)
+        if not expense:
+            return request.redirect("/my/travel/expenses")
+        attachments = request.env["ir.attachment"].sudo().search([
+            ("res_model", "=", "approval.travel.expense"),
+            ("res_id", "=", expense.id),
+        ])
         vals = {
             "page_name": "travel_expense_page",
-            "request_rec": expense.request_id,
+            "request_rec": expense.request_id,    # may be empty
             "expense": expense,
             "employee_name": expense.employee_name,
             "employee_reg_no": expense.employee_reg_no,
@@ -673,191 +973,698 @@ class ApprovalPortal(CustomerPortal):
             "purpose_of_trip": expense.purpose_of_trip,
             "period_from": expense.period_from.strftime("%Y-%m-%d %H:%M") if expense.period_from else "",
             "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
+            "is_manual": False,
             "is_readonly": True,
-            "currencies": ["PKR", "USD", "EUR", "GBP", "AED"],
+            "currencies": self.CURRENCIES,
+            "attachments": attachments,
+            "is_hr_approver": expense.state == 'submitted' and expense._is_role('hr'),
+            "is_payable_approver": expense.state == 'hr_approved' and expense._is_role('payable'),
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
 
+    # ---------------------------- save ----------------------------
     @http.route("/my/travel/expense/save", type="http", auth="user", website=True, methods=["POST"])
     def portal_travel_expense_save(self, **post):
-        request_id = int(post.get('request_id', 0))
-        request_rec = request.env["approval.request"].sudo().browse(request_id)
-        
-        if not request_rec.exists():
-            return request.redirect("/my/travel")
-            
-        employee = request_rec.employee_id
-        
         def safe_float(val):
-            if not val:
-                return 0.0
             try:
-                return float(val)
+                return float(val) if val else 0.0
             except (ValueError, TypeError):
                 return 0.0
 
+        request_id = int(post.get('request_id') or 0)
+        back_url = f"/my/travel/expense/new/{request_id}" if request_id else "/my/travel/expense/new"
+        request_rec = request.env["approval.request"]
+
+        if request_id:
+            request_rec = request_rec.sudo().browse(request_id)
+            if (not request_rec.exists()
+                    or request_rec.request_status != 'approved'
+                    or request_rec.request_owner_id != request.env.user):
+                return request.redirect("/my/travel/expenses")
+            existing = request.env['approval.travel.expense'].sudo().search(
+                [('request_id', '=', request_rec.id)], limit=1)
+            if existing:
+                return request.redirect(f"/my/travel/expense/view/{existing.id}")
+            employee = request_rec.employee_id
+            trip_to = (request_rec.travel_schedule_ids[0].arrival_destination
+                       if request_rec.travel_schedule_ids else (request_rec.location or ""))
+            purpose = request_rec.category_id.name or ""
+            period_from, period_to = request_rec.date_start, request_rec.date_end
+        else:
+            employee = self._get_current_employee()
+            trip_to = (post.get('trip_to') or '').strip()
+            purpose = (post.get('purpose_of_trip') or '').strip()
+            period_from = self._parse_dt(post.get('period_from'))
+            period_to = self._parse_dt(post.get('period_to'))
+
+        if not employee:
+            request.session['expense_error'] = "No employee record is linked to your user."
+            return request.redirect(back_url)
+
         try:
-            trip_to = request_rec.travel_schedule_ids[0].arrival_destination if request_rec.travel_schedule_ids else (request_rec.location or "")
-            
-            # Main Expense Record
-            expense_vals = {
-                'request_id': request_rec.id,
-                'employee_id': employee.id if employee else False,
-                'employee_name': employee.name if employee else "",
-                'employee_reg_no': employee.identification_id if employee else "",
-                'department_name': employee.department_id.name if employee and employee.department_id else "",
-                'designation_name': employee.job_id.name if employee and employee.job_id else "",
-                'trip_to': trip_to,
-                'purpose_of_trip': request_rec.category_id.name or "",
-                'period_from': request_rec.date_start,
-                'period_to': request_rec.date_end,
-                'date': post.get('expense_date'),
-                'advance_by_company': safe_float(post.get('advance_by_company')),
-                'items_paid_direct': safe_float(post.get('items_paid_direct')),
-                'state': 'submitted',
-            }
-            expense = request.env['approval.travel.expense'].sudo().create(expense_vals)
-            
-            # Lines
-            cols = ['fare', 'hotel', 'meals', 'taxi', 'laundry', 'telephone', 'other', 'daily']
-            for i in range(1, 8):
-                station_from = post.get(f'station_from_{i}')
-                station_to = post.get(f'station_to_{i}')
-                date_str = post.get(f'date_{i}')
-                time_str = post.get(f'time_{i}')
+            with request.env.cr.savepoint():   # nothing is left half-created on error
+                expense = request.env['approval.travel.expense'].sudo().create({
+                    'request_id': request_rec.id or False,
+                    'employee_id': employee.id,
+                    'employee_name': employee.name,
+                    'employee_reg_no': employee.identification_id,
+                    'department_name': employee.department_id.name or "",
+                    'designation_name': employee.job_id.name or "",
+                    'trip_to': trip_to,
+                    'purpose_of_trip': purpose,
+                    'period_from': period_from,
+                    'period_to': period_to,
+                    'date': post.get('expense_date'),
+                    'advance_by_company': safe_float(post.get('advance_by_company')),
+                    'items_paid_direct': safe_float(post.get('items_paid_direct')),
+                    'state': 'submitted',
+                })
 
-                fare_amt = safe_float(post.get(f'fare_{i}'))
-                fare_desc = post.get(f'fare_desc_{i}', '')
-                fare_curr = post.get(f'fare_curr_{i}', '')
+                # Attachments
+                for file in request.httprequest.files.getlist('attachments'):
+                    if file and file.filename:
+                        content = file.read()
+                        if len(content) > 10 * 1024 * 1024:
+                            raise ValueError(f"{file.filename} is larger than 10MB.")
+                        request.env['ir.attachment'].sudo().create({
+                            'name': file.filename,
+                            'datas': base64.b64encode(content),
+                            'res_model': 'approval.travel.expense',
+                            'res_id': expense.id,
+                            'mimetype': file.content_type or 'application/octet-stream',
+                        })
 
-                hotel_amt = safe_float(post.get(f'hotel_{i}'))
-                hotel_desc = post.get(f'hotel_desc_{i}', '')
-                hotel_curr = post.get(f'hotel_curr_{i}', '')
-
-                meals_amt = safe_float(post.get(f'meals_{i}'))
-                meals_desc = post.get(f'meals_desc_{i}', '')
-                meals_curr = post.get(f'meals_curr_{i}', '')
-
-                taxi_amt = safe_float(post.get(f'taxi_{i}'))
-                taxi_desc = post.get(f'taxi_desc_{i}', '')
-                taxi_curr = post.get(f'taxi_curr_{i}', '')
-
-                laundry_amt = safe_float(post.get(f'laundry_{i}'))
-                laundry_desc = post.get(f'laundry_desc_{i}', '')
-                laundry_curr = post.get(f'laundry_curr_{i}', '')
-
-                telephone_amt = safe_float(post.get(f'telephone_{i}'))
-                telephone_desc = post.get(f'telephone_desc_{i}', '')
-                telephone_curr = post.get(f'telephone_curr_{i}', '')
-
-                other_amt = safe_float(post.get(f'other_{i}'))
-                other_desc = post.get(f'other_desc_{i}', '')
-                other_curr = post.get(f'other_curr_{i}', '')
-
-                daily_amt = safe_float(post.get(f'daily_{i}'))
-                daily_desc = post.get(f'daily_desc_{i}', '')
-                daily_curr = post.get(f'daily_curr_{i}', '')
-                
-                # Check if row has any data
-                has_data = any([
-                    station_from, station_to, date_str, time_str,
-                    fare_amt, fare_desc, fare_curr,
-                    hotel_amt, hotel_desc, hotel_curr,
-                    meals_amt, meals_desc, meals_curr,
-                    taxi_amt, taxi_desc, taxi_curr,
-                    laundry_amt, laundry_desc, laundry_curr,
-                    telephone_amt, telephone_desc, telephone_curr,
-                    other_amt, other_desc, other_curr,
-                    daily_amt, daily_desc, daily_curr,
-                ])
-                
-                if has_data:
-                    request.env['approval.travel.expense.line'].sudo().create({
+                # Lines
+                # for i in range(1, 8):
+                row_indexes = sorted(
+                    int(m.group(1)) for k in post
+                    for m in [re.match(r'^station_from_(\d+)$', k)] if m
+                )
+                for i in row_indexes:
+                    line_vals = {
                         'expense_id': expense.id,
-                        'station_from': station_from,
-                        'station_to': station_to,
-                        'date_str': date_str,
-                        'time_str': time_str,
-                        'fare': fare_amt,
-                        'fare_desc': fare_desc,
-                        'fare_curr': fare_curr,
-                        'hotel_room': hotel_amt,
-                        'hotel_desc': hotel_desc,
-                        'hotel_curr': hotel_curr,
-                        'meals': meals_amt,
-                        'meals_desc': meals_desc,
-                        'meals_curr': meals_curr,
-                        'taxi': taxi_amt,
-                        'taxi_desc': taxi_desc,
-                        'taxi_curr': taxi_curr,
-                        'laundry': laundry_amt,
-                        'laundry_desc': laundry_desc,
-                        'laundry_curr': laundry_curr,
-                        'telephone': telephone_amt,
-                        'telephone_desc': telephone_desc,
-                        'telephone_curr': telephone_curr,
-                        'other_expense': other_amt,
-                        'other_desc': other_desc,
-                        'other_curr': other_curr,
-                        'daily_allowance': daily_amt,
-                        'daily_desc': daily_desc,
-                        'daily_curr': daily_curr,
-                    })
-            
-            # Trigger Email
+                        'station_from': post.get(f'station_from_{i}'),
+                        'station_to': post.get(f'station_to_{i}'),
+                        'date_str': post.get(f'date_{i}'),
+                        'time_str': post.get(f'time_{i}'),
+                    }
+                    has_data = any([line_vals['station_from'], line_vals['station_to'],
+                                    line_vals['date_str'], line_vals['time_str']])
+                    for prefix, f_amt, f_desc, f_curr in self.LINE_COLS:
+                        amt = safe_float(post.get(f'{prefix}_{i}'))
+                        desc = post.get(f'{prefix}_desc_{i}', '')
+                        curr = post.get(f'{prefix}_curr_{i}', '')
+                        line_vals.update({f_amt: amt, f_desc: desc, f_curr: curr})
+                        has_data = has_data or any([amt, desc, curr])
+                    if has_data:
+                        request.env['approval.travel.expense.line'].sudo().create(line_vals)
+
             self._send_expense_notification(expense)
 
         except Exception as e:
             request.session['expense_error'] = str(e)
-            return request.redirect(f"/my/travel/expense/new/{request_id}")
-            
+            return request.redirect(back_url)
+
         return request.redirect(f"/my/travel/expense/view/{expense.id}")
 
-    def _send_expense_notification(self, expense):
-        # Find region specific config, fallback to first config if none matches exactly
-        region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
-        domain = [('region_id', '=', region_id)] if region_id else []
-        config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
-        if not config:
-            config = request.env['approval.expense.config'].sudo().search([], limit=1)
-            
-        if not config:
+    @http.route("/my/travel/expense/action/<int:expense_id>", type="http", auth="user",
+                website=True, methods=["POST"])
+    def portal_travel_expense_action(self, expense_id, action=None, remarks='', **kw):
+        expense = request.env['approval.travel.expense'].sudo().browse(expense_id)
+        if not expense.exists():
+            return request.redirect("/my/travel/expenses")
+        try:
+            with request.env.cr.savepoint():
+                if action == 'approve':
+                    expense.action_approve(remarks)
+                elif action == 'refuse':
+                    expense.action_refuse(remarks)
+            self._send_expense_notification(expense)
+        except Exception as e:
+            request.session['expense_error'] = str(e)
+        return request.redirect(f"/my/travel/expense/view/{expense.id}")
+
+
+    def _send_expense_mail(self, expense, emails, subject, message):
+        emails = [e for e in emails if e]
+        if not emails:
             return
-            
-        recipients = []
-        if config.expense_payable_id and config.expense_payable_id.work_email:
-            recipients.append(config.expense_payable_id.work_email)
-        if config.hr_id and config.hr_id.work_email:
-            recipients.append(config.hr_id.work_email)
-            
-        if not recipients:
-            return
-            
-        subject = f"Travel Expense Submitted: {expense.ref_no}"
+        base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+            base_url = 'http://odoo.aesl.com.pk:8018'
+        url = f"{base_url}/my/travel/expense/view/{expense.id}"
+        HRurl = f"{base_url}/odoo/action-959/{expense.id}"
+
         body = f"""
         <div style="font-family: Arial, sans-serif; font-size: 14px;">
-            <h2 style="color: #8D0000;">Travel Expense Report Submitted</h2>
-            <p>Dear Team,</p>
-            <p>A new Travel Expense report has been submitted by <strong>{expense.employee_name}</strong> for Travel Request: <strong>{expense.ref_no}</strong>.</p>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
-                <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
+            <h2 style="color: #8D0000;">{subject}</h2>
+            <p>{message}</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Employee:</td><td style="padding: 5px;">{expense.employee_name}</td></tr>
+                <tr><td style="padding: 5px; font-weight: bold;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
                 <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
-                <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
+                <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px;">{expense.balance_due}</td></tr>
             </table>
-            <p>Please check the backend system to view the full details.</p>
-            <p>Best Regards,<br/>AESL System</p>
-        </div>
-        """
-        
-        mail_values = {
-            'subject': subject,
+            <p><a href="{url}" style="background-color: #8D0000; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 4px;">View Expense Report</a></p>
+            <p><a href="{HRurl}" style="background-color: #8D0000; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 4px;">HR View Expense Report</a></p>
+            
+            <p>Best Regards,</p>
+        </div>"""
+        request.env['mail.mail'].sudo().create({
+            'subject': f"{subject}: {expense.ref_no}",
             'body_html': body,
-            'email_to': ','.join(recipients),
+            'email_to': ','.join(emails),
             'email_from': request.env.company.email or request.env.user.email_formatted,
             'state': 'outgoing',
-        }
-        request.env['mail.mail'].sudo().create(mail_values).send()
+        }).send()
 
+    def _send_expense_notification(self, expense):
+        """Called on every state change; sends mail to whoever acts next."""
+        cfg = expense._get_config()
+        if expense.state == 'submitted':
+            self._send_expense_mail(expense, [cfg.hr_id.work_email],
+                "Travel Expense Pending HR Approval",
+                f"A Travel Expense was submitted by <b>{expense.employee_name}</b> and needs your approval.")
+        elif expense.state == 'hr_approved':
+            self._send_expense_mail(expense, [cfg.expense_payable_id.work_email],
+                "Travel Expense Pending Payment Approval",
+                f"HR has approved the Travel Expense of <b>{expense.employee_name}</b>. It is now waiting for you.")
+        elif expense.state in ('approved', 'refused'):
+            word = 'approved' if expense.state == 'approved' else 'refused'
+            self._send_expense_mail(expense, [expense.employee_id.work_email],
+                f"Travel Expense {word.title()}",
+                f"Your Travel Expense has been <b>{word}</b>.")
+
+    # def _send_expense_notification(self, expense):
+    #     region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
+    #     domain = [('region_id', '=', region_id)] if region_id else []
+    #     config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
+    #     if not config:
+    #         config = request.env['approval.expense.config'].sudo().search([], limit=1)
+    #     if not config:
+    #         return
+    #     recipients = []
+    #     if config.expense_payable_id and config.expense_payable_id.work_email:
+    #         recipients.append(config.expense_payable_id.work_email)
+    #     if config.hr_id and config.hr_id.work_email:
+    #         recipients.append(config.hr_id.work_email)
+    #     if not recipients:
+    #         return
+    #     base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+    #     if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+    #         base_url = 'http://odoo.aesl.com.pk:8018'
+    #     travel_url = f"{base_url}/my/travel/expense/view/{expense.id}"
+    #     subject = f"Travel Expense Submitted: {expense.ref_no}"
+    #     body = f"""
+    #     <div style="font-family: Arial, sans-serif; font-size: 14px;">
+    #         <h2 style="color: #8D0000;">Travel Expense Report Submitted</h2>
+    #         <p>Dear Team,</p>
+    #         <p>A new Travel Expense report has been submitted by <strong>{expense.employee_name}</strong> for Travel Request: <strong>{expense.ref_no}</strong>.</p>
+    #         <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+    #             <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
+    #         </table>
+    #         <p style="margin-top: 15px;">
+    #             <a href="{travel_url}" style="background-color: #8D0000; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block;">
+    #                 View Expense Report
+    #             </a>
+    #         </p>
+    #         <p>Please check the backend system to view the full details.</p>
+    #         <p>Best Regards,</p>
+    #     </div>
+    #     """
+    #     mail_values = {
+    #         'subject': subject,
+    #         'body_html': body,
+    #         'email_to': ','.join(recipients),
+    #         'email_from': request.env.company.email or request.env.user.email_formatted,
+    #         'state': 'outgoing',
+    #     }
+    #     request.env['mail.mail'].sudo().create(mail_values).send()
+
+    # def _send_expense_notification(self, expense):
+    #     # Find region specific config, fallback to first config if none matches exactly
+    #     region_id = expense.employee_id.work_location_id.id if expense.employee_id else False
+    #     domain = [('region_id', '=', region_id)] if region_id else []
+    #     config = request.env['approval.expense.config'].sudo().search(domain, limit=1)
+    #     if not config:
+    #         config = request.env['approval.expense.config'].sudo().search([], limit=1)
+    #
+    #     if not config:
+    #         return
+    #
+    #     recipients = []
+    #     if config.expense_payable_id and config.expense_payable_id.work_email:
+    #         recipients.append(config.expense_payable_id.work_email)
+    #     if config.hr_id and config.hr_id.work_email:
+    #         recipients.append(config.hr_id.work_email)
+    #
+    #     if not recipients:
+    #         return
+    #
+    #     subject = f"Travel Expense Submitted: {expense.ref_no}"
+    #     body = f"""
+    #     <div style="font-family: Arial, sans-serif; font-size: 14px;">
+    #         <h2 style="color: #8D0000;">Travel Expense Report Submitted</h2>
+    #         <p>Dear Team,</p>
+    #         <p>A new Travel Expense report has been submitted by <strong>{expense.employee_name}</strong> for Travel Request: <strong>{expense.ref_no}</strong>.</p>
+    #         <table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px;">
+    #             <tr><td style="padding: 5px; font-weight: bold; width: 30%;">Trip To:</td><td style="padding: 5px;">{expense.trip_to}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Total Expense:</td><td style="padding: 5px;">{expense.total_expense}</td></tr>
+    #             <tr><td style="padding: 5px; font-weight: bold;">Balance Due:</td><td style="padding: 5px; color: #d9534f; font-weight: bold;">{expense.balance_due}</td></tr>
+    #         </table>
+    #         <p>Please check the backend system to view the full details.</p>
+    #         <p>Best Regards,<br/>AESL System</p>
+    #     </div>
+    #     """
+    #
+    #     mail_values = {
+    #         'subject': subject,
+    #         'body_html': body,
+    #         'email_to': ','.join(recipients),
+    #         'email_from': request.env.company.email or request.env.user.email_formatted,
+    #         'state': 'outgoing',
+    #     }
+    #     request.env['mail.mail'].sudo().create(mail_values).send()
+
+
+# class PFLoanPortal(CustomerPortal):
+#
+#     @http.route(["/my/pf_loan"], type="http", auth="user", website=True)
+#     def portal_my_pf_loans(self, **kw):
+#         user = request.env.user
+#         employee = user.employee_id
+#         loans = []
+#         if "pf.loan.application" in request.env:
+#             pf_model = request.env["pf.loan.application"].sudo()
+#             if employee:
+#                 my_loans = pf_model.search([("employee_id", "=", employee.id)])
+#                 # approver_loans = pf_model.search([
+#                 #     '|', '|', '|', '|',
+#                 #     ('hr_approver_id', '=', employee.id),
+#                 #     ('hod_approver_id', '=', employee.id),
+#                 #     ('finance_approver_id', '=', employee.id),
+#                 #     ('trustee_approver_id', '=', employee.id),
+#                 #     ('second_trustee_approver_id', '=', employee.id),
+#                 #     ('trustee_ids', 'in', [employee.id]),
+#                 #     ('second_trustee_ids', 'in', [employee.id]),
+#                 # ])
+#                 approver_loans = pf_model.search([
+#                     '|', '|', '|', '|', '|', '|',
+#                     ('hr_approver_id', '=', employee.id),
+#                     ('hod_approver_id', '=', employee.id),
+#                     ('finance_approver_id', '=', employee.id),
+#                     ('trustee_approver_id', '=', employee.id),
+#                     ('second_trustee_approver_id', '=', employee.id),
+#                     ('trustee_ids', 'in', [employee.id]),
+#                     ('second_trustee_ids', 'in', [employee.id]),
+#                 ])
+#                 relevant_ids = set(my_loans.ids)
+#                 for l in approver_loans:
+#                     st = l.state
+#                     if st == 'draft' and l.hr_approver_id == employee:
+#                         relevant_ids.add(l.id)
+#                     elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hr_approver_id == employee:
+#                         relevant_ids.add(l.id)
+#                     elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hod_approver_id == employee:
+#                         relevant_ids.add(l.id)
+#                     elif st in ['waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.finance_approver_id == employee:
+#                         relevant_ids.add(l.id)
+#                     elif st in ['waiting_trustee', 'waiting_trustee_Second', 'approved', 'rejected'] and (l.trustee_approver_id == employee or employee in l.trustee_ids):
+#                         relevant_ids.add(l.id)
+#                     elif st in ['waiting_trustee_second', 'approved', 'rejected'] and (l.second_trustee_approver_id == employee or employee in l.second_trustee_ids):
+#                         relevant_ids.add(l.id)
+#
+#
+#                 loans = pf_model.browse(list(relevant_ids)).sorted(key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
+#             else:
+#                 loans = pf_model.search([('create_uid', '=', user.id)], order="create_date desc, id desc")
+#         elif "hr.loan" in request.env:
+#             loans = request.env["hr.loan"].sudo().search([("employee_id", "=", employee.id)])
+#
+#         vals = {
+#             "page_name": "pf_loan_list_page",
+#             "loans": loans,
+#             "user": user,
+#         }
+#         return request.render("prodo_user_portal.pf_loan_request_list_view_portal", vals)
+#
+#     @http.route(["/my/pf_loan/new"], type="http", auth="user", website=True)
+#     def portal_pf_loan_new(self, **kw):
+#         user = request.env.user
+#         employee = user.employee_id
+#         today_date = fields.Date.context_today(request.env.user).strftime("%Y-%m-%d")
+#
+#         gross_salary = 0.0
+#         less_pf = 0.0
+#         income_tax = 0.0
+#         other_deductions = 0.0
+#         net_pay = 0.0
+#         pf_balance_dues = 0.0
+#
+#         if employee:
+#             existing_active = request.env["pf.loan.application"].sudo().search([
+#                 ('employee_id', '=', employee.id),
+#                 ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second']),
+#             ], limit=1)
+#             if existing_active:
+#                 request.session['pf_loan_active_modal'] = f"You already have an active/pending Provident Fund Loan Application (Ref: {existing_active.name}). You cannot submit a new loan request while an existing application is active."
+#                 return request.redirect("/my/pf_loan")
+#
+#             last_payslip = request.env['hr.payslip'].sudo().search([
+#                 ('employee_id', '=', employee.id),
+#                 ('state', 'in', ['done', 'paid']),
+#             ], order='date_to desc', limit=1)
+#
+#             if not last_payslip:
+#                 last_payslip = request.env['hr.payslip'].sudo().search([
+#                     ('employee_id', '=', employee.id),
+#                 ], order='date_to desc', limit=1)
+#
+#             if last_payslip:
+#                 for line in last_payslip.line_ids:
+#                     code = (line.code or '').upper().strip()
+#                     name = (line.name or '').lower().strip()
+#                     val = line.total or line.amount or 0.0
+#
+#                     if code == 'GROSS' or name == 'gross':
+#                         gross_salary = val
+#                     elif code == 'OTHER_DEDUCTION_TAXABLE' or 'other deduction' in name:
+#                         other_deductions = val
+#                     elif code == 'CURRENT_INCOME_TAX' or 'income tax' in name or 'current month i tax' in name:
+#                         income_tax = abs(val)
+#                     elif code == 'NET' or name == 'net salary' or name == 'net pay':
+#                         net_pay = val
+#                     elif code in ['PF_EMPLOYEE', 'PF', 'PF_DED', 'LESS_PF'] or 'less p.f' in name or 'less pf' in name:
+#                         less_pf = abs(val)
+#
+#                 if hasattr(last_payslip, 'get_pf_balance_as_of'):
+#                     pf_balance_dues = last_payslip.get_pf_balance_as_of()
+#                 elif hasattr(employee, 'total'):
+#                     pf_balance_dues = (getattr(employee, 'total', 0.0) or 0.0) + (getattr(employee, 'pf_employee', 0.0) or 0.0) + (getattr(employee, 'pf_employer', 0.0) or 0.0) + (getattr(employee, 'pf_interest', 0.0) or 0.0)
+#
+#         max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
+#         # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+#         is_interest_free = False if employee.exclude_pf_interest else True
+#
+#         vals = {
+#             "page_name": "pf_loan_form_page",
+#             "loan": False,
+#             "employee_name": employee.name if employee else user.name,
+#             "employee_reg_no": employee.identification_id if employee else "",
+#             "designation_name": employee.job_id.name if employee and employee.job_id else "",
+#             "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else (employee.create_date.strftime("%d-%m-%Y") if employee else ""),
+#             "today_date": today_date,
+#             "is_readonly": False,
+#             "is_interest_free": is_interest_free,
+#             "gross_salary": gross_salary,
+#             "less_pf": less_pf,
+#             "income_tax": income_tax,
+#             "other_deductions": other_deductions,
+#             "net_pay": net_pay,
+#             "max_ded_allowed": max_ded_allowed,
+#             "pf_balance_dues": pf_balance_dues,
+#         }
+#         return request.render("prodo_user_portal.pf_loan_request_form_portal", vals)
+#
+#     @http.route(["/my/pf_loan/view/<int:loan_id>"], type="http", auth="user", website=True)
+#     def portal_pf_loan_view(self, loan_id, **kw):
+#         user = request.env.user
+#         loan = False
+#         if "pf.loan.application" in request.env:
+#             loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+#         elif "hr.loan" in request.env:
+#             loan = request.env["hr.loan"].sudo().browse(loan_id)
+#
+#         employee = loan.employee_id if loan and hasattr(loan, "employee_id") and loan.employee_id else user.employee_id
+#         today_date = fields.Date.context_today(request.env.user).strftime("%Y-%m-%d")
+#
+#         is_current_approver = False
+#         if loan and user.employee_id and hasattr(loan, 'state'):
+#             emp = user.employee_id
+#             if loan.state == 'draft' and getattr(loan, 'hr_approver_id', False) == emp:
+#                 is_current_approver = True
+#             elif loan.state == 'waiting_hod' and getattr(loan, 'hod_approver_id', False) == emp:
+#                 is_current_approver = True
+#             elif loan.state == 'waiting_finance' and getattr(loan, 'finance_approver_id', False) == emp:
+#                 is_current_approver = True
+#             elif loan.state == 'waiting_trustee' and (getattr(loan, 'trustee_approver_id', False) == emp or emp in loan.trustee_ids):
+#                 is_current_approver = True
+#             elif loan.state == 'waiting_trustee_second' and (getattr(loan, 'second_trustee_approver_id', False) == emp or emp in loan.second_trustee_ids):
+#                 is_current_approver = True
+#
+#
+#         is_readonly = True
+#         if loan and hasattr(loan, 'state') and loan.state == 'returned' and employee and loan.employee_id == employee:
+#             is_readonly = False
+#
+#         hr_balance_modal_data = False
+#         if loan and hasattr(loan, 'state') and loan.state == 'draft' and (getattr(loan, 'hr_approver_id', False) == user.employee_id or user.has_group('hr.group_hr_user') or user.has_group('hr.group_hr_manager')):
+#             applicant = loan.employee_id if hasattr(loan, 'employee_id') and loan.employee_id else employee
+#             if applicant:
+#                 t_amt = 0.0
+#                 p_amt = 0.0
+#                 d_amt = 0.0
+#
+#                 # Option 1: Read Latest Active Loan (single record)
+#                 loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+#                 if not loan_records and "hr.loan" in request.env:
+#                     loan_records = request.env["hr.loan"].sudo().search([
+#                         ('employee_id', '=', applicant.id),
+#                         ('state', '!=', 'cancel'),
+#                     ], order='id desc')
+#
+#                 if loan_records:
+#                     latest = loan_records[0]  # Option 1: Latest active loan only
+#                     t_amt = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+#                     p_amt = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
+#                     d_amt = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+#                     if not d_amt and t_amt:
+#                         d_amt = t_amt - p_amt if t_amt > p_amt else t_amt
+#
+#                 if t_amt == 0.0:
+#                     t_amt = getattr(loan, 'loan_amount', 0.0) or 0.0
+#                     d_amt = getattr(loan, 'loan_amount', 0.0) or 0.0
+#                     p_amt = 0.0
+#
+#                 hr_balance_modal_data = {
+#                     'applicant_name': applicant.name,
+#                     'ref': getattr(loan, 'name', 'Application'),
+#                     'total_loan': t_amt,
+#                     'received_paid': p_amt,
+#                     'balance_on_loan': d_amt,
+#                 }
+#
+#         attachments = request.env["ir.attachment"].sudo().search([
+#             ("res_model", "=", "pf.loan.application"),
+#             ("res_id", "=", loan.id)
+#         ]) if loan else []
+#
+#         vals = {
+#             "page_name": "pf_loan_form_page",
+#             "loan": loan,
+#             "employee_name": employee.name if employee else user.name,
+#             "employee_reg_no": employee.identification_id if employee else "",
+#             "designation_name": employee.job_id.name if employee and employee.job_id else "",
+#             "joining_date": employee.joining_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "joining_date") and employee.joining_date else "",
+#             "today_date": today_date,
+#             "is_readonly": is_readonly,
+#             "is_current_approver": is_current_approver,
+#             "hr_balance_modal_data": hr_balance_modal_data,
+#             "attachments": attachments,
+#         }
+#         return request.render("prodo_user_portal.pf_loan_request_form_portal", vals)
+#
+#     @http.route(["/my/pf_loan/approve/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+#     def portal_pf_loan_approve(self, loan_id, **kw):
+#         user = request.env.user
+#         if "pf.loan.application" in request.env:
+#             loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+#             if loan and user.employee_id:
+#                 emp = user.employee_id
+#                 remarks = kw.get('remarks') or request.params.get('remarks')
+#                 if remarks:
+#                     existing_remarks = loan.remarks or ""
+#                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name}: {remarks}"
+#                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+#
+#                 try:
+#                     if loan.state == 'draft' and loan.hr_approver_id == emp:
+#                         inst = kw.get('repay_installments') or request.params.get('repay_installments')
+#                         if inst:
+#                             loan.write({'repay_installments': int(inst)})
+#                         loan.action_approve_hr()
+#                     elif loan.state == 'waiting_hod' and loan.hod_approver_id == emp:
+#                         loan.action_approve_hod()
+#                     elif loan.state == 'waiting_finance' and loan.finance_approver_id == emp:
+#                         gp_code = kw.get('gp_audit_trail_code') or request.params.get('gp_audit_trail_code')
+#                         if gp_code:
+#                             loan.write({
+#                                 'is_voucher_created': True,
+#                                 'gp_audit_trail_code': gp_code,
+#                                 'gp_date': kw.get('gp_date') or request.params.get('gp_date') or fields.Date.today(),
+#                                 'gp_journal_entry_no': kw.get('gp_journal_entry_no') or request.params.get('gp_journal_entry_no'),
+#                                 'gp_posting_date': kw.get('gp_posting_date') or request.params.get('gp_posting_date') or fields.Date.today(),
+#                                 'gp_check_book_id': kw.get('gp_check_book_id') or request.params.get('gp_check_book_id'),
+#                                 'gp_cheque_number': kw.get('gp_cheque_number') or request.params.get('gp_cheque_number'),
+#                                 'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get('gp_paid_to_rcvd_from'),
+#                                 'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
+#                             })
+#                         loan.action_approve_finance()
+#                     elif loan.state == 'waiting_trustee' and (loan.trustee_approver_id == emp or emp in loan.trustee_ids):
+#                         loan.action_approve_trustee()
+#                     elif loan.state == 'waiting_trustee_second' and (loan.second_trustee_approver_id == emp or emp in loan.second_trustee_ids):
+#                         loan.action_approve_trustee2()
+#
+#                 except Exception as e:
+#                     request.session['pf_loan_error'] = str(e)
+#         return request.redirect(f"/my/pf_loan/view/{loan_id}")
+#
+#     @http.route(["/my/pf_loan/reject/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+#     def portal_pf_loan_reject(self, loan_id, **kw):
+#         user = request.env.user
+#         if "pf.loan.application" in request.env:
+#             loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+#             if loan and user.employee_id:
+#                 emp = user.employee_id
+#                 remarks = kw.get('remarks') or request.params.get('remarks')
+#                 if remarks:
+#                     existing_remarks = loan.remarks or ""
+#                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Rejected): {remarks}"
+#                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+#
+#                 loan.action_reject()
+#         return request.redirect(f"/my/pf_loan/view/{loan_id}")
+#
+#     @http.route(["/my/pf_loan/return/<int:loan_id>"], type="http", auth="user", website=True, methods=["GET", "POST"])
+#     def portal_pf_loan_return(self, loan_id, **kw):
+#         user = request.env.user
+#         if "pf.loan.application" in request.env:
+#             loan = request.env["pf.loan.application"].sudo().browse(loan_id)
+#             if loan and user.employee_id:
+#                 emp = user.employee_id
+#                 remarks = kw.get('remarks') or request.params.get('remarks')
+#                 if remarks:
+#                     existing_remarks = loan.remarks or ""
+#                     new_entry = f"[{fields.Datetime.now().strftime('%Y-%m-%d %H:%M')}] {emp.name} (Returned): {remarks}"
+#                     loan.remarks = (existing_remarks + "\n" + new_entry).strip() if existing_remarks else new_entry
+#
+#                 loan.action_return()
+#         return request.redirect(f"/my/pf_loan/view/{loan_id}")
+#
+#     @http.route(["/my/pf_loan/save"], type="http", auth="user", website=True, methods=["POST"])
+#     def portal_pf_loan_save(self, **post):
+#         user = request.env.user
+#         employee = user.employee_id
+#
+#         def safe_float(val):
+#             if not val:
+#                 return 0.0
+#             try:
+#                 return float(val)
+#             except (ValueError, TypeError):
+#                 return 0.0
+#
+#         try:
+#             # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+#             is_interest_free = False if employee.exclude_pf_interest else True
+#             vals = {
+#                 "loan_amount": safe_float(post.get("loan_amount")),
+#                 "loan_amount_words": post.get("loan_amount_words", ""),
+#                 "installments_count": int(post.get("installments_count") or 1),
+#                 "application_date": post.get("application_date"),
+#                 "is_interest_free": is_interest_free,
+#                 "loan_purpose": post.get("loan_purpose", ""),
+#                 "gross_salary": safe_float(post.get("gross_salary")),
+#                 "less_pf": safe_float(post.get("less_pf")),
+#                 "income_tax": safe_float(post.get("income_tax")),
+#                 "other_deductions": safe_float(post.get("other_deductions")),
+#                 "net_pay": safe_float(post.get("net_pay")),
+#                 "max_ded_allowed": safe_float(post.get("max_ded_allowed")),
+#                 "loan_outstanding": safe_float(post.get("loan_outstanding")),
+#                 "loan_required": safe_float(post.get("loan_required")),
+#                 "total_loan_calc": safe_float(post.get("total_loan_calc")),
+#                 "pf_balance_dues": safe_float(post.get("pf_balance_dues")),
+#                 "sanctioned_amount": safe_float(post.get("sanctioned_amount")),
+#                 "total_sanctioned_loan": safe_float(post.get("total_sanctioned_loan")),
+#                 "repay_installments": int(post.get("repay_installments") or 1),
+#                 "per_installment_amount": safe_float(post.get("per_installment_amount")),
+#             }
+#             loan_rec = False
+#             if "pf.loan.application" in request.env:
+#                 loan_id = post.get("loan_id")
+#                 if loan_id:
+#                     loan_rec = request.env["pf.loan.application"].sudo().browse(int(loan_id))
+#                     vals["state"] = "draft"
+#                     loan_rec.write(vals)
+#                     loan_rec._send_approver_email()
+#                 else:
+#                     vals["employee_id"] = employee.id if employee else False
+#                     loan_rec = request.env["pf.loan.application"].sudo().create(vals)
+#
+#             file_attachment = request.httprequest.files.get("attachment")
+#             if file_attachment and file_attachment.filename and loan_rec:
+#                 import base64
+#                 file_content = file_attachment.read()
+#                 request.env["ir.attachment"].sudo().create({
+#                     "name": file_attachment.filename,
+#                     "datas": base64.b64encode(file_content),
+#                     "res_model": "pf.loan.application",
+#                     "res_id": loan_rec.id,
+#                 })
+#
+#             if loan_rec and employee:
+#                 current_requested_amount = loan_rec.loan_amount or 0.0
+#                 total_loan_orig = 0.0
+#                 balance_on_loan = 0.0
+#                 received_paid = 0.0
+#
+#                 # 1. Read directly from employee.loan_ids (Loan Details tab on hr.employee)
+#                 loan_records = employee.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(employee, 'loan_ids') and employee.loan_ids else []
+#
+#                 # 2. Fallback to searching hr.loan model
+#                 if not loan_records and "hr.loan" in request.env:
+#                     loan_records = request.env["hr.loan"].sudo().search([
+#                         ('employee_id', '=', employee.id),
+#                         ('state', '!=', 'cancel'),
+#                     ], order='id desc')
+#
+#                 if loan_records:
+#                     latest = loan_records[0]  # Option 1: Latest active loan only
+#                     total_loan_orig = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+#                     received_paid = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
+#                     balance_on_loan = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+#                     if not balance_on_loan and total_loan_orig:
+#                         balance_on_loan = total_loan_orig - received_paid if total_loan_orig > received_paid else total_loan_orig
+#
+#                 if total_loan_orig == 0.0:
+#                     approved_pf_loans = request.env["pf.loan.application"].sudo().search([
+#                         ('employee_id', '=', employee.id),
+#                         ('state', '=', 'approved'),
+#                         ('id', '!=', loan_rec.id),
+#                     ])
+#                     for pf_l in approved_pf_loans:
+#                         total_loan_orig += pf_l.loan_amount
+#                         bal = pf_l.loan_outstanding if pf_l.loan_outstanding else pf_l.loan_amount
+#                         balance_on_loan += bal
+#                         received_paid += (pf_l.loan_amount - bal)
+#
+#                 if total_loan_orig == 0.0:
+#                     total_loan_orig = current_requested_amount
+#                     balance_on_loan = current_requested_amount
+#                     received_paid = 0.0
+#
+#                 request.session['pf_loan_success'] = f"Your Provident Fund Loan Application ({loan_rec.name}) has been submitted successfully!"
+#         except Exception as e:
+#             msg = str(e)
+#             if "already have an active" in msg:
+#                 request.session["pf_loan_active_modal"] = msg
+#                 return request.redirect("/my/pf_loan")
+#             request.session["pf_loan_error"] = msg
+#             return request.redirect("/my/pf_loan/new")
+#
+#         return request.redirect("/my/pf_loan")
 
 class PFLoanPortal(CustomerPortal):
 
@@ -895,24 +1702,29 @@ class PFLoanPortal(CustomerPortal):
                     st = l.state
                     if st == 'draft' and l.hr_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hr_approver_id == employee:
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second',
+                                'approved', 'rejected'] and l.hr_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.hod_approver_id == employee:
+                    elif st in ['waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second',
+                                'approved', 'rejected'] and l.hod_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_finance', 'waiting_trustee','waiting_trustee_second', 'approved', 'rejected'] and l.finance_approver_id == employee:
+                    elif st in ['waiting_finance', 'waiting_trustee', 'waiting_trustee_second', 'approved',
+                                'rejected'] and l.finance_approver_id == employee:
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_trustee', 'waiting_trustee_Second', 'approved', 'rejected'] and (l.trustee_approver_id == employee or employee in l.trustee_ids):
+                    elif st in ['waiting_trustee', 'waiting_trustee_Second', 'approved', 'rejected'] and (
+                            l.trustee_approver_id == employee or employee in l.trustee_ids):
                         relevant_ids.add(l.id)
-                    elif st in ['waiting_trustee_second', 'approved', 'rejected'] and (l.second_trustee_approver_id == employee or employee in l.second_trustee_ids):
+                    elif st in ['waiting_trustee_second', 'approved', 'rejected'] and (
+                            l.second_trustee_approver_id == employee or employee in l.second_trustee_ids):
                         relevant_ids.add(l.id)
 
-
-                loans = pf_model.browse(list(relevant_ids)).sorted(key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
+                loans = pf_model.browse(list(relevant_ids)).sorted(
+                    key=lambda r: (r.create_date or fields.Datetime.now(), r.id), reverse=True)
             else:
                 loans = pf_model.search([('create_uid', '=', user.id)], order="create_date desc, id desc")
         elif "hr.loan" in request.env:
             loans = request.env["hr.loan"].sudo().search([("employee_id", "=", employee.id)])
-            
+
         vals = {
             "page_name": "pf_loan_list_page",
             "loans": loans,
@@ -936,10 +1748,12 @@ class PFLoanPortal(CustomerPortal):
         if employee:
             existing_active = request.env["pf.loan.application"].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('state', 'in', ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second']),
+                ('state', 'in',
+                 ['draft', 'returned', 'waiting_hod', 'waiting_finance', 'waiting_trustee', 'waiting_trustee_second']),
             ], limit=1)
             if existing_active:
-                request.session['pf_loan_active_modal'] = f"You already have an active/pending Provident Fund Loan Application (Ref: {existing_active.name}). You cannot submit a new loan request while an existing application is active."
+                request.session[
+                    'pf_loan_active_modal'] = f"You already have an active/pending Provident Fund Loan Application (Ref: {existing_active.name}). You cannot submit a new loan request while an existing application is active."
                 return request.redirect("/my/pf_loan")
 
             last_payslip = request.env['hr.payslip'].sudo().search([
@@ -972,13 +1786,21 @@ class PFLoanPortal(CustomerPortal):
                 if hasattr(last_payslip, 'get_pf_balance_as_of'):
                     pf_balance_dues = last_payslip.get_pf_balance_as_of()
                 elif hasattr(employee, 'total'):
-                    pf_balance_dues = (getattr(employee, 'total', 0.0) or 0.0) + (getattr(employee, 'pf_employee', 0.0) or 0.0) + (getattr(employee, 'pf_employer', 0.0) or 0.0) + (getattr(employee, 'pf_interest', 0.0) or 0.0)
+                    pf_balance_dues = (getattr(employee, 'total', 0.0) or 0.0) + (
+                                getattr(employee, 'pf_employee', 0.0) or 0.0) + (
+                                                  getattr(employee, 'pf_employer', 0.0) or 0.0) + (
+                                                  getattr(employee, 'pf_interest', 0.0) or 0.0)
 
         max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
-        is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
-        
-        appt_date = (getattr(employee, "appointment_date", False) or getattr(employee, "joining_date", False)) if employee else False
-        joining_date_str = appt_date.strftime("%d-%m-%Y") if appt_date else (employee.create_date.strftime("%d-%m-%Y") if employee and hasattr(employee, "create_date") and employee.create_date else "")
+
+        # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+        is_interest_free = False if employee.exclude_pf_interest else True
+
+        appt_date = (getattr(employee, "appointment_date", False) or getattr(employee, "joining_date",
+                                                                             False)) if employee else False
+        joining_date_str = appt_date.strftime("%d-%m-%Y") if appt_date else (
+            employee.create_date.strftime("%d-%m-%Y") if employee and hasattr(employee,
+                                                                              "create_date") and employee.create_date else "")
 
         vals = {
             "page_name": "pf_loan_form_page",
@@ -1008,7 +1830,7 @@ class PFLoanPortal(CustomerPortal):
             loan = request.env["pf.loan.application"].sudo().browse(loan_id)
         elif "hr.loan" in request.env:
             loan = request.env["hr.loan"].sudo().browse(loan_id)
-            
+
         employee = loan.employee_id if loan and hasattr(loan, "employee_id") and loan.employee_id else user.employee_id
         today_date = fields.Date.context_today(request.env.user).strftime("%Y-%m-%d")
 
@@ -1021,18 +1843,21 @@ class PFLoanPortal(CustomerPortal):
                 is_current_approver = True
             elif loan.state == 'waiting_finance' and getattr(loan, 'finance_approver_id', False) == emp:
                 is_current_approver = True
-            elif loan.state == 'waiting_trustee' and (getattr(loan, 'trustee_approver_id', False) == emp or emp in loan.trustee_ids):
+            elif loan.state == 'waiting_trustee' and (
+                    getattr(loan, 'trustee_approver_id', False) == emp or emp in loan.trustee_ids):
                 is_current_approver = True
-            elif loan.state == 'waiting_trustee_second' and (getattr(loan, 'second_trustee_approver_id', False) == emp or emp in loan.second_trustee_ids):
+            elif loan.state == 'waiting_trustee_second' and (
+                    getattr(loan, 'second_trustee_approver_id', False) == emp or emp in loan.second_trustee_ids):
                 is_current_approver = True
 
-        
         is_readonly = True
         if loan and hasattr(loan, 'state') and loan.state == 'returned' and employee and loan.employee_id == employee:
             is_readonly = False
 
         hr_balance_modal_data = False
-        if loan and hasattr(loan, 'state') and loan.state == 'draft' and (getattr(loan, 'hr_approver_id', False) == user.employee_id or user.has_group('hr.group_hr_user') or user.has_group('hr.group_hr_manager')):
+        if loan and hasattr(loan, 'state') and loan.state == 'draft' and (
+                getattr(loan, 'hr_approver_id', False) == user.employee_id or user.has_group(
+                'hr.group_hr_user') or user.has_group('hr.group_hr_manager')):
             applicant = loan.employee_id if hasattr(loan, 'employee_id') and loan.employee_id else employee
             if applicant:
                 t_amt = 0.0
@@ -1040,7 +1865,8 @@ class PFLoanPortal(CustomerPortal):
                 d_amt = 0.0
 
                 # Option 1: Read Latest Active Loan (single record)
-                loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+                loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant,
+                                                                                                     'loan_ids') and applicant.loan_ids else []
                 if not loan_records and "hr.loan" in request.env:
                     loan_records = request.env["hr.loan"].sudo().search([
                         ('employee_id', '=', applicant.id),
@@ -1049,9 +1875,14 @@ class PFLoanPortal(CustomerPortal):
 
                 if loan_records:
                     latest = loan_records[0]  # Option 1: Latest active loan only
-                    t_amt = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+                    t_amt = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount',
+                                                                                                0.0) or getattr(latest,
+                                                                                                                'principal_amount',
+                                                                                                                0.0)
                     p_amt = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
-                    d_amt = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+                    d_amt = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest,
+                                                                                                          'balance_amount',
+                                                                                                          0.0)
                     if not d_amt and t_amt:
                         d_amt = t_amt - p_amt if t_amt > p_amt else t_amt
 
@@ -1074,7 +1905,8 @@ class PFLoanPortal(CustomerPortal):
         ]) if loan else []
 
         target_emp = loan.employee_id if loan and loan.employee_id else employee
-        view_appt_date = (getattr(target_emp, "appointment_date", False) or getattr(target_emp, "joining_date", False)) if target_emp else False
+        view_appt_date = (getattr(target_emp, "appointment_date", False) or getattr(target_emp, "joining_date",
+                                                                                    False)) if target_emp else False
         view_joining_date_str = view_appt_date.strftime("%d-%m-%Y") if view_appt_date else ""
 
         vals = {
@@ -1135,17 +1967,24 @@ class PFLoanPortal(CustomerPortal):
                                 'is_voucher_created': True,
                                 'gp_audit_trail_code': gp_code,
                                 'gp_date': kw.get('gp_date') or request.params.get('gp_date') or fields.Date.today(),
-                                'gp_journal_entry_no': kw.get('gp_journal_entry_no') or request.params.get('gp_journal_entry_no'),
-                                'gp_posting_date': kw.get('gp_posting_date') or request.params.get('gp_posting_date') or fields.Date.today(),
-                                'gp_check_book_id': kw.get('gp_check_book_id') or request.params.get('gp_check_book_id'),
-                                'gp_cheque_number': kw.get('gp_cheque_number') or request.params.get('gp_cheque_number'),
-                                'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get('gp_paid_to_rcvd_from'),
+                                'gp_journal_entry_no': kw.get('gp_journal_entry_no') or request.params.get(
+                                    'gp_journal_entry_no'),
+                                'gp_posting_date': kw.get('gp_posting_date') or request.params.get(
+                                    'gp_posting_date') or fields.Date.today(),
+                                'gp_check_book_id': kw.get('gp_check_book_id') or request.params.get(
+                                    'gp_check_book_id'),
+                                'gp_cheque_number': kw.get('gp_cheque_number') or request.params.get(
+                                    'gp_cheque_number'),
+                                'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get(
+                                    'gp_paid_to_rcvd_from'),
                                 'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
                             })
                         loan.action_approve_finance()
-                    elif loan.state == 'waiting_trustee' and (loan.trustee_approver_id == emp or emp in loan.trustee_ids):
+                    elif loan.state == 'waiting_trustee' and (
+                            loan.trustee_approver_id == emp or emp in loan.trustee_ids):
                         loan.action_approve_trustee()
-                    elif loan.state == 'waiting_trustee_second' and (loan.second_trustee_approver_id == emp or emp in loan.second_trustee_ids):
+                    elif loan.state == 'waiting_trustee_second' and (
+                            loan.second_trustee_approver_id == emp or emp in loan.second_trustee_ids):
                         loan.action_approve_trustee2()
 
                 except Exception as e:
@@ -1202,7 +2041,8 @@ class PFLoanPortal(CustomerPortal):
                 return 0.0
 
         try:
-            is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+            # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
+            is_interest_free = False if employee.exclude_pf_interest else True
             vals = {
                 "loan_amount": safe_float(post.get("loan_amount")),
                 "loan_amount_words": post.get("loan_amount_words", ""),
@@ -1255,8 +2095,9 @@ class PFLoanPortal(CustomerPortal):
                 received_paid = 0.0
 
                 # 1. Read directly from employee.loan_ids (Loan Details tab on hr.employee)
-                loan_records = employee.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(employee, 'loan_ids') and employee.loan_ids else []
-                
+                loan_records = employee.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(employee,
+                                                                                                    'loan_ids') and employee.loan_ids else []
+
                 # 2. Fallback to searching hr.loan model
                 if not loan_records and "hr.loan" in request.env:
                     loan_records = request.env["hr.loan"].sudo().search([
@@ -1266,9 +2107,13 @@ class PFLoanPortal(CustomerPortal):
 
                 if loan_records:
                     latest = loan_records[0]  # Option 1: Latest active loan only
-                    total_loan_orig = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
+                    total_loan_orig = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest,
+                                                                                                          'loan_amount',
+                                                                                                          0.0) or getattr(
+                        latest, 'principal_amount', 0.0)
                     received_paid = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
-                    balance_on_loan = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+                    balance_on_loan = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(
+                        latest, 'balance_amount', 0.0)
                     if not balance_on_loan and total_loan_orig:
                         balance_on_loan = total_loan_orig - received_paid if total_loan_orig > received_paid else total_loan_orig
 
@@ -1289,7 +2134,8 @@ class PFLoanPortal(CustomerPortal):
                     balance_on_loan = current_requested_amount
                     received_paid = 0.0
 
-                request.session['pf_loan_success'] = f"Your Provident Fund Loan Application ({loan_rec.name}) has been submitted successfully!"
+                request.session[
+                    'pf_loan_success'] = f"Your Provident Fund Loan Application ({loan_rec.name}) has been submitted successfully!"
         except Exception as e:
             msg = str(e)
             if "already have an active" in msg:
@@ -1297,5 +2143,5 @@ class PFLoanPortal(CustomerPortal):
                 return request.redirect("/my/pf_loan")
             request.session["pf_loan_error"] = msg
             return request.redirect("/my/pf_loan/new")
-            
+
         return request.redirect("/my/pf_loan")

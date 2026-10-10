@@ -13,10 +13,17 @@
                     <t t-set="config_card" t-value="True"/>
                 </t>
                 <t t-call="portal.portal_docs_entry">
-                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/icons8-assets-64.png'"/>
+                    <t t-set="icon" t-value="'/ivis_user_portal/static/description/icons/travel_request.png'"/>
                     <t t-set="title">Approval</t>
                     <t t-set="text">Manage your Travel Requests</t>
                     <t t-set="url" t-value="'/my/travel'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/travel_expenses.jpg'"/>
+                    <t t-set="title">Travel Expense</t>
+                    <t t-set="text">Manage your Travel Expense</t>
+                    <t t-set="url" t-value="'/my/travel/expenses'"/>
                     <t t-set="config_card" t-value="True"/>
                 </t>
                 <t t-call="portal.portal_docs_entry">

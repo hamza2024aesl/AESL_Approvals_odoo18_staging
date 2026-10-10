@@ -15,6 +15,17 @@ class ApprovalRequest(models.Model):
     employee_dob = fields.Date(string='DOB', related='employee_id.birthday', readonly=True)
     employee_designation_id = fields.Many2one('hr.job', string='Designation', related='employee_id.job_id', readonly=True)
     employee_mobile = fields.Char(string='Mobile No', related='employee_id.mobile_phone', readonly=True)
+    # Employee Section
+    employee_remarks = fields.Text(string='Details:')
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Currency',
+        default=lambda self: self.env.company.currency_id
+    )
+    required_amount = fields.Monetary(
+        string='Required Amount',
+        currency_field='currency_id'
+    )
 
     # Track Time Off
     time_off_id = fields.Many2one('hr.leave', string='Linked Time Off', readonly=True)
@@ -82,7 +93,8 @@ class ApprovalRequest(models.Model):
             # Unlink default approvers BEFORE super() to prevent default notifications to line managers
             rec.sudo().approver_ids.unlink()
 
-            if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
+            # if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
+            if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.travel_department_id:
                 continue
             
             # Determine Config Type
@@ -92,7 +104,8 @@ class ApprovalRequest(models.Model):
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
                 ('work_location_ids', '=', rec.employee_id.work_location_id.id),
-                ('department_id', '=', rec.employee_id.department_id.id),
+                # ('department_id', '=', rec.employee_id.department_id.id),
+                ('travel_department_id', '=', rec.employee_id.travel_department_id.id),
                 ('line_type', '=', 'first_approver'),
             ])
 
@@ -100,7 +113,8 @@ class ApprovalRequest(models.Model):
                 raise UserError(_("No 1st approver found in %s configuration for Region '%s' and Department '%s'.") % (
                     dict(self._fields['travel_request_type'].selection).get(c_type, c_type).capitalize(),
                     rec.employee_id.work_location_id.name,
-                    rec.employee_id.department_id.name
+                    # rec.employee_id.department_id.name
+                    rec.employee_id.traveldepartment_id.name
                 ))
 
             # Set custom ones so super().action_confirm() sees them
@@ -119,14 +133,15 @@ class ApprovalRequest(models.Model):
         res = super(ApprovalRequest, self.with_context(ctx)).action_confirm()
 
         for rec in self:
-            if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
+            # if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
+            if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.travel_department_id:
                 continue
             
             c_type = rec.travel_request_type or 'domestic'
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
                 ('work_location_ids', '=', rec.employee_id.work_location_id.id),
-                ('department_id', '=', rec.employee_id.department_id.id),
+                ('travel_department_id', '=', rec.employee_id.travel_department_id.id),
                 ('line_type', '=', 'first_approver'),
             ])
 
@@ -145,8 +160,22 @@ class ApprovalRequest(models.Model):
         """ Send internal message and notification to mapped approvers. """
         approver_partners = approver_lines.mapped('employee_id.user_id.partner_id')
         if approver_partners:
-            subject = _("Approval Required: %s") % request.name
-            body = _("please review the request and take action")
+            base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+                base_url = 'http://odoo.aesl.com.pk:8018'
+            travel_url = f"{base_url}/my/travel/view/{request.id}"
+            subject = _("Approval Required: %s ") % request.name
+            # body = _("please review the request and take action")
+            body = f"""
+                <p>Dear {request.employee_id.name},</p>
+                <p>{request.employee_id.name} assigned you an activity Travel Request Approval on {request.employee_id.name} on {request.travel_request_type.capitalize()} Travel: {days} days to close for {date_start_str}</p>
+                <br>
+                <p>To view or process, you can use the following link:</p>
+                <div style="margin-top: 10px; margin-bottom: 20px;">
+                    <a href="{travel_url}" style="background-color: #875A7B; padding: 8px 16px; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold;">View Travel Request</a>
+                </div>
+                <p>Thanks</p>
+                """
             request.message_post(
                 body=body,
                 subject=subject,
@@ -218,7 +247,8 @@ class ApprovalRequest(models.Model):
                 second_approver_line = self.env['approval.config.line'].sudo().search([
                     ('config_id.config_type', '=', 'international'),
                     ('work_location_ids', '=', rec.employee_id.work_location_id.id),
-                    ('department_id', '=', rec.employee_id.department_id.id),
+                    # ('department_id', '=', rec.employee_id.department_id.id),
+                    ('travel_department_id', '=', rec.employee_id.travel_department_id.id),
                     ('line_type', '=', 'second_approver'),
                 ], limit=1)
                 
@@ -286,7 +316,8 @@ class ApprovalRequest(models.Model):
             ('config_id.config_type', '=', config_type),
             ('line_type', 'in', ['finance', 'hr']),
             ('work_location_ids', '=', request.employee_id.work_location_id.id),
-            ('department_id', '=', request.employee_id.department_id.id),
+            # ('department_id', '=', request.employee_id.department_id.id),
+            ('travel_department_id', '=', request.employee_id.travel_department_id.id),
         ])
         
         recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped('employee_id.user_id.partner_id')
