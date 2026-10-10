@@ -1906,6 +1906,7 @@ class PFLoanPortal(CustomerPortal):
         target_emp = loan.employee_id if loan and loan.employee_id else employee
         view_appt_date = (getattr(target_emp, "appointment_date", False) or getattr(target_emp, "joining_date",
                                                                                     False)) if target_emp else False
+
         view_joining_date_str = view_appt_date.strftime("%d-%m-%Y") if view_appt_date else ""
 
         vals = {
