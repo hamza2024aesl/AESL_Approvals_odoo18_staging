@@ -190,8 +190,6 @@
                 <div class="card-body bg-white p-3 p-md-4">
                     <form method="post" action="" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-<<<<<<< HEAD
-                        
                         <!-- GP Voucher Fields for Finance Officer -->
                         <t t-if="loan and loan.state == 'waiting_finance'">
                             <div class="p-3 border border-primary rounded bg-light mb-3">
@@ -230,49 +228,6 @@
                                         <label class="form-label small fw-bold">Auto Amount in Words :</label>
                                         <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>
                                     </div>
-
-=======
-
-                        <!-- GP Voucher Fields for Finance Officer -->
-                        <t t-if="loan and loan.state == 'waiting_finance'">
-                            <div class="p-3 border border-primary rounded bg-light mb-3">
-                                <h6 class="fw-bold text-primary mb-3"><i class="fa fa-file-text-o me-1"/> Create GP Voucher (Bank Transaction Posting Journal)</h6>
-                                <div class="row g-2">
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold">Audit Trail Code :</label>
-                                        <input type="text" name="gp_audit_trail_code" class="form-control form-control-sm" placeholder="e.g. CMTRX00002049" required="1" t-att-value="loan.gp_audit_trail_code or ''"/>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold">Date :</label>
-                                        <input type="date" name="gp_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_date.strftime('%Y-%m-%d') if loan.gp_date else today_date"/>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold">Journal Entry No. :</label>
-                                        <input type="text" name="gp_journal_entry_no" class="form-control form-control-sm" placeholder="e.g. 2,480" required="1" t-att-value="loan.gp_journal_entry_no or ''"/>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold">Posting Date :</label>
-                                        <input type="date" name="gp_posting_date" class="form-control form-control-sm" required="1" t-att-value="loan.gp_posting_date.strftime('%Y-%m-%d') if loan.gp_posting_date else today_date"/>
-                                    </div>
-
-                                    <div class="col-md-3 mt-2">
-                                        <label class="form-label small fw-bold">Check Book ID :</label>
-                                        <input type="text" name="gp_check_book_id" class="form-control form-control-sm" placeholder="e.g. SBL-PLS-KIA" required="1" t-att-value="loan.gp_check_book_id or ''"/>
-                                    </div>
-                                    <div class="col-md-3 mt-2">
-                                        <label class="form-label small fw-bold">Cheque Number :</label>
-                                        <input type="text" name="gp_cheque_number" class="form-control form-control-sm" placeholder="e.g. 2560" required="1" t-att-value="loan.gp_cheque_number or ''"/>
-                                    </div>
-                                    <div class="col-md-3 mt-2">
-                                        <label class="form-label small fw-bold">Auto Amount (Rs.) :</label>
-                                        <input type="text" class="form-control form-control-sm bg-white fw-bold" readonly="1" t-att-value="'{:,.2f}'.format(loan.loan_amount) if loan else ''"/>
-                                    </div>
-                                    <div class="col-md-3 mt-2">
-                                        <label class="form-label small fw-bold">Auto Amount in Words :</label>
-                                        <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>
-                                    </div>
-
->>>>>>> 8bb0731c420afb5a570787dbba21884b6c52f2f6
                                     <div class="col-md-6 mt-2">
                                         <label class="form-label small fw-bold">Paid To / Received From :</label>
                                         <input type="text" name="gp_paid_to_rcvd_from" class="form-control form-control-sm" placeholder="e.g. Employee Name CHQ#..." required="1" t-att-value="loan.gp_paid_to_rcvd_from or ((loan.employee_id.name + ' CHQ#') if loan and loan.employee_id else '')"/>
