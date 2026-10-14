@@ -74,6 +74,7 @@
                                     <field name="max_ded_allowed"/>
                                     <field name="loan_outstanding"/>
                                     <field name="loan_required"/>
+                                    <field name="loan_required_amount_words"/>
                                     <field name="total_loan_calc"/>
                                     <field name="pf_balance_dues"/>
                                 </group>

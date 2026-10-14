@@ -1956,9 +1956,10 @@ class PFLoanPortal(CustomerPortal):
                     if loan.state == 'draft' and loan.hr_approver_id == emp:
                         inst = kw.get('repay_installments') or request.params.get('repay_installments')
                         if inst:
-                            loan.write({'repay_installments': int(inst)})
+                            loan.write({'repay_installments': int(inst),'hr_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_hr()
                     elif loan.state == 'waiting_hod' and loan.hod_approver_id == emp:
+                        loan.write({'hod_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_hod()
                     elif loan.state == 'waiting_finance' and loan.finance_approver_id == emp:
                         gp_code = kw.get('gp_audit_trail_code') or request.params.get('gp_audit_trail_code')
@@ -1978,13 +1979,16 @@ class PFLoanPortal(CustomerPortal):
                                 'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get(
                                     'gp_paid_to_rcvd_from'),
                                 'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
+                                'finance_Date': fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
                             })
                         loan.action_approve_finance()
                     elif loan.state == 'waiting_trustee' and (
                             loan.trustee_approver_id == emp or emp in loan.trustee_ids):
+                        loan.write({'trustee1_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_trustee()
                     elif loan.state == 'waiting_trustee_second' and (
                             loan.second_trustee_approver_id == emp or emp in loan.second_trustee_ids):
+                        loan.write({'trustee2_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_trustee2()
 
                 except Exception as e:
@@ -2058,6 +2062,7 @@ class PFLoanPortal(CustomerPortal):
                 "max_ded_allowed": safe_float(post.get("max_ded_allowed")),
                 "loan_outstanding": safe_float(post.get("loan_outstanding")),
                 "loan_required": safe_float(post.get("loan_required")),
+                # "loan_required_amount_words": safe_float(post.get("loan_required_amount_words","")),
                 "total_loan_calc": safe_float(post.get("total_loan_calc")),
                 "pf_balance_dues": safe_float(post.get("pf_balance_dues")),
                 "sanctioned_amount": safe_float(post.get("sanctioned_amount")),

@@ -8,8 +8,8 @@ class PFLoanVoucherWizard(models.TransientModel):
 
     loan_id = fields.Many2one('pf.loan.application', string='PF Loan Application', required=True, readonly=True)
     employee_id = fields.Many2one('hr.employee', related='loan_id.employee_id', string='Employee', readonly=True)
-    loan_amount = fields.Float(related='loan_id.loan_amount', string='Amount (Rs.)', readonly=True)
-    loan_amount_words = fields.Char(related='loan_id.loan_amount_words', string='Amount in Words', readonly=True)
+    loan_amount = fields.Float(related='loan_id.loan_required', string='Amount (Rs.)', readonly=True)
+    loan_amount_words = fields.Char(related='loan_id.loan_required_amount_words', string='Amount in Words', readonly=True)
 
     audit_trail_code = fields.Char(string='Audit Trail Code', required=True)
     voucher_date = fields.Date(string='Date', default=fields.Date.context_today, required=True)

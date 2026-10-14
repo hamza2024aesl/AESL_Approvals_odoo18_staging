@@ -31,7 +31,8 @@ class PFLoanApplication(models.Model):
 
     max_ded_allowed = fields.Float(string='Maximum Ded. Allowed')
     loan_outstanding = fields.Float(string='Loan Outstanding')
-    loan_required = fields.Float(string='Loan Required')
+    loan_required = fields.Float(string='Loan Approved')
+    loan_required_amount_words = fields.Char(string='Approved Amount in Words')
     total_loan_calc = fields.Float(string='Total Rs.')
     pf_balance_dues = fields.Float(string='DUES: Provident Fund Balance')
 
@@ -41,10 +42,10 @@ class PFLoanApplication(models.Model):
     repay_installments = fields.Integer(string='Repay Installments', default=1, tracking=True)
     per_installment_amount = fields.Float(string='Per Installment Amount', compute='_compute_sanctioned_loan_details', store=True, readonly=False)
 
-    @api.depends('employee_id', 'loan_amount', 'repay_installments')
+    @api.depends('employee_id', 'loan_amount','loan_required', 'repay_installments')
     def _compute_sanctioned_loan_details(self):
         for rec in self:
-            rec.sanctioned_amount = rec.loan_amount or 0.0
+            rec.sanctioned_amount = rec.loan_required or 0.0
 
             prev_total = 0.0
             if rec.employee_id:
@@ -76,18 +77,20 @@ class PFLoanApplication(models.Model):
                 p_amt = 0.0
                 d_amt = 0.0
 
-                loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+                # loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+                loan_records = applicant.loan_ids.filtered_domain([('state', '!=', 'cancel'), ('total_amount_due_principal', '!=', 0)]) if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
                 if not loan_records and "hr.loan" in self.env:
                     loan_records = self.env["hr.loan"].sudo().search([
                         ('employee_id', '=', applicant.id),
                         ('state', '!=', 'cancel'),
+                        ('total_amount_due_principal', '!=', 0),
                     ], order='id desc')
 
                 if loan_records:
                     latest = loan_records[0]
                     t_amt = latest.final_total or getattr(latest, 'total_loan', 0.0) or getattr(latest, 'loan_amount', 0.0) or getattr(latest, 'principal_amount', 0.0)
                     p_amt = latest.total_amount_paid or getattr(latest, 'total_paid', 0.0)
-                    d_amt = latest.total_amount_due or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
+                    d_amt = latest.total_amount_due_principal or getattr(latest, 'balance_on_loan', 0.0) or getattr(latest, 'balance_amount', 0.0)
                     if not d_amt and t_amt:
                         d_amt = t_amt - p_amt if t_amt > p_amt else t_amt
 
@@ -98,8 +101,7 @@ class PFLoanApplication(models.Model):
                             <i class="fa fa-info-circle"></i> HR Review Notice: Previous Active Loan Balance ({applicant.name})
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 13px; color: #334155;">
-                            <span><strong>Total Loan:</strong> Rs. {t_amt:,.2f}</span>
-                            <span style="color: #15803d;"><strong>Received From Employee:</strong> Rs. {p_amt:,.2f}</span>
+                            <span><strong>Total Loan:</strong> Rs. {t_amt:,.2f}action_{p_amt:,.2f}</span>
                             <span style="color: #0369a1;"><strong>Balance on Loan:</strong> Rs. {d_amt:,.2f}</span>
                         </div>
                     </div>
@@ -140,6 +142,12 @@ class PFLoanApplication(models.Model):
     second_trustee_approver_id = fields.Many2one('hr.employee', string='5th Approver (Trustee Main)', readonly=True)
     trustee_ids = fields.Many2many('hr.employee', 'pf_loan_app_trustee_rel', 'app_id', 'employee_id', string='4th Approver (Trustees)', readonly=True)
     second_trustee_ids = fields.Many2many('hr.employee', 'pf_loan_app_trustee_rel', 'app_id', 'employee_id', string='5th Approver (Trustees)', readonly=True)
+
+    # hr_approved_date = fields.Char()
+    # hod_approved_date = fields.Char()
+    # finance_approved_date = fields.Char()
+    # trustee_approved_date = fields.Char()
+    # second_trustee_approved_date = fields.Char()
 
     @api.onchange('net_pay')
     def _onchange_net_pay(self):
@@ -372,15 +380,20 @@ class PFLoanApplication(models.Model):
                 is_trustee = (rec.env.user.employee_id in rec.trustee_ids) or (rec.env.user.employee_id == rec.trustee_approver_id)
                 if not is_trustee and not rec.env.is_admin():
                     raise UserError(_("Only the designated Trustees can approve this application at this step."))
+                rec.trustee_approver_id = rec.env.user.employee_id
                 rec.state = 'waiting_trustee_second'
                 rec._send_approver_email()
 
     def action_approve_trustee2(self):
         for rec in self:
             if rec.state == 'waiting_trustee_second':
+                is_trustee = (rec.env.user.employee_id in rec.trustee_ids) or (rec.env.user.employee_id == rec.trustee_approver_id)
                 is_trustee_second = (rec.env.user.employee_id in rec.second_trustee_ids) or (rec.env.user.employee_id == rec.second_trustee_approver_id)
                 if not is_trustee_second and not rec.env.is_admin():
                     raise UserError(_("Only the designated Trustees can approve this application at this step."))
+                if rec.trustee_approver_id == rec.env.user.employee_id:
+                    raise UserError(_("You have already approved as trustee"))
+                rec.second_trustee_approver_id = rec.env.user.employee_id
                 rec.state = 'approved'
                 rec._send_final_approval_email()
 

@@ -117,30 +117,51 @@
             </div>
 
             <!-- Error Alert Pop-Up Modal -->
-            <t t-if="request.session.get('pf_loan_error')">
-                <div class="modal fade show d-block" id="pfLoanErrorModal" tabindex="-1" aria-labelledby="pfLoanErrorModalLabel" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.55);">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content shadow-lg border-0 rounded-3">
-                            <div class="modal-header bg-danger bg-opacity-25 border-bottom border-danger">
-                                <h5 class="modal-title fw-bold text-dark" id="pfLoanErrorModalLabel">
-                                    <i class="fa fa-exclamation-circle me-2 text-danger fs-4"/> Approval Action Error
-                                </h5>
-                                <button type="button" class="btn-close" onclick="document.getElementById('pfLoanErrorModal').style.display='none';" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body p-4 text-dark">
-                                <p class="mb-0 fs-6 leading-relaxed">
-                                    <t t-esc="request.session.pop('pf_loan_error')"/>
-                                </p>
-                            </div>
-                            <div class="modal-footer bg-light border-top-0">
-                                <button type="button" class="btn btn-danger fw-bold px-4" onclick="document.getElementById('pfLoanErrorModal').style.display='none';">OK, Got It</button>
+<!--            <t t-if="request.session.get('pf_loan_error')">-->
+<!--                <div class="modal fade show d-block" id="pfLoanErrorModal" tabindex="-1" aria-labelledby="pfLoanErrorModalLabel" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.55);">-->
+<!--                    <div class="modal-dialog modal-dialog-centered">-->
+<!--                        <div class="modal-content shadow-lg border-0 rounded-3">-->
+<!--                            <div class="modal-header bg-danger bg-opacity-25 border-bottom border-danger">-->
+<!--                                <h5 class="modal-title fw-bold text-dark" id="pfLoanErrorModalLabel">-->
+<!--                                    <i class="fa fa-exclamation-circle me-2 text-danger fs-4"/> Approval Action Error-->
+<!--                                </h5>-->
+<!--                                <button type="button" class="btn-close" onclick="document.getElementById('pfLoanErrorModal').style.display='none';" aria-label="Close"></button>-->
+<!--                            </div>-->
+<!--                            <div class="modal-body p-4 text-dark">-->
+<!--                                <p class="mb-0 fs-6 leading-relaxed">-->
+<!--                                    <t t-esc="request.session.pop('pf_loan_error')"/>-->
+<!--                                </p>-->
+<!--                            </div>-->
+<!--                            <div class="modal-footer bg-light border-top-0">-->
+<!--                                <button type="button" class="btn btn-danger fw-bold px-4" onclick="document.getElementById('pfLoanErrorModal').style.display='none';">OK, Got It</button>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </t>-->
+                <t t-if="request.session.get('pf_loan_error')">
+                    <div class="modal fade show d-block" id="pfLoanErrorModal" tabindex="-1" aria-labelledby="pfLoanErrorModalLabel" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.55);">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content shadow-lg border-0 rounded-3">
+                                <div class="modal-header bg-danger bg-opacity-25 border-bottom border-danger">
+                                    <h5 class="modal-title fw-bold text-dark" id="pfLoanErrorModalLabel">
+                                        <i class="fa fa-exclamation-circle me-2 text-danger fs-4"/> Approval Action Error
+                                    </h5>
+                                    <button type="button" class="btn-close" onclick="document.getElementById('pfLoanErrorModal').remove();" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4 text-dark">
+                                    <p class="mb-0 fs-6 leading-relaxed">
+                                        <t t-esc="request.session.pop('pf_loan_error')"/>
+                                    </p>
+                                </div>
+                                <div class="modal-footer bg-light border-top-0">
+                                    <button type="button" class="btn btn-danger fw-bold px-4" onclick="document.getElementById('pfLoanErrorModal').remove();">OK, Got It</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </t>
-
-            <!-- HR Approver Balance Notice Modal (Option 1: Latest Active Loan) -->
+                </t>
+                            <!-- HR Approver Balance Notice Modal (Option 1: Latest Active Loan) -->
             <t t-if="hr_balance_modal_data">
                 <div class="modal fade show d-block" id="hrBalanceModal" tabindex="-1" aria-labelledby="hrBalanceModalLabel" aria-modal="true" role="dialog" style="background: rgba(0,0,0,0.55);">
                     <div class="modal-dialog modal-dialog-centered">
@@ -221,14 +242,14 @@
                                         <label class="form-label small fw-bold">Cheque Number :</label>
                                         <input type="text" name="gp_cheque_number" class="form-control form-control-sm" placeholder="e.g. 2560" required="1" t-att-value="loan.gp_cheque_number or ''"/>
                                     </div>
-                                    <div class="col-md-3 mt-2">
+                                    <div class="col-md-6 mt-2">
                                         <label class="form-label small fw-bold">Auto Amount (Rs.) :</label>
-                                        <input type="text" class="form-control form-control-sm bg-white fw-bold" readonly="1" t-att-value="'{:,.2f}'.format(loan.loan_amount) if loan else ''"/>
+                                        <input type="text" class="form-control form-control-sm bg-white fw-bold" readonly="1" t-att-value="'{:,.2f}'.format(loan.loan_required) if loan else ''"/>
                                     </div>
-                                    <div class="col-md-3 mt-2">
-                                        <label class="form-label small fw-bold">Auto Amount in Words :</label>
-                                        <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>
-                                    </div>
+<!--                                    <div class="col-md-3 mt-2">-->
+<!--                                        <label class="form-label small fw-bold">Auto Amount in Words :</label>-->
+<!--                                        <input type="text" class="form-control form-control-sm bg-white" readonly="1" t-att-value="loan.loan_amount_words or ''"/>-->
+<!--                                    </div>-->
 
                                     <div class="col-md-6 mt-2">
                                         <label class="form-label small fw-bold">Paid To / Received From :</label>
@@ -429,10 +450,17 @@
 
                             <div class="col-md-6 mt-3">
                                 <div class="border rounded p-3 text-center bg-light">
-                                    <div class="fw-bold text-muted mb-4">Head of Department</div>
-                                    <div class="border-top pt-1 text-muted small">Signature &amp; Approval Box</div>
+                                    <div class="fw-bold text-muted mb-4">Head of Department: <t t-esc="loan.hod_approver_id.name if loan and loan.hod_approver_id.name else ''"/></div>
+                                    <div class="border-top pt-1 text-muted small"></div>
                                 </div>
                             </div>
+                            <div class="col-md-6 mt-3">
+                                <div class="border rounded p-3 text-center bg-light">
+                                    <div class="fw-bold text-muted mb-4">HR Approved: <t t-esc="loan.hr_approver_id.name if loan and loan.hr_approver_id.name else ''"/></div>
+                                    <div class="border-top pt-1 text-muted small"></div>
+                                </div>
+                            </div>
+
                         </div>
 
                         <!-- For Accounts Use Only Box -->
@@ -591,8 +619,8 @@
                                 <div class="col-md-6 mt-2"><strong>Paid To / Rcvd From:</strong> <t t-esc="loan.gp_paid_to_rcvd_from"/></div>
 
                                 <div class="col-md-6 mt-2"><strong>Description:</strong> <t t-esc="loan.gp_description"/></div>
-                                <div class="col-md-3 mt-2"><strong>Amount:</strong> Rs. <t t-esc="'{:,.2f}'.format(loan.loan_amount) if loan and loan.loan_amount else '0.00'"/></div>
-                                <div class="col-md-3 mt-2"><strong>Amount in Words:</strong> <t t-esc="loan.loan_amount_words if loan else ''"/></div>
+                                <div class="col-md-3 mt-2"><strong>Amount:</strong> Rs. <t t-esc="'{:,.2f}'.format(loan.loan_required) if loan and loan.loan_required else '0.00'"/></div>
+<!--                                <div class="col-md-3 mt-2"><strong>Amount in Words:</strong> <t t-esc="loan.loan_required_amount_words if loan else ''"/></div>-->
                             </div>
                         </div>
 
@@ -678,19 +706,19 @@
                             <div class="row text-center mt-4">
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Recommended by</div>
+                                        <div class="fw-bold text-muted mb-4">Prepared by: <t t-esc="loan.finance_approver_id if loan and loan.finance_approver_id else ''"/></div>
                                         <div class="border-top pt-1 text-muted small">Signature</div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Approved by Trustee</div>
+                                        <div class="fw-bold text-muted mb-4">Approved by Trustee1 <t t-esc="loan.trustee_approver_id if loan and loan.trustee_approver_id else ''"/></div>
                                         <div class="border-top pt-1 text-muted small">Signature</div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Trustee</div>
+                                        <div class="fw-bold text-muted mb-4">Approved by Trustee2 <t t-esc="loan.second_trustee_approver_id if loan and loan.second_trustee_approver_id else ''"/></div>
                                         <div class="border-top pt-1 text-muted small">Signature</div>
                                     </div>
                                 </div>
@@ -925,6 +953,7 @@
                             if (totalSanctionedLoanInput) totalSanctionedLoanInput.value = '';
                             if (perInstallmentInput) perInstallmentInput.value = '';
                         }
+                        updateRequiredWords();
                     }
 
                     // Comma formatting listeners (sirf editable fields par)
