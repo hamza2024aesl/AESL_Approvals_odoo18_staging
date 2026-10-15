@@ -805,6 +805,7 @@
                     <form action="/my/travel/expense/save" method="post" id="expense_form" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                         <input type="hidden" name="request_id" t-att-value="request_rec.id if request_rec else 0"/>
+                        <input type="hidden" name="expense_id" t-att-value="expense.id if expense else 0"/>
                         <input type="hidden" name="total_expense" id="total_expense_input" value="0.0"/>
 
                         <div class="bg-primary text-white p-2 text-center fw-bold mb-3">Allied Engineering &amp; Services Ltd.<br/>TRAVEL EXPENSE REPORT</div>
@@ -851,7 +852,9 @@
 
                             <div class="col-md-6 mb-2">
                                 <strong>Trip To :</strong>
-                                <input t-if="is_manual" type="text" name="trip_to" class="form-control form-control-sm d-inline-block w-50 ms-2" required="1"/>
+                                <input t-if="is_manual" type="text" name="trip_to"
+                                       class="form-control form-control-sm d-inline-block w-50 ms-2"
+                                       t-att-value="trip_to"/>
                                 <span t-else="" class="ms-2"><t t-esc="trip_to"/></span>
                             </div>
                             <div class="col-md-6 mb-2">
@@ -860,15 +863,21 @@
 
                             <div class="col-md-6 mb-2">
                                 <strong>Purpose of Trip :</strong>
-                                <input t-if="is_manual" type="text" name="purpose_of_trip" class="form-control form-control-sm d-inline-block w-50 ms-2" required="1"/>
+                                <input t-if="is_manual" type="text" name="purpose_of_trip"
+                                       class="form-control form-control-sm d-inline-block w-50 ms-2"
+                                       t-att-value="purpose_of_trip"/>
                                 <span t-else="" class="ms-2"><t t-esc="purpose_of_trip"/></span>
                             </div>
                             <div class="col-md-6 mb-2">
                                 <t t-if="is_manual">
                                     <strong>Period From :</strong>
-                                    <input type="datetime-local" name="period_from" class="form-control form-control-sm d-inline-block w-auto ms-2" required="1"/>
+                                    <input type="datetime-local" name="period_from"
+                                           class="form-control form-control-sm d-inline-block w-auto ms-2"
+                                           t-att-value="period_from.replace(' ', 'T') if period_from else ''"/>
                                     <strong class="ms-3">To :</strong>
-                                    <input type="datetime-local" name="period_to" class="form-control form-control-sm d-inline-block w-auto ms-2" required="1"/>
+                                    <input type="datetime-local" name="period_to"
+                                           class="form-control form-control-sm d-inline-block w-auto ms-2"
+                                           t-att-value="period_to.replace(' ', 'T') if period_to else ''"/>
                                 </t>
                                 <t t-else="">
                                     <strong>Period From :</strong> <span class="ms-2"><t t-esc="period_from"/></span>
@@ -1047,14 +1056,19 @@
                                         <ul class="list-group mt-2">
                                             <t t-foreach="attachments" t-as="att">
                                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    <a t-attf-href="/web/content/{{att.id}}?download=true"
+                                                    <a t-attf-href="/my/travel/expense/attachment/{{att.id}}"
                                                        target="_blank">
                                                         <i class="fa fa-file me-1"></i>
                                                         <t t-esc="att.name"/>
                                                     </a>
-                                                    <span class="badge bg-secondary">
-                                                        <t t-esc="round(att.file_size / 1024, 2)"/>
-                                                        KB
+                                                    <span>
+                                                        <span class="badge bg-secondary">
+                                                            <t t-esc="round(att.file_size / 1024, 2)"/> KB
+                                                        </span>
+                                                        <a t-attf-href="/my/travel/expense/attachment/{{att.id}}?download=1"
+                                                           class="btn btn-sm btn-outline-primary ms-2" title="Download">
+                                                            <i class="fa fa-download"/>
+                                                        </a>
                                                     </span>
                                                 </li>
                                             </t>
@@ -1085,7 +1099,61 @@
                                 </t>
                             </div>
                         </div>
-                        <!-- ==================== END ATTACHMENTS SECTION ==================== -->
+<!-- ==================== END ATTACHMENTS SECTION ==================== -->
+
+<!--                        &lt;!&ndash; ==================== ATTACHMENTS SECTION ==================== &ndash;&gt;-->
+<!--                        <div class="card mt-4 border">-->
+<!--                            <div class="card-header bg-light fw-bold">-->
+<!--                                <i class="fa fa-paperclip me-1"></i>-->
+<!--                                Attachments-->
+<!--                            </div>-->
+<!--                            <div class="card-body">-->
+<!--                                &lt;!&ndash; Existing attachments (view mode) &ndash;&gt;-->
+<!--                                <t t-if="expense and attachments">-->
+<!--                                    <div class="mb-3">-->
+<!--                                        <label class="fw-bold">Uploaded Files:</label>-->
+<!--                                        <ul class="list-group mt-2">-->
+<!--                                            <t t-foreach="attachments" t-as="att">-->
+<!--                                                <li class="list-group-item d-flex justify-content-between align-items-center">-->
+<!--                                                    <a t-attf-href="/web/content/{{att.id}}?download=true"-->
+<!--                                                       target="_blank">-->
+<!--                                                        <i class="fa fa-file me-1"></i>-->
+<!--                                                        <t t-esc="att.name"/>-->
+<!--                                                    </a>-->
+<!--                                                    <span class="badge bg-secondary">-->
+<!--                                                        <t t-esc="round(att.file_size / 1024, 2)"/>-->
+<!--                                                        KB-->
+<!--                                                    </span>-->
+<!--                                                </li>-->
+<!--                                            </t>-->
+<!--                                        </ul>-->
+<!--                                    </div>-->
+<!--                                </t>-->
+
+<!--                                &lt;!&ndash; Upload input (only in editable mode) &ndash;&gt;-->
+<!--                                <t t-if="not is_readonly">-->
+<!--                                    <label class="fw-bold">Upload Attachments (Bills/Receipts):</label>-->
+<!--                                    <input type="file"-->
+<!--                                           name="attachments"-->
+<!--                                           id="attachments_input"-->
+<!--                                           class="form-control mt-2"-->
+<!--                                           multiple="multiple"-->
+<!--                                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"/>-->
+<!--                                    <small class="text-muted">You can select multiple files (PDF, Images, Word, Excel).-->
+<!--                                        Max 10MB per file.-->
+<!--                                    </small>-->
+<!--                                    <div id="file_preview" class="mt-2"></div>-->
+<!--                                </t>-->
+
+<!--                                &lt;!&ndash; No attachments message in view mode &ndash;&gt;-->
+<!--                                <t t-if="is_readonly and not attachments">-->
+<!--                                    <p class="text-muted mb-0">-->
+<!--                                        <i>No attachments uploaded.</i>-->
+<!--                                    </p>-->
+<!--                                </t>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        &lt;!&ndash; ==================== END ATTACHMENTS SECTION ==================== &ndash;&gt;-->
                         <!-- ==================== APPROVAL SECTION ==================== -->
                         <t t-if="is_readonly and expense">
                             <div class="card mt-4 border">
@@ -1096,6 +1164,16 @@
                                     </span>
                                 </div>
                                 <div class="card-body">
+                                    <div class="mb-2" t-if="expense.manager_approver_id">
+                                       <b>Reporting Manager:</b>
+                                       <t t-esc="expense.manager_approver_id.name"/>
+                                       <span class="text-muted" t-if="expense.manager_date">
+                                           (<t t-esc="expense.manager_date.strftime('%d/%m/%Y %I:%M %p')"/>)
+                                       </span>
+                                       <div class="text-muted" t-if="expense.manager_remarks">Remarks:
+                                           <t t-esc="expense.manager_remarks"/>
+                                       </div>
+                                   </div>
                                     <div class="mb-2" t-if="expense.hr_approver_id">
                                         <b>HR:</b>
                                         <t t-esc="expense.hr_approver_id.name"/>
@@ -1118,7 +1196,8 @@
                                     </div>
 
                                     <!-- Approver action (separate form, because the main form is readonly) -->
-                                    <t t-if="is_hr_approver or is_payable_approver">
+<!--                                    <t t-if="is_hr_approver or is_payable_approver">-->
+                                    <t t-if="is_manager_approver or is_hr_approver or is_payable_approver">
                                         <hr/>
                                         <label class="fw-bold">Remarks</label>
                                         <textarea id="approval_remarks" class="form-control mb-3" rows="2"
@@ -1135,12 +1214,20 @@
                         </t>
                         <!-- ==================== END APPROVAL SECTION ==================== -->
 
+<!--                        <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">-->
+<!--                            <a t-attf-href="{{ '/my/travel/view/%s' % request_rec.id if request_rec else '/my/travel/expenses' }}" class="btn btn-secondary">Discard</a>-->
+<!--                            <button type="submit" class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>-->
+<!--                        </div>-->
                         <div class="d-flex justify-content-end gap-2 mt-4" t-if="not is_readonly">
-                            <a t-attf-href="{{ '/my/travel/view/%s' % request_rec.id if request_rec else '/my/travel/expenses' }}" class="btn btn-secondary">Discard</a>
-                            <button type="submit" class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>
+                            <a t-attf-href="{{ '/my/travel/view/%s' % request_rec.id if request_rec else '/my/travel/expenses' }}"
+                               class="btn btn-secondary">Discard</a>
+                            <button type="submit" name="submit_action" value="save" formnovalidate="formnovalidate"
+                                    class="btn btn-outline-primary px-4" id="btn_save">Save as Draft</button>
+                            <button type="submit" name="submit_action" value="submit"
+                                    class="btn btn-primary px-4" id="btn_submit">Submit Expense Report</button>
                         </div>
                     </form>
-                    <form t-if="is_readonly and expense and (is_hr_approver or is_payable_approver)"
+                    <form t-if="is_readonly and expense and (is_manager_approver or is_hr_approver or is_payable_approver)"
                           id="expense_action_form" method="post"
                           t-attf-action="/my/travel/expense/action/{{expense.id}}">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
@@ -1163,6 +1250,14 @@
                             document.getElementById('action_remarks').value = remarks;
                             document.getElementById('expense_action_form').submit();
                         }
+                        var expenseForm = document.getElementById('expense_form');
+                            if (expenseForm) {
+                                expenseForm.addEventListener('keydown', function (e) {
+                                    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                                        e.preventDefault();
+                                    }
+                                });
+                            }
                         //]]>
                     </script>
                 </div>

@@ -199,8 +199,8 @@
             <form string="Travel Expense" create="false" edit="false">
                 <header>
                     <button name="action_approve" string="Approve"
-                            type="object" class="oe_highlight"/>
-                    <button name="action_refuse" string="Refuse"
+                            type="object" class="oe_highlight" invisible="state in ('draft','approved')"/>
+                    <button name="action_refuse" string="Refuse" invisible="state in ('draft','approved')"
                             type="object"/>
                     <field name="state"
                            widget="statusbar"

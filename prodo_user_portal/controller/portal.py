@@ -16,6 +16,8 @@ import json
 import base64
 from odoo import http
 from odoo.http import request
+import logging
+_logger = logging.getLogger(__name__)
 
 class AppraisalPortal(CustomerPortal):
 
@@ -845,7 +847,9 @@ class ApprovalPortal(CustomerPortal):
     #         return request.redirect(f"/my/travel/expense/new/{request_id}")
     #
     #     return request.redirect(f"/my/travel/expense/view/{expense.id}")
-
+        # ===== Class ApprovalPortal(CustomerPortal) ke andar, usi indentation par paste karein =====
+        # File ke top par ye imports hon:  import logging, base64, re, datetime
+        #                                  _logger = logging.getLogger(__name__)
 
     LINE_COLS = [
         # (post prefix, model amount field, desc field, curr field)
@@ -866,21 +870,25 @@ class ApprovalPortal(CustomerPortal):
             [('user_id', '=', request.env.user.id)], limit=1)
 
     def _is_expense_manager(self):
-        """Users configured as payable/HR in approval.expense.config see all expenses."""
+        """Users configured as payable/HR in approval.expense.config."""
         emp = self._get_current_employee()
         if not emp:
             return False
         return bool(request.env['approval.expense.config'].sudo().search_count(
             ['|', ('expense_payable_id', '=', emp.id), ('hr_id', '=', emp.id)]))
 
+
     def _expense_domain(self):
+        uid = request.env.user.id
         if self._is_expense_manager():
-            return []
-        return [('employee_id.user_id', '=', request.env.user.id)]
+            # HR/Finance: sab ki submitted+ expenses, aur apni draft
+            return ['|', ('state', '!=', 'draft'), ('employee_id.user_id', '=', uid)]
+        # Normal user: apni sab, aur team ki submitted+ (agar wo kisi ka manager hai)
+        return ['|', ('employee_id.user_id', '=', uid),
+                '&', ('state', '!=', 'draft'), ('employee_id.parent_id.user_id', '=', uid)]
 
     def _linkable_requests(self):
-        """Approved requests of this user that don't have an expense yet.
-        Add the same extra domain you use on the /my/travel list if needed."""
+        """Approved requests of this user that don't have an expense yet."""
         used = request.env['approval.travel.expense'].sudo().search(
             [('request_id', '!=', False)]).mapped('request_id').ids
         return request.env['approval.request'].sudo().search([
@@ -933,7 +941,7 @@ class ApprovalPortal(CustomerPortal):
 
         vals = {
             "page_name": "travel_expense_page",
-            "request_rec": request_rec,           # empty recordset when standalone
+            "request_rec": request_rec,  # empty recordset when standalone
             "expense": False,
             "linkable_requests": self._linkable_requests() if not request_id else [],
             "employee_name": employee.name if employee else "",
@@ -944,7 +952,7 @@ class ApprovalPortal(CustomerPortal):
             "purpose_of_trip": purpose,
             "period_from": p_from,
             "period_to": p_to,
-            "is_manual": not request_id,          # manual header fields when no request
+            "is_manual": not request_id,  # manual header fields when no request
             "is_readonly": False,
             "currencies": self.CURRENCIES,
         }
@@ -961,9 +969,12 @@ class ApprovalPortal(CustomerPortal):
             ("res_model", "=", "approval.travel.expense"),
             ("res_id", "=", expense.id),
         ])
+        # Draft + apni expense = editable, baqi sab readonly
+        is_owner = expense.employee_id.user_id == request.env.user
+        is_readonly = not (expense.state == 'draft' and is_owner)
         vals = {
             "page_name": "travel_expense_page",
-            "request_rec": expense.request_id,    # may be empty
+            "request_rec": expense.request_id,  # may be empty
             "expense": expense,
             "employee_name": expense.employee_name,
             "employee_reg_no": expense.employee_reg_no,
@@ -973,11 +984,12 @@ class ApprovalPortal(CustomerPortal):
             "purpose_of_trip": expense.purpose_of_trip,
             "period_from": expense.period_from.strftime("%Y-%m-%d %H:%M") if expense.period_from else "",
             "period_to": expense.period_to.strftime("%Y-%m-%d %H:%M") if expense.period_to else "",
-            "is_manual": False,
-            "is_readonly": True,
+            "is_manual": (not expense.request_id) and (not is_readonly),
+            "is_readonly": is_readonly,
             "currencies": self.CURRENCIES,
             "attachments": attachments,
-            "is_hr_approver": expense.state == 'submitted' and expense._is_role('hr'),
+            "is_manager_approver": expense.state == 'submitted' and expense._is_role('manager'),
+            "is_hr_approver": expense.state == 'manager_approved' and expense._is_role('hr'),   # <-- state badal gayi
             "is_payable_approver": expense.state == 'hr_approved' and expense._is_role('payable'),
         }
         return request.render("prodo_user_portal.travel_expense_form_portal", vals)
@@ -991,27 +1003,41 @@ class ApprovalPortal(CustomerPortal):
             except (ValueError, TypeError):
                 return 0.0
 
-        request_id = int(post.get('request_id') or 0)
-        back_url = f"/my/travel/expense/new/{request_id}" if request_id else "/my/travel/expense/new"
-        request_rec = request.env["approval.request"]
+        Expense = request.env['approval.travel.expense'].sudo()
+        is_submit = post.get('submit_action', 'submit') == 'submit'
+        expense_id = int(post.get('expense_id') or 0)
 
+        # ---- editing an existing draft ----
+        expense = Expense
+        if expense_id:
+            expense = Expense.browse(expense_id)
+            if (not expense.exists() or expense.state != 'draft'
+                    or expense.employee_id.user_id != request.env.user):
+                return request.redirect("/my/travel/expenses")
+            request_id = expense.request_id.id
+            back_url = f"/my/travel/expense/view/{expense.id}"
+        else:
+            request_id = int(post.get('request_id') or 0)
+            back_url = f"/my/travel/expense/new/{request_id}" if request_id else "/my/travel/expense/new"
+
+        request_rec = request.env["approval.request"]
         if request_id:
             request_rec = request_rec.sudo().browse(request_id)
-            if (not request_rec.exists()
-                    or request_rec.request_status != 'approved'
-                    or request_rec.request_owner_id != request.env.user):
-                return request.redirect("/my/travel/expenses")
-            existing = request.env['approval.travel.expense'].sudo().search(
-                [('request_id', '=', request_rec.id)], limit=1)
-            if existing:
-                return request.redirect(f"/my/travel/expense/view/{existing.id}")
+            if not expense:  # new record: validate request + duplicate
+                if (not request_rec.exists()
+                        or request_rec.request_status != 'approved'
+                        or request_rec.request_owner_id != request.env.user):
+                    return request.redirect("/my/travel/expenses")
+                existing = Expense.search([('request_id', '=', request_rec.id)], limit=1)
+                if existing:
+                    return request.redirect(f"/my/travel/expense/view/{existing.id}")
             employee = request_rec.employee_id
             trip_to = (request_rec.travel_schedule_ids[0].arrival_destination
                        if request_rec.travel_schedule_ids else (request_rec.location or ""))
             purpose = request_rec.category_id.name or ""
             period_from, period_to = request_rec.date_start, request_rec.date_end
         else:
-            employee = self._get_current_employee()
+            employee = expense.employee_id if expense else self._get_current_employee()
             trip_to = (post.get('trip_to') or '').strip()
             purpose = (post.get('purpose_of_trip') or '').strip()
             period_from = self._parse_dt(post.get('period_from'))
@@ -1022,8 +1048,12 @@ class ApprovalPortal(CustomerPortal):
             return request.redirect(back_url)
 
         try:
-            with request.env.cr.savepoint():   # nothing is left half-created on error
-                expense = request.env['approval.travel.expense'].sudo().create({
+            with request.env.cr.savepoint():  # error par kuch half-created nahi rahega
+                if is_submit and not post.get('expense_date'):
+                    raise ValueError("Please enter the expense date before submitting.")
+                has_manager = bool(employee.parent_id) and employee.parent_id != employee
+                submit_state = 'submitted' if has_manager else 'manager_approved'
+                vals = {
                     'request_id': request_rec.id or False,
                     'employee_id': employee.id,
                     'employee_name': employee.name,
@@ -1034,13 +1064,18 @@ class ApprovalPortal(CustomerPortal):
                     'purpose_of_trip': purpose,
                     'period_from': period_from,
                     'period_to': period_to,
-                    'date': post.get('expense_date'),
+                    'date': post.get('expense_date') or False,
                     'advance_by_company': safe_float(post.get('advance_by_company')),
                     'items_paid_direct': safe_float(post.get('items_paid_direct')),
-                    'state': 'submitted',
-                })
+                    'state': submit_state if is_submit else 'draft',
+                }
+                if expense:
+                    expense.expense_line_ids.unlink()  # purani lines hata kar nayi banayenge
+                    expense.write(vals)
+                else:
+                    expense = Expense.create(vals)
 
-                # Attachments
+                # Attachments (nayi files add hongi, purani rehti hain)
                 for file in request.httprequest.files.getlist('attachments'):
                     if file and file.filename:
                         content = file.read()
@@ -1055,7 +1090,6 @@ class ApprovalPortal(CustomerPortal):
                         })
 
                 # Lines
-                # for i in range(1, 8):
                 row_indexes = sorted(
                     int(m.group(1)) for k in post
                     for m in [re.match(r'^station_from_(\d+)$', k)] if m
@@ -1079,19 +1113,27 @@ class ApprovalPortal(CustomerPortal):
                     if has_data:
                         request.env['approval.travel.expense.line'].sudo().create(line_vals)
 
-            self._send_expense_notification(expense)
-
         except Exception as e:
+            _logger.exception("Expense save failed")
             request.session['expense_error'] = str(e)
             return request.redirect(back_url)
 
+        # Mail sirf submit par (HR ko). Mail fail ho to expense save rehti hai.
+        if is_submit:
+            try:
+                expense._send_expense_notification()  # model wala method
+            except Exception:
+                _logger.exception("Expense mail failed for %s", expense.id)
+
         return request.redirect(f"/my/travel/expense/view/{expense.id}")
 
+    # ---------------------------- approve / refuse ----------------------------
     @http.route("/my/travel/expense/action/<int:expense_id>", type="http", auth="user",
                 website=True, methods=["POST"])
     def portal_travel_expense_action(self, expense_id, action=None, remarks='', **kw):
-        expense = request.env['approval.travel.expense'].sudo().browse(expense_id)
-        if not expense.exists():
+        expense = request.env['approval.travel.expense'].sudo().search(
+            [('id', '=', expense_id)] + self._expense_domain(), limit=1)
+        if not expense:
             return request.redirect("/my/travel/expenses")
         try:
             with request.env.cr.savepoint():
@@ -1099,11 +1141,23 @@ class ApprovalPortal(CustomerPortal):
                     expense.action_approve(remarks)
                 elif action == 'refuse':
                     expense.action_refuse(remarks)
-            self._send_expense_notification(expense)
         except Exception as e:
+            _logger.exception("Expense action failed for %s", expense_id)
             request.session['expense_error'] = str(e)
         return request.redirect(f"/my/travel/expense/view/{expense.id}")
 
+    @http.route("/my/travel/expense/attachment/<int:att_id>", type="http", auth="user", website=True)
+    def portal_travel_expense_attachment(self, att_id, download=False, **kw):
+        att = request.env['ir.attachment'].sudo().browse(att_id)
+        if not att.exists() or att.res_model != 'approval.travel.expense':
+            return request.not_found()
+        # sirf wahi dekh sake jise ye expense dekhne ki ijazat ho
+        expense = request.env['approval.travel.expense'].sudo().search(
+            [('id', '=', att.res_id)] + self._expense_domain(), limit=1)
+        if not expense:
+            return request.not_found()
+        stream = request.env['ir.binary']._get_stream_from(att, 'raw')
+        return stream.get_response(as_attachment=bool(download))
 
     def _send_expense_mail(self, expense, emails, subject, message):
         emails = [e for e in emails if e]
