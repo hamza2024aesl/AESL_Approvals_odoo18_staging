@@ -304,6 +304,7 @@ class ApprovalRequest(models.Model):
         res = super(ApprovalRequest, self).action_refuse(approver=approver)
         for request in self:
             if request.time_off_id:
+                request.time_off_id.sudo().refuse_reason = 'Auto Refusal by Manager'
                 request.time_off_id.sudo().action_refuse()
                 # Optional: request.time_off_id.sudo().unlink() 
         return res

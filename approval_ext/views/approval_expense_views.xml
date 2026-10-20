@@ -276,6 +276,11 @@
                         <page string="Approvals">
                             <group>
                                 <group string="HR">
+                                    <field name="manager_approver_id"/>
+                                    <field name="manager_date"/>
+                                    <field name="manager_remarks"/>
+                                </group>
+                                <group string="HR">
                                     <field name="hr_approver_id"/>
                                     <field name="hr_date"/>
                                     <field name="hr_remarks"/>
@@ -285,6 +290,7 @@
                                     <field name="payable_date"/>
                                     <field name="payable_remarks"/>
                                 </group>
+
                             </group>
                         </page>
                     </notebook>

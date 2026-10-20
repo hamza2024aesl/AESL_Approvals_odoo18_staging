@@ -152,7 +152,20 @@ class ApprovalTravelExpense(models.Model):
         emp = cfg.hr_id if role == 'hr' else cfg.expense_payable_id
         return [self._employee_email(emp)]
 
-            # --- 5. _send_expense_notification replace karein (baqi mail methods waise hi) ---
+    SKIP_MANAGER_JOB_TITLES = ('managing director', 'executive director')
+    @api.model
+    def _manager_step_required(self, employee):
+        """False: manager stage skip hokar seedha HR ko jayegi."""
+        manager = employee.parent_id
+        if not manager or manager == employee:
+            return False
+        titles = {
+            (manager.job_id.name or '').strip().lower(),
+            (manager.job_title or '').strip().lower(),
+        }
+        return not (titles & set(self.SKIP_MANAGER_JOB_TITLES))
+
+    # --- 5. _send_expense_notification replace karein (baqi mail methods waise hi) ---
     def _send_expense_notification(self):
         for rec in self:
             if rec.state == 'submitted':

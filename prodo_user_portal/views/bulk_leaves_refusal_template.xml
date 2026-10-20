@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="leaves_manage_portal_bulk_refuse"
+              inherit_id="ivis_user_portal.leaves_manage_portal"
+              name="Leaves Manage Portal - Bulk Refuse Button">
+        <xpath expr="//button[@id='btn-approve-selected']" position="after">
+            <button type="button" id="btn-refuse-selected" class="btn btn-danger mb-2 ms-2">
+                Refuse Selected
+            </button>
+        </xpath>
+    </template>
+</odoo>

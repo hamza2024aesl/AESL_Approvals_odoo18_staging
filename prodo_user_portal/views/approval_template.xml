@@ -818,7 +818,9 @@
                                     onchange="if (this.value) window.location = '/my/travel/expense/new/' + this.value;">
                                 <option value="">-- Not linked / enter manually --</option>
                                 <t t-foreach="linkable_requests" t-as="lr">
-                                    <option t-att-value="lr.id"><t t-esc="lr.name"/> - <t t-esc="lr.category_id.name"/></option>
+                                    <option t-att-value="lr.id"><t t-esc="lr.name"/> - <t t-esa="lr.travel_request_type"/> - <t t-if="lr.travel_schedule_ids">
+                                        <t t-esc="lr.travel_schedule_ids[0].arrival_destination"/>
+                                    </t></option>
                                 </t>
                             </select>
                         </div>
@@ -1258,6 +1260,15 @@
                                     }
                                 });
                             }
+                            var submitBtn = document.getElementById('btn_submit');
+                                if (submitBtn) {
+                                    submitBtn.addEventListener('click', function () {
+                                        ['trip_to', 'purpose_of_trip', 'period_from', 'period_to'].forEach(function (n) {
+                                            var el = document.querySelector('[name="' + n + '"]');
+                                            if (el) el.required = true;
+                                        });
+                                    });
+                                }
                         //]]>
                     </script>
                 </div>

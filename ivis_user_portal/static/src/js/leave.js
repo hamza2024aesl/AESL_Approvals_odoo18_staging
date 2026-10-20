@@ -420,12 +420,69 @@ publicWidget.registry.LeaveFormSubmitOnce = publicWidget.Widget.extend({
         $discardBtn.attr('aria-disabled', 'true');
     },
 });
-
+//
+//publicWidget.registry.LeaveBulkApprove = publicWidget.Widget.extend({
+//    selector: '.o_portal_wrap, #wrapwrap, body',
+//    events: {
+//        'change #select-all-leaves': '_onToggleSelectAll',
+//        'click #btn-approve-selected': '_onBulkApprove',
+//    },
+//
+//    _onToggleSelectAll(ev) {
+//        const checked = ev.currentTarget.checked;
+//        $('.leave-select-checkbox').prop('checked', checked);
+//    },
+//
+//    async _onBulkApprove(ev) {
+//        ev.preventDefault();
+//
+//        const selectedIds = $('.leave-select-checkbox:checked')
+//            .map((i, el) => $(el).data('leave-id'))
+//            .get();
+//
+//        if (!selectedIds.length) {
+//            alert("Please select at least one leave to approve.");
+//            return;
+//        }
+//
+//        if (!lockLeaveActions()) {
+//            return;
+//        }
+//
+//        const $btn = $('#btn-approve-selected');
+//
+//        if (!$btn.data('original-html')) {
+//            $btn.data('original-html', $btn.html());
+//        }
+//
+//        $btn.html(`
+//            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+//            Approving...
+//        `);
+//
+//        try {
+//            await rpc('/leave/approve/bulk', {
+//                leave_ids: selectedIds,
+//            });
+//
+//            window.location.reload();
+//        } catch (error) {
+//            console.error("Failed to bulk approve leaves:", error);
+//            alert("An error occurred while approving the selected leaves.");
+//        } finally {
+//            unlockLeaveActions();
+//            if ($btn.data('original-html')) {
+//                $btn.html($btn.data('original-html'));
+//            }
+//        }
+//    },
+//});
 publicWidget.registry.LeaveBulkApprove = publicWidget.Widget.extend({
     selector: '.o_portal_wrap, #wrapwrap, body',
     events: {
         'change #select-all-leaves': '_onToggleSelectAll',
         'click #btn-approve-selected': '_onBulkApprove',
+        'click #btn-refuse-selected': '_onBulkRefuse',   // 👈 NEW
     },
 
     _onToggleSelectAll(ev) {
@@ -471,6 +528,58 @@ publicWidget.registry.LeaveBulkApprove = publicWidget.Widget.extend({
             alert("An error occurred while approving the selected leaves.");
         } finally {
             unlockLeaveActions();
+            if ($btn.data('original-html')) {
+                $btn.html($btn.data('original-html'));
+            }
+        }
+    },
+
+    // 👇 NEW — Bulk Refuse
+    async _onBulkRefuse(ev) {
+        ev.preventDefault();
+
+        const selectedIds = $('.leave-select-checkbox:checked')
+            .map((i, el) => $(el).data('leave-id'))
+            .get();
+
+        if (!selectedIds.length) {
+            alert("Please select at least one leave to refuse.");
+            return;
+        }
+
+        if (!lockLeaveActions()) {
+            return;
+        }
+
+        const $btn = $('#btn-refuse-selected');
+
+        if (!$btn.data('original-html')) {
+            $btn.data('original-html', $btn.html());
+        }
+
+        $btn.prop('disabled', true);
+        $btn.html(`
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Refusing...
+        `);
+
+        try {
+            const res = await rpc('/leave/refuse/bulk', {
+                leave_ids: selectedIds,
+                refuse_reason: "Refused by Manager",
+            });
+
+            if (res && res.success) {
+                window.location.reload();
+            } else {
+                alert((res && res.error) || "Unknown error.");
+            }
+        } catch (error) {
+            console.error("Failed to bulk refuse leaves:", error);
+            alert("An error occurred while refusing the selected leaves.");
+        } finally {
+            unlockLeaveActions();
+            $btn.prop('disabled', false);
             if ($btn.data('original-html')) {
                 $btn.html($btn.data('original-html'));
             }

@@ -1051,8 +1051,9 @@ class ApprovalPortal(CustomerPortal):
             with request.env.cr.savepoint():  # error par kuch half-created nahi rahega
                 if is_submit and not post.get('expense_date'):
                     raise ValueError("Please enter the expense date before submitting.")
-                has_manager = bool(employee.parent_id) and employee.parent_id != employee
-                submit_state = 'submitted' if has_manager else 'manager_approved'
+                # has_manager = bool(employee.parent_id) and employee.parent_id != employee
+                # submit_state = 'submitted' if has_manager else 'manager_approved'
+                submit_state = 'submitted' if expense._manager_step_required(employee) else 'manager_approved'
                 vals = {
                     'request_id': request_rec.id or False,
                     'employee_id': employee.id,
