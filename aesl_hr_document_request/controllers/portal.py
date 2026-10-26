@@ -118,7 +118,11 @@ class HrDocumentRequestPortal(CustomerPortal):
                 'signed_on': fields.Datetime.now(),
             })
 
-        # Update status to submitted and auto-create document in Documents App
+        # Stamp digital signature directly onto uploaded document (PDF or Image)
+        if doc_req.attachment_id and doc_req.signature:
+            doc_req.sudo().action_stamp_signature()
+
+        # Update status to submitted and sync to Documents App
         doc_req.write({'state': 'submitted'})
         doc_req.action_approve()
 

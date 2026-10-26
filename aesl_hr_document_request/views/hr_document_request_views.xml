@@ -10,11 +10,19 @@
                 <header>
                     <button name="action_send_request" string="Send Request to Employee" type="object" class="btn-primary" invisible="state != 'draft'"/>
                     <button name="action_approve" string="Approve &amp; Sync to Documents" type="object" class="btn-success" invisible="state not in ['submitted', 'pending']"/>
+                    <button name="action_stamp_signature" string="Stamp Signature on PDF" type="object" class="btn-secondary" invisible="not signature or not attachment_id"/>
                     <button name="action_reject" string="Reject" type="object" class="btn-danger" invisible="state not in ['pending', 'submitted']"/>
                     <button name="action_reset_draft" string="Reset to Draft" type="object" invisible="state not in ['rejected', 'approved']"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,pending,submitted,approved"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_document" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="not document_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">View in<br/>Documents</span>
+                            </div>
+                        </button>
+                    </div>
                     <div class="oe_title">
                         <label for="name" string="Document Title"/>
                         <h1>
@@ -24,12 +32,12 @@
                     <group>
                         <group>
                             <field name="employee_id"/>
-                            <field name="partner_id"/>
-                            <field name="user_id"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
                             <field name="deadline"/>
                         </group>
                         <group string="Documents App Options">
-                            <field name="folder_id" options="{'no_create': True}"/>
+                            <field name="folder_id" domain="[('type', '=', 'folder'), ('shortcut_document_id', '=', False)]" options="{'no_create': True}"/>
                             <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                             <field name="document_id" readonly="1" invisible="not document_id"/>
                         </group>
@@ -39,17 +47,104 @@
                             <field name="instructions" placeholder="Enter instructions for the employee regarding this document request..."/>
                         </page>
                         <page string="Uploaded Document &amp; Signature" invisible="state == 'draft'">
-                            <group>
-                                <group string="Uploaded Attachment">
-                                    <field name="attachment_id" readonly="1"/>
-                                    <field name="attachment_file" filename="attachment_name" widget="binary"/>
-                                </group>
-                                <group string="Digital Signature Details">
-                                    <field name="signature" widget="image" options="{'size': [300, 100]}"/>
-                                    <field name="signed_by" readonly="1"/>
-                                    <field name="signed_on" readonly="1"/>
-                                </group>
-                            </group>
+                            <field name="is_pdf" invisible="1"/>
+                            <field name="is_image" invisible="1"/>
+                            <field name="attachment_id" invisible="1"/>
+
+                            <div class="row">
+                                <!-- Top Bar with File Info & Download Action -->
+                                <div class="col-12 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded border">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-file-text-o fa-2x text-primary me-3"/>
+                                            <div>
+                                                <small class="text-muted d-block" style="font-size: 11px;">UPLOADED FILE</small>
+                                                <field name="attachment_name" readonly="1" class="fw-bold fs-6 text-dark"/>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button name="action_stamp_signature"
+                                                    string="Stamp Signature on PDF"
+                                                    type="object"
+                                                    class="btn btn-sm btn-outline-success me-2"
+                                                    icon="fa-pencil-square-o"
+                                                    invisible="not signature or not attachment_id"/>
+                                            <button name="action_download_attachment"
+                                                    string="Download Document"
+                                                    type="object"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    icon="fa-download"
+                                                    invisible="not attachment_id"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 1. Document Preview Section -->
+                                <div class="col-12 mb-3">
+                                    <!-- PDF Viewer -->
+                                    <div invisible="not is_pdf" class="border rounded bg-white shadow-sm p-1">
+                                        <field name="attachment_file" widget="pdf_viewer" readonly="1"/>
+                                    </div>
+
+                                    <!-- Image Preview -->
+                                    <div invisible="not is_image" class="border rounded bg-white shadow-sm p-3 text-center">
+                                        <field name="attachment_file" widget="image" class="img-fluid" options="{'size': [800, 600]}" readonly="1"/>
+                                    </div>
+
+                                    <!-- Non-previewable fallback -->
+                                    <div invisible="is_pdf or is_image or not attachment_id" class="alert alert-secondary text-center p-4">
+                                        <i class="fa fa-file-o fa-3x text-muted mb-2"/>
+                                        <p class="mb-0 fw-bold">Preview is not available for this document format.</p>
+                                        <small class="text-muted">Please click 'Download Document' above to inspect the file.</small>
+                                    </div>
+                                    <div invisible="attachment_id" class="alert alert-info text-center p-3">
+                                        <i class="fa fa-info-circle me-1"/> Employee has not uploaded any attachment yet.
+                                    </div>
+                                </div>
+
+                                <!-- 2. Digital Signature Div directly below Document Preview -->
+                                <div class="col-12" invisible="not signature">
+                                    <div class="card shadow-sm border bg-light mt-1">
+                                        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                                            <span class="fw-bold text-dark">
+                                                <i class="fa fa-pencil-square-o text-success me-2"/> Employee Digital Signature
+                                            </span>
+                                            <span class="badge bg-success text-white">
+                                                <i class="fa fa-check-circle me-1"/> Digitally Verified
+                                            </span>
+                                        </div>
+                                        <div class="card-body p-3">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-5 text-center">
+                                                    <div class="p-2 bg-white rounded border d-inline-block shadow-sm">
+                                                        <field name="signature" widget="image" options="{'size': [350, 120]}"/>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-7 ps-md-4 mt-3 mt-md-0">
+                                                    <div class="mb-2">
+                                                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 11px;">Signatory Full Name</small>
+                                                        <span class="fs-6 fw-bold text-dark">
+                                                            <i class="fa fa-user me-1 text-primary"/>
+                                                            <field name="signed_by" readonly="1"/>
+                                                        </span>
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 11px;">Signed Date &amp; Time</small>
+                                                        <span class="text-dark">
+                                                            <i class="fa fa-clock-o me-1 text-primary"/>
+                                                            <field name="signed_on" readonly="1"/>
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 11px;">Document Status</small>
+                                                        <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-info="state == 'submitted'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </page>
                     </notebook>
                 </sheet>
