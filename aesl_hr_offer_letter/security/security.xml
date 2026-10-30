@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_hr_offer_letter_multi_company" model="ir.rule">
+        <field name="name">Offer Letter Multi-Company Rule</field>
+        <field name="model_id" ref="model_hr_offer_letter"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

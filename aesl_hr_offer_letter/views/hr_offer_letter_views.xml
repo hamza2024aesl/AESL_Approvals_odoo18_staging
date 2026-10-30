@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 1. FORM VIEW -->
+    <record id="view_hr_offer_letter_form" model="ir.ui.view">
+        <field name="name">hr.offer.letter.form</field>
+        <field name="model">hr.offer.letter</field>
+        <field name="arch" type="xml">
+            <form string="Employment Offer Letter">
+                <header>
+                    <!-- Action Buttons -->
+                    <button name="action_send_offer" string="Send Offer Letter" type="object" class="btn-primary" 
+                            invisible="state not in ['draft', 'rejected']"/>
+                    
+                    <button name="action_create_employee" string="Create Employee" type="object" class="btn-success" 
+                            invisible="state != 'accepted' or employee_id != False"/>
+                    
+                    <button name="action_revise_offer" string="Revise Offer" type="object" class="btn-warning" 
+                            invisible="state not in ['rejected', 'sent']"/>
+                    
+                    <button name="action_print_offer_letter" string="Print PDF Offer" type="object" class="btn-secondary"/>
+                    
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ['done', 'cancel']"/>
+                    <button name="action_reset_to_draft" string="Reset to Draft" type="object" invisible="state in ['draft', 'done']"/>
+
+                    <!-- Statusbar -->
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,accepted,done"/>
+                </header>
+                <sheet>
+                    <!-- Ribbons for visual clarity -->
+                    <widget name="web_ribbon" title="Accepted" bg_color="text-bg-success" invisible="state != 'accepted'"/>
+                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger" invisible="state != 'rejected'"/>
+                    <widget name="web_ribbon" title="Onboarded" bg_color="text-bg-info" invisible="state != 'done'"/>
+
+                    <!-- Stat Buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_print_offer_letter" type="object" class="oe_stat_button" icon="fa-file-pdf-o">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Offer Letter<br/>PDF</span>
+                            </div>
+                        </button>
+                        <field name="employee_id" invisible="1"/>
+                        <button name="%(hr.open_view_employee_list_my)d" type="action" class="oe_stat_button" icon="fa-user" 
+                                invisible="not employee_id"
+                                context="{'search_default_id': employee_id}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">View<br/>Employee</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Title Block -->
+                    <div class="oe_title">
+                        <span class="o_form_label">Offer Letter Reference</span>
+                        <h1>
+                            <field name="name" readonly="1"/>
+                            <field name="revision" invisible="1"/>
+                            <span invisible="revision == 0" class="badge text-bg-warning ms-2" style="font-size: 14px;">
+                                Rev #<field name="revision" readonly="1"/>
+                            </span>
+                        </h1>
+                    </div>
+
+                    <!-- Top Primary Details -->
+                    <group>
+                        <group string="Candidate Selection">
+                            <field name="applicant_id" placeholder="Select accepted candidate..." 
+                                   readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="candidate_name" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="email" widget="email" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="phone" widget="phone" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="date" readonly="state in ['sent', 'accepted', 'done']"/>
+                        </group>
+                        <group string="Position &amp; Department">
+                            <field name="job_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="department_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="posting_location" placeholder="e.g. Multan, Karachi" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="joining_date" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Rejection Alert Bar if Rejected -->
+                    <div class="alert alert-danger" role="alert" invisible="state != 'rejected'">
+                        <h5 class="alert-heading font-weight-bold mb-1">Offer Declined by Candidate</h5>
+                        <p class="mb-0" invisible="not rejection_reason">
+                            <strong>Feedback:</strong> <field name="rejection_reason" readonly="1"/>
+                        </p>
+                        <p class="mb-0 text-muted small mt-1">
+                            Click <strong>"Revise Offer"</strong> above to reopen the form, adjust salary/terms, and re-send.
+                        </p>
+                    </div>
+
+                    <!-- Notebook Tabs -->
+                    <notebook>
+                        <!-- Tab 1: Candidate Personal Details (Image 1) -->
+                        <page string="Candidate Profile (Application Form)" name="candidate_profile">
+                            <group>
+                                <group string="Personal Identification">
+                                    <field name="father_name" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="cnic" placeholder="e.g. 36302-1285740-1" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="date_of_birth" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="gender" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="religion" readonly="state in ['sent', 'accepted', 'done']"/>
+                                </group>
+                                <group string="Family &amp; Employment History">
+                                    <field name="marital_status" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="no_of_dependents" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="place_of_birth" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="last_salary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="earliest_joining_date" readonly="state in ['sent', 'accepted', 'done']"/>
+                                </group>
+                            </group>
+                            <group string="Address Details">
+                                <field name="present_address" placeholder="Enter present residential address..." readonly="state in ['sent', 'accepted', 'done']"/>
+                            </group>
+                        </page>
+
+                        <!-- Tab 2: Salary Package & Breakdown (Image 2) -->
+                        <page string="Salary &amp; Compensation" name="salary_package">
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border">
+                                <div>
+                                    <span class="text-muted">Total Agreed Package:</span>
+                                    <h3 class="mb-0 text-primary">
+                                        <field name="gross_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    </h3>
+                                </div>
+                                <button name="action_calculate_aesl_breakdown" string="Auto Calculate Standard Breakdown" 
+                                        type="object" class="btn btn-outline-primary btn-sm"
+                                        invisible="state in ['sent', 'accepted', 'done']"
+                                        help="Calculates standard AESL breakdown (~60.6% Basic, ~27.2% House Rent, ~6.0% Conveyance, ~6.0% Utilities) based on Gross Salary."/>
+                            </div>
+
+                            <group>
+                                <group string="Salary Components (Monthly)">
+                                    <field name="basic_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="house_rent" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="conveyance_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="utilities_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="other_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                </group>
+                                <group string="Employment Terms">
+                                    <field name="probation_period" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="contract_id" readonly="1" invisible="not contract_id"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab 3: Benefits & Medical Terms (Image 2 Section 2) -->
+                        <page string="Benefits &amp; Terms" name="benefits_terms">
+                            <group string="Medical Facilities">
+                                <field name="medical_outpatient" readonly="state in ['sent', 'accepted', 'done']"/>
+                                <field name="medical_hospitalisation" readonly="state in ['sent', 'accepted', 'done']"/>
+                            </group>
+                            <group string="Additional Terms &amp; Conditions">
+                                <field name="additional_terms" placeholder="Any additional conditions, notice period, or bonuses..." 
+                                       readonly="state in ['sent', 'accepted', 'done']"/>
+                            </group>
+                        </page>
+
+                        <!-- Tab 4: Signatory & Automation -->
+                        <page string="Signatory &amp; Notifications" name="signatory_notifications">
+                            <group>
+                                <group string="Company Signatory &amp; Letter Format">
+                                    <field name="signatory_name" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="signatory_title" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="drafter_initials" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="validity_days" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="hr_manager_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                                </group>
+                                <group string="Onboarding Notification Recipients">
+                                    <field name="notify_user_ids" widget="many2many_tags" 
+                                           options="{'color_field': 'color', 'no_create': True}"
+                                           readonly="state in ['sent', 'accepted', 'done']"/>
+                                </group>
+                            </group>
+                            <group string="Portal Security &amp; Candidate Response" invisible="state == 'draft'">
+                                <group>
+                                    <field name="response_date" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="access_token" readonly="1" groups="base.group_no_one"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <!-- Chatter -->
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- 2. LIST / TREE VIEW -->
+    <record id="view_hr_offer_letter_tree" model="ir.ui.view">
+        <field name="name">hr.offer.letter.tree</field>
+        <field name="model">hr.offer.letter</field>
+        <field name="arch" type="xml">
+            <list string="Offer Letters" decoration-success="state == 'accepted'" decoration-info="state == 'sent'" decoration-danger="state == 'rejected'" decoration-muted="state in ['done', 'cancel']">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="candidate_name"/>
+                <field name="job_id"/>
+                <field name="department_id"/>
+                <field name="posting_location" optional="show"/>
+                <field name="gross_salary" widget="monetary"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="joining_date"/>
+                <field name="state" widget="badge" 
+                       decoration-success="state == 'accepted'" 
+                       decoration-info="state == 'sent'" 
+                       decoration-danger="state == 'rejected'" 
+                       decoration-primary="state == 'done'"
+                       decoration-warning="state == 'draft'"/>
+                <field name="employee_id" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 3. KANBAN VIEW -->
+    <record id="view_hr_offer_letter_kanban" model="ir.ui.view">
+        <field name="name">hr.offer.letter.kanban</field>
+        <field name="model">hr.offer.letter</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" quick_create="false" sample="1">
+                <field name="name"/>
+                <field name="candidate_name"/>
+                <field name="job_id"/>
+                <field name="department_id"/>
+                <field name="gross_salary"/>
+                <field name="currency_id"/>
+                <field name="joining_date"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-primary"><field name="name"/></strong>
+                            <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'sent': 'info', 'accepted': 'success', 'rejected': 'danger', 'done': 'primary'}}"/>
+                        </div>
+                        <div class="fw-bold fs-5 text-dark"><field name="candidate_name"/></div>
+                        <div class="text-muted"><field name="job_id"/> &#8226; <field name="department_id"/></div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                            <div>
+                                <small class="text-muted">Joining: </small>
+                                <strong><field name="joining_date"/></strong>
+                            </div>
+                            <div class="fw-bold text-success">
+                                <field name="gross_salary" widget="monetary"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- 4. SEARCH VIEW -->
+    <record id="view_hr_offer_letter_search" model="ir.ui.view">
+        <field name="name">hr.offer.letter.search</field>
+        <field name="model">hr.offer.letter</field>
+        <field name="arch" type="xml">
+            <search string="Search Offer Letters">
+                <field name="name" string="Offer Reference"/>
+                <field name="candidate_name"/>
+                <field name="cnic"/>
+                <field name="email"/>
+                <field name="job_id"/>
+                <field name="department_id"/>
+
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Offer Sent" name="sent" domain="[('state', '=', 'sent')]"/>
+                <filter string="Accepted" name="accepted" domain="[('state', '=', 'accepted')]"/>
+                <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+                <filter string="Employee Created" name="done" domain="[('state', '=', 'done')]"/>
+
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
+                    <filter string="Department" name="group_by_department" context="{'group_by': 'department_id'}"/>
+                    <filter string="Designation" name="group_by_job" context="{'group_by': 'job_id'}"/>
+                    <filter string="Offer Date" name="group_by_date" context="{'group_by': 'date:month'}"/>
+                    <filter string="Company" name="group_by_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- 5. WINDOW ACTION -->
+    <record id="action_hr_offer_letter" model="ir.actions.act_window">
+        <field name="name">Offer Letters</field>
+        <field name="res_model">hr.offer.letter</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="search_view_id" ref="view_hr_offer_letter_search"/>
+        <field name="context">{'search_default_draft': 1, 'search_default_sent': 1, 'search_default_accepted': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Employment Offer Letter!
+            </p>
+            <p>
+                Select an accepted candidate to auto-populate personal details from their application, define the salary breakdown, generate a professional PDF letter, and send it for 1-click candidate approval.
+            </p>
+        </field>
+    </record>
+
+    <!-- 6. MENU ITEMS -->
+    <!-- Under Employees Root Menu -->
+    <menuitem id="menu_hr_offer_letter_root"
+              name="Offer Letters"
+              parent="hr.menu_hr_root"
+              action="action_hr_offer_letter"
+              sequence="25"/>
+
+</odoo>

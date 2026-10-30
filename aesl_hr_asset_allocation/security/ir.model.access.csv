@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_asset_allocation_user,hr.asset.allocation.user,model_hr_asset_allocation,base.group_user,1,1,1,0
+access_hr_asset_allocation_manager,hr.asset.allocation.manager,model_hr_asset_allocation,hr.group_hr_manager,1,1,1,1
+access_hr_asset_allocation_portal,hr.asset.allocation.portal,model_hr_asset_allocation,base.group_portal,1,1,0,0
+access_hr_asset_allocation_line_user,hr.asset.allocation.line.user,model_hr_asset_allocation_line,base.group_user,1,1,1,0
+access_hr_asset_allocation_line_manager,hr.asset.allocation.line.manager,model_hr_asset_allocation_line,hr.group_hr_manager,1,1,1,1
+access_hr_asset_allocation_line_portal,hr.asset.allocation.line.portal,model_hr_asset_allocation_line,base.group_portal,1,1,0,0
+access_hr_asset_item_template_user,hr.asset.item.template.user,model_hr_asset_item_template,base.group_user,1,0,0,0
+access_hr_asset_item_template_manager,hr.asset.item.template.manager,model_hr_asset_item_template,hr.group_hr_manager,1,1,1,1

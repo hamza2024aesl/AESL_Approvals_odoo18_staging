@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inherit Applicant Form to add Offer Letters Smart Button -->
+    <record id="hr_applicant_view_form_inherit_offer" model="ir.ui.view">
+        <field name="name">hr.applicant.form.inherit.offer</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_offer_letters"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-envelope-open-o"
+                        invisible="not id">
+                    <field name="offer_letter_count" widget="statinfo" string="Offer Letters"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_offer_letter_user,hr.offer.letter.user,model_hr_offer_letter,hr.group_hr_user,1,1,1,0
+access_hr_offer_letter_manager,hr.offer.letter.manager,model_hr_offer_letter,hr.group_hr_manager,1,1,1,1
+access_hr_offer_letter_portal,hr.offer.letter.portal,model_hr_offer_letter,base.group_portal,1,0,0,0

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================== -->
+    <!-- HR ASSET ALLOCATION VIEWS                  -->
+    <!-- ========================================== -->
+
+    <!-- Search View -->
+    <record id="view_hr_asset_allocation_search" model="ir.ui.view">
+        <field name="name">hr.asset.allocation.search</field>
+        <field name="model">hr.asset.allocation</field>
+        <field name="arch" type="xml">
+            <search string="Search Asset Allocations">
+                <field name="employee_id"/>
+                <field name="department_head_id"/>
+                <field name="name"/>
+                <separator/>
+                <filter string="Pending Approval" name="filter_pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Approved" name="filter_approved" domain="[('state', '=', 'approved')]"/>
+                <separator/>
+                <filter string="My Assigned Allocations" name="filter_my_allocations" domain="['|', ('department_head_id', '=', uid), ('partner_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Admin Department" name="filter_admin" domain="[('department_type', '=', 'admin')]"/>
+                <filter string="IT Department" name="filter_it" domain="[('department_type', '=', 'it')]"/>
+                <filter string="HSE Department" name="filter_hse" domain="[('department_type', '=', 'hse')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Department" name="group_department" context="{'group_by': 'department_type'}"/>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Employee" name="group_employee" context="{'group_by': 'employee_id'}"/>
+                    <filter string="Responsible Head" name="group_head" context="{'group_by': 'department_head_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="view_hr_asset_allocation_tree" model="ir.ui.view">
+        <field name="name">hr.asset.allocation.list</field>
+        <field name="model">hr.asset.allocation</field>
+        <field name="arch" type="xml">
+            <list string="Asset Allocations" decoration-warning="state == 'pending'" decoration-success="state == 'approved'">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="department_type" widget="badge"/>
+                <field name="department_head_id"/>
+                <field name="allocated_count" string="Allocated"/>
+                <field name="total_count" string="Total Items"/>
+                <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-success="state == 'approved'"/>
+                <field name="approval_date"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_hr_asset_allocation_form" model="ir.ui.view">
+        <field name="name">hr.asset.allocation.form</field>
+        <field name="model">hr.asset.allocation</field>
+        <field name="arch" type="xml">
+            <form string="Employee Asset Allocation">
+                <header>
+                    <button name="action_approve"
+                            string="Approve Allocation"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="state != 'pending'"/>
+                    <button name="action_send_notification"
+                            string="Notify Head via Email"
+                            type="object"
+                            icon="fa-envelope"
+                            invisible="state != 'pending'"/>
+                    <button name="action_reset_draft"
+                            string="Reset to Pending"
+                            type="object"
+                            groups="hr.group_hr_manager"
+                            invisible="state == 'pending'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,approved"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Allocation Reference"/>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group name="info_left">
+                            <field name="employee_id" readonly="state == 'approved'"/>
+                            <field name="department_type" readonly="state == 'approved'"/>
+                            <field name="department_head_id" readonly="state == 'approved'"/>
+                        </group>
+                        <group name="info_right">
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="approved_by_id" invisible="not approved_by_id"/>
+                            <field name="approval_date" invisible="not approval_date"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Asset Checklist" name="page_checklist">
+                            <field name="line_ids" readonly="state == 'approved'">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="is_allocated" widget="boolean_toggle"/>
+                                    <field name="asset_details" placeholder="e.g. Serial #, Reg #, Card #"/>
+                                    <field name="remarks" placeholder="Optional notes"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Department Head Remarks" name="page_remarks">
+                            <field name="remarks" placeholder="Provide any departmental handover remarks or conditions..." readonly="state == 'approved'"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_hr_asset_allocation" model="ir.actions.act_window">
+        <field name="name">Asset Allocations</field>
+        <field name="res_model">hr.asset.allocation</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_hr_asset_allocation_search"/>
+        <field name="context">{'search_default_filter_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No asset allocations found!
+            </p>
+            <p>
+                When a new employee is created, asset allocation checklists are automatically dispatched to the Admin, IT, and HSE department heads.
+            </p>
+        </field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- ASSET CHECKLIST TEMPLATE VIEWS             -->
+    <!-- ========================================== -->
+
+    <record id="view_hr_asset_item_template_search" model="ir.ui.view">
+        <field name="name">hr.asset.item.template.search</field>
+        <field name="model">hr.asset.item.template</field>
+        <field name="arch" type="xml">
+            <search string="Search Templates">
+                <field name="name"/>
+                <field name="department_type"/>
+                <filter string="Admin Items" name="filter_admin" domain="[('department_type', '=', 'admin')]"/>
+                <filter string="IT Items" name="filter_it" domain="[('department_type', '=', 'it')]"/>
+                <filter string="HSE Items" name="filter_hse" domain="[('department_type', '=', 'hse')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Department" name="group_dept" context="{'group_by': 'department_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_hr_asset_item_template_tree" model="ir.ui.view">
+        <field name="name">hr.asset.item.template.list</field>
+        <field name="model">hr.asset.item.template</field>
+        <field name="arch" type="xml">
+            <list string="Asset Checklist Templates" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="department_type" widget="badge"/>
+                <field name="name"/>
+                <field name="placeholder_hint"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_hr_asset_item_template" model="ir.actions.act_window">
+        <field name="name">Asset Checklist Templates</field>
+        <field name="res_model">hr.asset.item.template</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_hr_asset_item_template_search"/>
+        <field name="context">{'search_default_group_dept': 1}</field>
+    </record>
+
+    <!-- ========================================== -->
+    <!-- MENU ENTRIES                               -->
+    <!-- ========================================== -->
+
+    <!-- Main menu under Employees -->
+    <menuitem id="menu_hr_asset_allocation_root"
+              name="Asset Allocations"
+              parent="hr.menu_hr_root"
+              action="action_hr_asset_allocation"
+              sequence="28"/>
+
+    <!-- Configuration menu for Templates -->
+    <menuitem id="menu_hr_asset_item_template"
+              name="Asset Checklist Templates"
+              parent="hr.menu_human_resources_configuration"
+              action="action_hr_asset_item_template"
+              sequence="55"/>
+
+</odoo>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_employee_form_inherit_asset_allocation" model="ir.ui.view">
+        <field name="name">hr.employee.form.inherit.asset.allocation</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Button Box: Stat Button -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_asset_allocations"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-cubes">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="asset_allocation_count"/>
+                        </span>
+                        <span class="o_stat_text">Assets</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- Header Action Button to generate checklists if needed -->
+            <xpath expr="//header" position="inside">
+                <button name="action_generate_asset_allocations"
+                        string="Generate Asset Checklists"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="asset_allocation_count > 0"
+                        groups="hr.group_hr_user"/>
+            </xpath>
+
+            <!-- Notebook Page: Assets (Strictly Read-Only for HR) -->
+            <xpath expr="//notebook" position="inside">
+                <page name="assets" string="Assets" groups="hr.group_hr_user">
+                    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+                        <i class="fa fa-info-circle me-2 fa-lg" title="Info"/>
+                        <div>
+                            <strong>Asset Allocation &amp; Departmental Handover:</strong>
+                            Assets are allocated by designated Department Heads (Admin, IT, HSE).
+                            This section is view-only for the HR department.
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Handover Status">
+                            <field name="asset_status" widget="badge"
+                                   decoration-warning="asset_status == 'pending'"
+                                   decoration-success="asset_status == 'approved'"
+                                   decoration-muted="asset_status == 'none'"
+                                   readonly="1"/>
+                            <field name="asset_allocation_count" readonly="1" string="Total Allocations"/>
+                        </group>
+                    </group>
+
+                    <separator string="Departmental Allocation Records"/>
+                    <field name="asset_allocation_ids" readonly="1">
+                        <list decoration-warning="state == 'pending'" decoration-success="state == 'approved'">
+                            <field name="name"/>
+                            <field name="department_type" widget="badge"/>
+                            <field name="department_head_id"/>
+                            <field name="allocated_count" string="Allocated Items"/>
+                            <field name="total_count" string="Total Items"/>
+                            <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-success="state == 'approved'"/>
+                            <field name="approved_by_id"/>
+                            <field name="approval_date"/>
+                            <field name="remarks"/>
+                        </list>
+                        <form string="Departmental Asset Allocation (Read-Only)">
+                            <sheet>
+                                <div class="oe_title">
+                                    <h3><field name="name" readonly="1"/></h3>
+                                </div>
+                                <group>
+                                    <group>
+                                        <field name="department_type" readonly="1"/>
+                                        <field name="department_head_id" readonly="1"/>
+                                        <field name="state" widget="badge" readonly="1"/>
+                                    </group>
+                                    <group>
+                                        <field name="approved_by_id" readonly="1"/>
+                                        <field name="approval_date" readonly="1"/>
+                                        <field name="allocated_count" readonly="1"/>
+                                    </group>
+                                </group>
+                                <separator string="Department Checklist Items"/>
+                                <field name="line_ids" readonly="1">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="is_allocated" widget="boolean_toggle"/>
+                                        <field name="asset_details"/>
+                                        <field name="remarks"/>
+                                    </list>
+                                </field>
+                                <group string="Head Remarks">
+                                    <field name="remarks" readonly="1" nolabel="1"/>
+                                </group>
+                            </sheet>
+                        </form>
+                    </field>
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

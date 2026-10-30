@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================== -->
+    <!-- 1. PORTAL HOME: ALERT BANNER & ASSET ALLOCATION MENU -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_home_asset_allocation" name="Portal Home: Asset Allocation Menu" inherit_id="portal.portal_my_home" priority="30">
+        <!-- Top alert if pending allocations exist -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-if="pending_asset_allocation_count and pending_asset_allocation_count &gt; 0">
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4 border-warning" role="alert" style="border-left: 5px solid #ffc107;">
+                    <div class="d-flex align-items-center">
+                        <i class="fa fa-cubes fa-2x text-warning me-3"/>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1 fw-bold">📦 Pending Asset Allocation Requests</h5>
+                            <p class="mb-0 text-muted">
+                                You have <strong><t t-esc="pending_asset_allocation_count"/></strong> newly onboarded employee asset checklist(s) awaiting your review and approval.
+                            </p>
+                        </div>
+                        <a href="/my/asset_allocations?filterby=pending" class="btn btn-warning text-dark btn-sm rounded-pill px-3 fw-bold">
+                            Review &amp; Allocate
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Menu card in portal home -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Asset Allocation</t>
+                <t t-set="text">Review, assign, and approve onboarding checklists</t>
+                <t t-set="url" t-value="'/my/asset_allocations'"/>
+                <t t-set="placeholder_count" t-value="'asset_allocation_count'"/>
+                <t t-set="config_card" t-value="True"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 2. BREADCRUMBS                                       -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_home_menu_asset_allocation" name="Portal Breadcrumbs: Asset Allocation" inherit_id="portal.portal_breadcrumbs" priority="30">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'asset_allocations'" class="breadcrumb-item active">
+                Asset Allocations
+            </li>
+            <li t-if="page_name == 'asset_allocation_detail'" class="breadcrumb-item">
+                <a href="/my/asset_allocations">Asset Allocations</a>
+            </li>
+            <li t-if="page_name == 'asset_allocation_detail'" class="breadcrumb-item active">
+                <t t-esc="allocation.name"/> (<t t-esc="allocation.employee_id.name"/>)
+            </li>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 3. LIST VIEW: /my/asset_allocations                  -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_asset_allocations" name="My Asset Allocations">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="card shadow-sm border-0 mt-3">
+                <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0 fw-bold" style="color: #004085;">
+                            <i class="fa fa-cubes me-2"/>Employee Asset Allocations
+                        </h4>
+                        <small class="text-muted">Manage and approve departmental onboarding assets for newly joined employees</small>
+                    </div>
+                    <!-- Filter Pills -->
+                    <div class="btn-group mt-2 mt-md-0" role="group">
+                        <a t-attf-href="/my/asset_allocations?filterby=all"
+                           t-attf-class="btn btn-sm #{'btn-primary' if filterby == 'all' else 'btn-outline-primary'}">
+                            All
+                        </a>
+                        <a t-attf-href="/my/asset_allocations?filterby=pending"
+                           t-attf-class="btn btn-sm #{'btn-warning text-dark fw-bold' if filterby == 'pending' else 'btn-outline-warning text-dark'}">
+                            Pending Approval
+                        </a>
+                        <a t-attf-href="/my/asset_allocations?filterby=approved"
+                           t-attf-class="btn btn-sm #{'btn-success text-white' if filterby == 'approved' else 'btn-outline-success'}">
+                            Approved
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <t t-if="not allocations">
+                        <div class="text-center py-5">
+                            <i class="fa fa-folder-open-o fa-4x text-muted mb-3"/>
+                            <h5 class="text-muted">No asset allocation records found.</h5>
+                            <p class="text-muted small">New employee onboarding checklists assigned to your department will appear here.</p>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead style="background-color: #f1f4f9;">
+                                    <tr>
+                                        <th style="color: #004085;">Ref #</th>
+                                        <th style="color: #004085;">Employee Name</th>
+                                        <th style="color: #004085;">Designation / Dept</th>
+                                        <th style="color: #004085;">Checklist Type</th>
+                                        <th style="color: #004085;" class="text-center">Items Allocated</th>
+                                        <th style="color: #004085;" class="text-center">Status</th>
+                                        <th style="color: #004085;" class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="allocations" t-as="alloc">
+                                        <tr>
+                                            <td>
+                                                <a t-attf-href="/my/asset_allocation/{{alloc.id}}" class="fw-bold text-decoration-none">
+                                                    <t t-esc="alloc.name"/>
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <strong><t t-esc="alloc.employee_id.name"/></strong>
+                                            </td>
+                                            <td>
+                                                <div class="small text-dark"><t t-esc="alloc.employee_id.job_id.name or 'Staff'"/></div>
+                                                <div class="small text-muted"><t t-esc="alloc.employee_id.department_id.name or '-'"/></div>
+                                            </td>
+                                            <td>
+                                                <span t-if="alloc.department_type == 'admin'" class="badge bg-secondary">🏢 Admin</span>
+                                                <span t-elif="alloc.department_type == 'it'" class="badge bg-info text-dark">💻 IT</span>
+                                                <span t-elif="alloc.department_type == 'hse'" class="badge bg-success">🦺 HSE</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-dark border">
+                                                    <t t-esc="alloc.allocated_count"/> / <t t-esc="alloc.total_count"/>
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span t-if="alloc.state == 'pending'" class="badge bg-warning text-dark px-2 py-1">
+                                                    <i class="fa fa-clock-o me-1"/> Pending
+                                                </span>
+                                                <span t-elif="alloc.state == 'approved'" class="badge bg-success px-2 py-1">
+                                                    <i class="fa fa-check me-1"/> Approved
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <a t-attf-href="/my/asset_allocation/{{alloc.id}}"
+                                                   t-attf-class="btn btn-sm #{'btn-primary' if alloc.state == 'pending' else 'btn-outline-secondary'}">
+                                                    <t t-if="alloc.state == 'pending'">
+                                                        <i class="fa fa-edit me-1"/> Checklist &amp; Approve
+                                                    </t>
+                                                    <t t-else="">
+                                                        <i class="fa fa-eye me-1"/> View Details
+                                                    </t>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div t-if="pager['page_count'] &gt; 1" class="d-flex justify-content-center mt-3">
+                            <t t-call="portal.pager"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 4. DETAIL CHECKLIST VIEW: /my/asset_allocation/<id>  -->
+    <!-- ==================================================== -->
+
+    <template id="portal_asset_allocation_detail" name="Asset Allocation Checklist Detail">
+        <t t-call="portal.portal_layout">
+
+            <!-- Notifications -->
+            <div t-if="saved" class="alert alert-success alert-dismissible fade show mt-3 shadow-sm" role="alert">
+                <i class="fa fa-check-circle me-2"/> <strong>Saved!</strong> Checklist details and remarks updated successfully.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+            </div>
+
+            <div t-if="approved" class="alert alert-success alert-dismissible fade show mt-3 shadow-sm border-success" role="alert" style="border-left: 5px solid #28a745;">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-check-circle-o fa-2x text-success me-3"/>
+                    <div>
+                        <h5 class="alert-heading mb-1 fw-bold">Asset Allocation Approved!</h5>
+                        <p class="mb-0">This checklist has been finalized and recorded in the employee's official HR master profile.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+            </div>
+
+            <!-- Employee & Allocation Header Card -->
+            <div class="card shadow-sm border-0 mt-3 mb-4">
+                <div class="card-header text-white py-3 d-flex flex-wrap justify-content-between align-items-center" style="background-color: #004085;">
+                    <div>
+                        <h4 class="mb-0 fw-bold">
+                            <i class="fa fa-tasks me-2"/>Asset Allocation Checklist - <t t-esc="allocation.department_name"/>
+                        </h4>
+                        <small class="text-light">Reference: <t t-esc="allocation.name"/></small>
+                    </div>
+                    <div>
+                        <span t-if="allocation.state == 'pending'" class="badge bg-warning text-dark px-3 py-2 fs-6">
+                            <i class="fa fa-clock-o me-1"/> Pending Allocation
+                        </span>
+                        <span t-elif="allocation.state == 'approved'" class="badge bg-success px-3 py-2 fs-6">
+                            <i class="fa fa-check-circle me-1"/> Approved on <span t-if="allocation.approval_date" t-field="allocation.approval_date" t-options='{"widget": "date"}'/>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body bg-light">
+                    <h5 class="fw-bold mb-3" style="color: #004085;">👤 Onboarded Employee Information</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Employee Name</small>
+                            <strong class="fs-6 text-dark"><t t-esc="employee.name"/></strong>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Designation / Role</small>
+                            <span class="text-dark"><t t-esc="employee.job_id.name or 'Staff'"/></span>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Department</small>
+                            <span class="text-dark"><t t-esc="employee.department_id.name or '-'"/></span>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Joining / Appointment Date</small>
+                            <strong class="text-dark">
+                                <t t-esc="joining_date or '-'"/>
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checklist Card & Form -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold" style="color: #004085;">
+                            <i class="fa fa-list-check me-2"/>Checklist Items for <t t-esc="allocation.department_name"/>
+                        </h5>
+                        <span class="badge bg-secondary">
+                            Allocated: <t t-esc="allocation.allocated_count"/> / <t t-esc="allocation.total_count"/>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <!-- Read-only mode if already approved -->
+                    <t t-if="allocation.state == 'approved'">
+                        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                            <i class="fa fa-info-circle fa-2x me-3 text-info"/>
+                            <div>
+                                <strong>Allocation Completed &amp; Locked:</strong>
+                                This allocation was approved by <strong><t t-esc="allocation.approved_by_id.name or 'Head'"/></strong>. The details below are officially logged.
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%;" class="text-center">#</th>
+                                        <th style="width: 35%;">Asset / Item Description</th>
+                                        <th style="width: 15%;" class="text-center">Allocated</th>
+                                        <th style="width: 25%;">Serial # / Reg # / Details</th>
+                                        <th style="width: 20%;">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="idx" t-value="1"/>
+                                    <t t-foreach="allocation.line_ids" t-as="line">
+                                        <tr t-att-class="'table-success' if line.is_allocated else ''">
+                                            <td class="text-center text-muted"><t t-esc="idx"/></td>
+                                            <td>
+                                                <strong class="text-dark"><t t-esc="line.name"/></strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <t t-if="line.is_allocated">
+                                                    <span class="badge bg-success px-2 py-1"><i class="fa fa-check me-1"/> Allocated</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-light text-muted border">Not Allocated</span>
+                                                </t>
+                                            </td>
+                                            <td>
+                                                <t t-if="line.asset_details">
+                                                    <code class="text-primary fw-bold"><t t-esc="line.asset_details"/></code>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">-</span>
+                                                </t>
+                                            </td>
+                                            <td>
+                                                <t t-if="line.remarks">
+                                                    <span class="text-muted"><t t-esc="line.remarks"/></span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">-</span>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                        <t t-set="idx" t-value="idx + 1"/>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div t-if="allocation.remarks" class="card bg-light mt-3 border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-dark mb-1">Department Head Remarks:</h6>
+                                <p class="mb-0 text-muted"><t t-esc="allocation.remarks"/></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-end">
+                            <a href="/my/asset_allocations" class="btn btn-secondary px-4">
+                                <i class="fa fa-arrow-left me-1"/> Back to Asset Allocations
+                            </a>
+                        </div>
+                    </t>
+
+                    <!-- Editable mode for pending allocation -->
+                    <t t-else="">
+                        <form t-attf-action="/my/asset_allocation/{{allocation.id}}/submit" method="POST">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                            <div class="alert alert-light border mb-4">
+                                <i class="fa fa-lightbulb-o text-warning me-2"/>
+                                Please check off the assets allocated to the employee, input serial/registration/ID numbers where applicable, and click <strong>Approve Allocation</strong> to confirm.
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover align-middle">
+                                    <thead style="background-color: #f1f4f9;">
+                                        <tr>
+                                            <th style="width: 5%;" class="text-center">#</th>
+                                            <th style="width: 30%;">Asset / Item Description</th>
+                                            <th style="width: 15%;" class="text-center">Allocated?</th>
+                                            <th style="width: 25%;">Serial # / Reg # / ID</th>
+                                            <th style="width: 25%;">Item Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-set="idx" t-value="1"/>
+                                        <t t-foreach="allocation.line_ids" t-as="line">
+                                            <tr>
+                                                <td class="text-center text-muted"><t t-esc="idx"/></td>
+                                                <td>
+                                                    <label t-attf-for="chk_{{line.id}}" class="fw-bold mb-0 text-dark cursor-pointer">
+                                                        <t t-esc="line.name"/>
+                                                    </label>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input"
+                                                               type="checkbox"
+                                                               t-attf-id="chk_{{line.id}}"
+                                                               t-attf-name="line_allocated_{{line.id}}"
+                                                               value="1"
+                                                               t-att-checked="'checked' if line.is_allocated else None"
+                                                               style="cursor: pointer; transform: scale(1.2);"/>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <input type="text"
+                                                           class="form-control form-control-sm"
+                                                           t-attf-name="line_details_{{line.id}}"
+                                                           t-att-value="line.asset_details or ''"
+                                                           t-att-placeholder="line.placeholder_hint or 'e.g. Serial # / ID / Reg'"/>
+                                                </td>
+                                                <td>
+                                                    <input type="text"
+                                                           class="form-control form-control-sm"
+                                                           t-attf-name="line_remarks_{{line.id}}"
+                                                           t-att-value="line.remarks or ''"
+                                                           placeholder="Optional notes"/>
+                                                </td>
+                                            </tr>
+                                            <t t-set="idx" t-value="idx + 1"/>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mt-4">
+                                <label for="overall_remarks" class="form-label fw-bold" style="color: #004085;">
+                                    Department Head Remarks / Handover Notes:
+                                </label>
+                                <textarea id="overall_remarks"
+                                          name="remarks"
+                                          rows="3"
+                                          class="form-control"
+                                          placeholder="Enter any general remarks, condition notes, or handover comments for this employee..."><t t-esc="allocation.remarks or ''"/></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <a href="/my/asset_allocations" class="btn btn-outline-secondary">
+                                    <i class="fa fa-arrow-left me-1"/> Back
+                                </a>
+                                <div>
+                                    <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2 px-3">
+                                        <i class="fa fa-save me-1"/> Save Draft
+                                    </button>
+                                    <button type="submit"
+                                            name="action"
+                                            value="approve"
+                                            class="btn btn-success px-4 fw-bold shadow-sm"
+                                            onclick="return confirm('Confirm Asset Allocation:\nAre you sure you want to approve this allocation? This will record the handover in the Employee Master Profile.');">
+                                        <i class="fa fa-check-circle me-1"/> Approve Allocation
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </t>
+                </div>
+            </div>
+
+        </t>
+    </template>
+
+</odoo>

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 1. Offer Accepted View -->
+    <template id="portal_offer_accepted" name="Offer Accepted Confirmation">
+        <t t-call="portal.portal_layout">
+            <div id="wrap" class="oe_structure oe_empty py-5">
+                <div class="container">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="card shadow border-0 rounded-3">
+                                <div class="card-header bg-success text-white text-center py-4 rounded-top-3">
+                                    <div class="display-3 mb-2">🎉</div>
+                                    <h2 class="h3 font-weight-bold mb-0">Offer Accepted!</h2>
+                                    <p class="mb-0 text-white-50">Welcome to Allied Engineering &amp; Services (Pvt.) Ltd.</p>
+                                </div>
+                                <div class="card-body p-4 p-md-5 text-center">
+                                    <h4 class="text-dark mb-3">
+                                        Dear <strong><t t-esc="offer.candidate_name"/></strong>,
+                                    </h4>
+                                    <p class="lead text-muted mb-4">
+                                        Thank you for accepting our offer of employment as 
+                                        <strong><t t-esc="offer.job_id.name"/></strong> in the 
+                                        <strong><t t-esc="offer.department_id.name"/></strong>.
+                                    </p>
+
+                                    <div class="alert alert-light border text-start p-3 mb-4 mx-auto" style="max-width: 500px;">
+                                        <div class="d-flex justify-content-between py-1 border-bottom">
+                                            <span class="text-muted">Offer Reference:</span>
+                                            <strong><t t-esc="offer.name"/></strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1 border-bottom">
+                                            <span class="text-muted">Designation:</span>
+                                            <strong><t t-esc="offer.job_id.name"/></strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1 border-bottom">
+                                            <span class="text-muted">Joining Date:</span>
+                                            <strong><t t-esc="offer.joining_date"/></strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between py-1">
+                                            <span class="text-muted">Place of Posting:</span>
+                                            <strong><t t-esc="offer.posting_location or 'Multan'"/></strong>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-secondary mb-4">
+                                        Our Human Resources Department has been notified and will be in touch with you regarding the formal joining and onboarding formalities.
+                                    </p>
+
+                                    <div class="d-flex justify-content-center gap-3">
+                                        <a t-attf-href="/offer/download/#{offer.access_token}" class="btn btn-outline-primary btn-lg px-4" target="_blank">
+                                            <i class="fa fa-download me-2"/> Download Official Offer PDF
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light text-center py-3 text-muted small">
+                                    Allied Engineering &amp; Services (Pvt.) Ltd. &#8226; Human Resources
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- 2. Offer Reject Form View -->
+    <template id="portal_offer_reject_form" name="Decline Offer Form">
+        <t t-call="portal.portal_layout">
+            <div id="wrap" class="oe_structure oe_empty py-5">
+                <div class="container">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-7">
+                            <div class="card shadow border-0 rounded-3">
+                                <div class="card-header bg-danger text-white text-center py-4 rounded-top-3">
+                                    <div class="display-4 mb-2">⚠️</div>
+                                    <h2 class="h3 font-weight-bold mb-0">Decline Employment Offer</h2>
+                                    <p class="mb-0 text-white-50"><t t-esc="offer.name"/> - <t t-esc="offer.job_id.name"/></p>
+                                </div>
+                                <div class="card-body p-4 p-md-5">
+                                    <p class="mb-3">
+                                        Dear <strong><t t-esc="offer.candidate_name"/></strong>,
+                                    </p>
+                                    <p class="text-muted mb-4">
+                                        You are about to decline the employment offer for the position of <strong><t t-esc="offer.job_id.name"/></strong>. 
+                                        If there are specific terms (such as remuneration, availability, or location) you wish to discuss, please share your feedback below so our HR team can review and potentially revise the offer.
+                                    </p>
+
+                                    <form t-attf-action="/offer/respond/#{token}?action=reject" method="POST">
+                                        <div class="mb-4">
+                                            <label for="rejection_reason" class="form-label font-weight-bold text-dark">
+                                                Reason for Declining / Feedback for Revision:
+                                            </label>
+                                            <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" 
+                                                      placeholder="e.g. Expected salary revision, earliest joining date conflict, or other reasons..." required="required"></textarea>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <a t-attf-href="/offer/respond/#{token}?action=accept" class="btn btn-outline-success">
+                                                ✔ Nevermind, I want to Accept
+                                            </a>
+                                            <button type="submit" class="btn btn-danger px-4">
+                                                Confirm Rejection
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="card-footer bg-light text-center py-3 text-muted small">
+                                    Allied Engineering &amp; Services (Pvt.) Ltd.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- 3. Offer Rejected Completed View -->
+    <template id="portal_offer_rejected_done" name="Offer Declined Confirmation">
+        <t t-call="portal.portal_layout">
+            <div id="wrap" class="oe_structure oe_empty py-5">
+                <div class="container">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-7">
+                            <div class="card shadow border-0 rounded-3 text-center p-4 p-md-5">
+                                <div class="display-3 text-warning mb-3">📩</div>
+                                <h3 class="font-weight-bold mb-3">Feedback Received</h3>
+                                <p class="lead text-muted mb-4">
+                                    Your response regarding the offer for <strong><t t-esc="offer.job_id.name"/></strong> has been submitted.
+                                </p>
+                                <p class="text-secondary">
+                                    Our Human Resources team has been notified. If revision of terms is agreed upon, an updated offer letter will be re-sent to your email.
+                                </p>
+                                <div class="mt-4">
+                                    <span class="badge bg-secondary p-2">Reference: <t t-esc="offer.name"/></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- 4. Offer Summary / Fallback -->
+    <template id="portal_offer_summary" name="Offer Letter View">
+        <t t-call="portal.portal_layout">
+            <div id="wrap" class="oe_structure oe_empty py-5">
+                <div class="container">
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="card shadow border-0 rounded-3">
+                                <div class="card-header bg-primary text-white text-center py-4">
+                                    <h3 class="mb-0">Employment Offer Letter</h3>
+                                    <p class="mb-0 text-white-50"><t t-esc="offer.name"/></p>
+                                </div>
+                                <div class="card-body p-4 text-center">
+                                    <h4>Dear <t t-esc="offer.candidate_name"/>,</h4>
+                                    <p>Position: <strong><t t-esc="offer.job_id.name"/></strong></p>
+                                    <p>Status: <span class="badge bg-info"><t t-esc="offer.state.upper()"/></span></p>
+                                    <div class="mt-4">
+                                        <a t-attf-href="/offer/download/#{token}" class="btn btn-outline-primary" target="_blank">
+                                            View Official PDF
+                                        </a>
+                                        <t t-if="offer.state == 'sent'">
+                                            <a t-attf-href="/offer/respond/#{token}?action=accept" class="btn btn-success ms-2">
+                                                Accept Offer
+                                            </a>
+                                            <a t-attf-href="/offer/respond/#{token}?action=reject" class="btn btn-danger ms-2">
+                                                Decline Offer
+                                            </a>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- 5. Not Found Template -->
+    <template id="portal_offer_not_found" name="Offer Not Found">
+        <t t-call="portal.portal_layout">
+            <div id="wrap" class="container py-5 text-center">
+                <div class="alert alert-warning py-4">
+                    <h4>Invalid or Expired Link</h4>
+                    <p>The offer letter link you followed is invalid or has expired. Please contact Allied Engineering &amp; Services HR department.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>
