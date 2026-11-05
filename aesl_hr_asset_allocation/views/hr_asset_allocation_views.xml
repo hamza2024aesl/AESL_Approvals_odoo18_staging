@@ -23,6 +23,8 @@
                 <filter string="Admin Department" name="filter_admin" domain="[('department_type', '=', 'admin')]"/>
                 <filter string="IT Department" name="filter_it" domain="[('department_type', '=', 'it')]"/>
                 <filter string="HSE Department" name="filter_hse" domain="[('department_type', '=', 'hse')]"/>
+                <separator/>
+                <filter string="Archived" name="filter_inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Department" name="group_department" context="{'group_by': 'department_type'}"/>
                     <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
@@ -149,6 +151,8 @@
                 <filter string="Admin Items" name="filter_admin" domain="[('department_type', '=', 'admin')]"/>
                 <filter string="IT Items" name="filter_it" domain="[('department_type', '=', 'it')]"/>
                 <filter string="HSE Items" name="filter_hse" domain="[('department_type', '=', 'hse')]"/>
+                <separator/>
+                <filter string="Archived" name="filter_inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Department" name="group_dept" context="{'group_by': 'department_type'}"/>
                 </group>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Inherit Form View to Add Workflow Actions, Fields, and Chatter -->
+        <record id="view_employee_resignation_form_inherit_workflow" model="ir.ui.view">
+            <field name="name">employee.resignation.form.inherit.workflow</field>
+            <field name="model">employee.resignation</field>
+            <field name="inherit_id" ref="ivis_employee_details.employee_resignation_form"/>
+            <field name="arch" type="xml">
+
+                <!-- Header Actions -->
+                <xpath expr="//header" position="inside">
+                    <!-- Submission & Manager Review Buttons -->
+                    <button name="action_submit" type="object" string="Submit for Review"
+                            class="oe_highlight"
+                            invisible="state not in ['draft']"/>
+
+                    <button name="action_manager_accept" type="object" string="Accept Resignation"
+                            class="btn-success"
+                            invisible="state != 'pending_manager'"/>
+
+                    <button name="action_manager_reject" type="object" string="Reject Resignation"
+                            class="btn-danger"
+                            invisible="state != 'pending_manager'"/>
+
+                    <!-- Revoke Actions (Portal is primary, available for HR/Manager in backend) -->
+                    <button name="action_request_revoke" type="object" string="Request Revoke"
+                            class="btn-warning"
+                            invisible="state not in ['serving_notice', 'clearance_in_progress']"/>
+
+                    <button name="action_manager_accept_revoke" type="object" string="Accept Revoke"
+                            class="btn-success"
+                            invisible="state != 'revoke_pending'"/>
+
+                    <button name="action_manager_reject_revoke" type="object" string="Reject Revoke"
+                            class="btn-danger"
+                            invisible="state != 'revoke_pending'"/>
+
+                    <!-- Exit Interview & Archiving Actions (Visible to HR only) -->
+                    <button name="action_done_exit_interview" type="object" string="Exit Interview Done"
+                            class="btn-primary"
+                            invisible="state != 'exit_interview_pending'"
+                            groups="hr.group_hr_user,hr.group_hr_manager"/>
+
+                    <button name="action_archive_employee_and_user" type="object" string="Archive Employee &amp; User"
+                            class="btn-danger"
+                            invisible="state != 'exit_interview_done'"
+                            groups="hr.group_hr_user,hr.group_hr_manager"
+                            confirm="Are you sure you want to archive this employee and permanently disable their login in Odoo?"/>
+                </xpath>
+
+                <!-- Fix Old Clearance Buttons Visibility from ivis_employee_details -->
+                <xpath expr="//button[@name='buh_clearance']" position="attributes">
+                    <attribute name="invisible">state not in ['serving_notice', 'clearance_complete']</attribute>
+                    <attribute name="string">Start Clearance (Proceed)</attribute>
+                </xpath>
+
+                <xpath expr="//button[@name='vp_clearance']" position="attributes">
+                    <attribute name="invisible">state != 'buh'</attribute>
+                </xpath>
+
+                <xpath expr="//button[@name='fa_clearance']" position="attributes">
+                    <attribute name="invisible">state != 'vp'</attribute>
+                </xpath>
+
+                <xpath expr="//button[@name='approve_clearance']" position="attributes">
+                    <attribute name="invisible">state != 'final_approval'</attribute>
+                </xpath>
+
+                <xpath expr="//button[@name='clearance_received']" position="attributes">
+                    <attribute name="invisible">state != 'clearance_approved'</attribute>
+                </xpath>
+
+                <xpath expr="//header/button[@type='action']" position="attributes">
+                    <attribute name="invisible">state not in ['buh', 'vp', 'final_approval']</attribute>
+                </xpath>
+
+                <!-- Update Statusbar -->
+                <xpath expr="//field[@name='state']" position="replace">
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,pending_manager,clearance_in_progress,exit_interview_pending,exit_interview_done,archived"/>
+                </xpath>
+
+                <!-- Title Reference -->
+                <xpath expr="//div[hasclass('oe_title')]" position="before">
+                    <div class="oe_title mb-2" invisible="name == 'New' or not name">
+                        <span class="badge bg-secondary fs-6"><field name="name" readonly="1"/></span>
+                    </div>
+                </xpath>
+
+                <!-- Notice Period & Calculated Exit Date -->
+                <xpath expr="//field[@name='resignation_date']" position="after">
+                    <field name="notice_period_duration"/>
+                    <field name="notice_period_custom_days" invisible="notice_period_duration != 'custom'"/>
+                    <field name="expected_exit_date"/>
+                </xpath>
+
+                <!-- Workflow Details Notebook Pages -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="Workflow Remarks &amp; History">
+                        <group>
+                            <group string="Resignation Information">
+                                <field name="reason" placeholder="Employee resignation reason and remarks..."/>
+                                <field name="manager_remarks" placeholder="Manager remarks upon acceptance..."/>
+                                <field name="acceptance_date" readonly="1"/>
+                            </group>
+                            <group string="Rejection Details" invisible="state != 'rejected'">
+                                <field name="rejection_reason" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Revocation Details" invisible="state not in ['revoke_pending', 'revoked'] and not is_revoked">
+                            <group>
+                                <field name="is_revoked" readonly="1"/>
+                                <field name="revoke_date" readonly="1"/>
+                                <field name="revoke_reason" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="revoke_response_remarks" readonly="1"/>
+                            </group>
+                        </group>
+                    </page>
+
+                    <!-- Page 2: Departmental Asset Clearance (Admin, IT, HSE) -->
+                    <page string="Departmental Clearance (Admin, IT, HSE)"
+                          invisible="state in ['draft', 'pending_manager', 'rejected', 'revoked']">
+                        <group string="Department Approval Overview">
+                            <group>
+                                <field name="clearance_admin_status" widget="badge"
+                                       decoration-success="clearance_admin_status == 'approved'"
+                                       decoration-warning="clearance_admin_status == 'pending'"/>
+                                <field name="clearance_it_status" widget="badge"
+                                       decoration-success="clearance_it_status == 'approved'"
+                                       decoration-warning="clearance_it_status == 'pending'"/>
+                                <field name="clearance_hse_status" widget="badge"
+                                       decoration-success="clearance_hse_status == 'approved'"
+                                       decoration-warning="clearance_hse_status == 'pending'"/>
+                            </group>
+                        </group>
+                        <field name="clearance_ids" readonly="1">
+                            <list string="Department Clearances">
+                                <field name="department_name"/>
+                                <field name="department_head_id"/>
+                                <field name="returned_count" string="Returned Items"/>
+                                <field name="total_count" string="Total Items"/>
+                                <field name="state" widget="badge"
+                                       decoration-success="state == 'approved'"
+                                       decoration-warning="state == 'pending'"/>
+                                <field name="approved_by_id"/>
+                                <field name="approval_date"/>
+                                <field name="remarks"/>
+                            </list>
+                        </field>
+                    </page>
+
+                    <!-- Page 3: Exit Interview & Employee Offboarding -->
+                    <page string="Exit Interview &amp; Offboarding"
+                          invisible="state in ['draft', 'pending_manager', 'rejected', 'revoked']">
+                        <group string="Exit Interview (Conducted by HR)">
+                            <group>
+                                <field name="exit_interview_date"/>
+                                <field name="exit_interview_conducted_by" options="{'no_create': True}"/>
+                                <field name="exit_interview_reason_for_leaving"/>
+                            </group>
+                            <group>
+                                <field name="exit_interview_feedback" placeholder="Employee suggestions and feedback on management/culture..."/>
+                                <field name="exit_interview_notes" placeholder="Confidential HR interviewer assessment..."/>
+                            </group>
+                        </group>
+                        <group string="Employee &amp; User Archiving Status" invisible="not is_employee_archived and state != 'archived'">
+                            <group>
+                                <field name="is_employee_archived" readonly="1"/>
+                                <field name="archived_date" readonly="1"/>
+                                <field name="archived_by_id" readonly="1"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+
+                <!-- Chatter for Tracking & Communication -->
+                <xpath expr="//sheet" position="after">
+                    <chatter>
+                        <field name="message_follower_ids"/>
+                        <field name="activity_ids"/>
+                        <field name="message_ids"/>
+                    </chatter>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Inherit List View to Show Reference, Notice Period, and Status -->
+        <record id="view_employee_resignation_list_inherit_workflow" model="ir.ui.view">
+            <field name="name">employee.resignation.list.inherit.workflow</field>
+            <field name="model">employee.resignation</field>
+            <field name="inherit_id" ref="ivis_employee_details.employee_resignation_list_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='emp_name']" position="before">
+                    <field name="name"/>
+                </xpath>
+                <xpath expr="//field[@name='resignation_date']" position="after">
+                    <field name="notice_period_display" string="Notice Period"/>
+                    <field name="expected_exit_date" string="Exit Date"/>
+                </xpath>
+                <xpath expr="//field[@name='state']" position="attributes">
+                    <attribute name="widget">badge</attribute>
+                    <attribute name="decoration-warning">state in ['pending_manager', 'revoke_pending']</attribute>
+                    <attribute name="decoration-info">state == 'serving_notice'</attribute>
+                    <attribute name="decoration-success">state in ['approved', 'revoked']</attribute>
+                    <attribute name="decoration-danger">state == 'rejected'</attribute>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
+

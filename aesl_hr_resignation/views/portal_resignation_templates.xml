@@ -1,0 +1,1196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================== -->
+    <!-- 1. PORTAL HOME: ALERT BANNER & RESIGNATION CARD      -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_home_resignation" name="Portal Home: Resignation Menu" inherit_id="portal.portal_my_home" priority="35">
+        <!-- Top alert if manager has pending team resignations to review -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-if="pending_team_resignation_count and pending_team_resignation_count &gt; 0">
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4 border-warning" role="alert" style="border-left: 5px solid #ffc107;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-user-times fa-2x text-warning me-3"/>
+                            <div>
+                                <h5 class="alert-heading mb-1 fw-bold">⚠️ Subordinate Resignation / Revoke Review Pending</h5>
+                                <p class="mb-0 text-muted">
+                                    You have <strong><t t-esc="pending_team_resignation_count"/></strong> resignation or revocation request(s) from your direct team members awaiting your decision.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="/my/resignations?tab=team" class="btn btn-warning text-dark btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                            <i class="fa fa-check-square-o me-1"/> Review Team Requests
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Resignation Entry Card in Portal Docs -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Resignation</t>
+                <t t-set="text">Submit resignation, track notice period &amp; revoke requests</t>
+                <t t-set="url" t-value="'/my/resignations'"/>
+                <t t-set="placeholder_count" t-value="'resignation_count'"/>
+                <t t-set="config_card" t-value="True"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 2. BREADCRUMBS                                       -->
+    <!-- ==================================================== -->
+
+    <template id="portal_breadcrumbs_resignation" name="Portal Breadcrumbs: Resignation" inherit_id="portal.portal_breadcrumbs" priority="35">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name in ['resignations', 'resignation_new', 'resignation_detail']" class="breadcrumb-item">
+                <a t-if="page_name != 'resignations'" href="/my/resignations">Resignations</a>
+                <t t-else="">Resignations</t>
+            </li>
+            <li t-if="page_name == 'resignation_new'" class="breadcrumb-item active">
+                Submit Resignation
+            </li>
+            <li t-if="page_name == 'resignation_detail'" class="breadcrumb-item active">
+                <t t-out="resignation.name or 'Resignation Request'"/>
+            </li>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 3. RESIGNATION LIST VIEW (/my/resignations)           -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_resignations_list" name="My Resignations">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-if="no_employee">
+                <div class="alert alert-info shadow-sm mt-3 border-0">
+                    <h5 class="fw-bold mb-1"><i class="fa fa-info-circle me-1"/> No Employee Linked</h5>
+                    <p class="mb-0">Your portal account is not connected to an employee profile. Please contact the HR department.</p>
+                </div>
+            </t>
+            <t t-else="">
+
+                <!-- Page Header with Action Button -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-3">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-0">Resignation Requests</h3>
+                        <p class="text-muted small mb-0">Manage and track resignation submissions and notice periods</p>
+                    </div>
+                    <div>
+                        <t t-if="has_active_resignation">
+                            <a t-attf-href="/my/resignation/{{active_resignation_id}}" class="btn btn-outline-info rounded-pill px-3 shadow-sm">
+                                <i class="fa fa-eye me-1"/> View Active Resignation
+                            </a>
+                        </t>
+                        <t t-else="">
+                            <a href="/my/resignation/new" class="btn btn-primary rounded-pill px-3 shadow-sm">
+                                <i class="fa fa-plus-circle me-1"/> Submit Resignation
+                            </a>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Tabs for Managers -->
+                <t t-if="is_manager">
+                    <ul class="nav nav-pills mb-3 bg-light p-1 rounded-3">
+                        <li class="nav-item">
+                            <a t-attf-class="nav-link rounded-3 px-4 fw-bold {{ 'active' if current_tab == 'my' else '' }}"
+                               href="/my/resignations?tab=my">
+                                <i class="fa fa-user me-1"/> My Resignation
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a t-attf-class="nav-link rounded-3 px-4 fw-bold {{ 'active' if current_tab == 'team' else '' }}"
+                               href="/my/resignations?tab=team">
+                                <i class="fa fa-users me-1"/> Team Resignation Requests
+                                <t t-if="pending_team_resignation_count and pending_team_resignation_count &gt; 0">
+                                    <span class="badge bg-warning text-dark ms-2"><t t-esc="pending_team_resignation_count"/></span>
+                                </t>
+                            </a>
+                        </li>
+                    </ul>
+                </t>
+
+                <!-- Resignations Card / Table -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-0">
+                        <t t-if="not resignations">
+                            <div class="text-center py-5 text-muted">
+                                <i class="fa fa-folder-open-o fa-3x mb-2 text-secondary"/>
+                                <p class="mb-0">No resignation records found.</p>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3">Reference</th>
+                                            <th t-if="current_tab == 'team'">Employee Name</th>
+                                            <th>Submission Date</th>
+                                            <th>Notice Period</th>
+                                            <th>Expected Exit Date</th>
+                                            <th>Status</th>
+                                            <th class="text-end pe-3">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="resignations" t-as="res">
+                                            <tr>
+                                                <td class="ps-3 fw-bold text-primary">
+                                                    <a t-attf-href="/my/resignation/{{res.id}}">
+                                                        <t t-esc="res.name or 'New'"/>
+                                                    </a>
+                                                </td>
+                                                <td t-if="current_tab == 'team'">
+                                                    <strong><t t-esc="res.emp_name.name"/></strong>
+                                                    <div class="small text-muted"><t t-esc="res.emp_designation.name or '-'"/></div>
+                                                </td>
+                                                <td>
+                                                    <t t-if="res.resignation_date">
+                                                        <t t-esc="res.resignation_date.strftime('%B %d, %Y')"/>
+                                                    </t>
+                                                    <t t-else="">-</t>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border">
+                                                        <t t-esc="res.notice_period_display or '1 Month'"/>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <t t-if="res.expected_exit_date">
+                                                        <span class="text-danger fw-bold"><t t-esc="res.expected_exit_date.strftime('%B %d, %Y')"/></span>
+                                                    </t>
+                                                    <t t-elif="res.exit_date">
+                                                        <span class="text-danger fw-bold"><t t-esc="res.exit_date"/></span>
+                                                    </t>
+                                                    <t t-else="">-</t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="res.state == 'draft'">
+                                                        <span class="badge bg-secondary">Draft</span>
+                                                    </t>
+                                                    <t t-elif="res.state == 'pending_manager'">
+                                                        <span class="badge bg-warning text-dark">Pending Manager Approval</span>
+                                                    </t>
+                                                    <t t-elif="res.state == 'serving_notice'">
+                                                        <span class="badge bg-info text-white">Serving Notice Period</span>
+                                                    </t>
+                                                    <t t-elif="res.state == 'rejected'">
+                                                        <span class="badge bg-danger">Rejected</span>
+                                                    </t>
+                                                    <t t-elif="res.state == 'revoke_pending'">
+                                                        <span class="badge bg-warning text-dark border border-warning">Revoke Pending</span>
+                                                    </t>
+                                                    <t t-elif="res.state == 'revoked'">
+                                                        <span class="badge bg-success">Resignation Revoked</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="badge bg-secondary"><t t-esc="res.state"/></span>
+                                                    </t>
+                                                </td>
+                                                <td class="text-end pe-3">
+                                                    <a t-attf-href="/my/resignation/{{res.id}}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                        <t t-if="current_tab == 'team' and res.state in ['pending_manager', 'revoke_pending']">
+                                                            <strong>Review</strong>
+                                                        </t>
+                                                        <t t-else="">View</t>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Pager -->
+                <div t-if="pager['page_count'] &gt; 1" class="d-flex justify-content-center">
+                    <t t-call="portal.pager"/>
+                </div>
+
+            </t>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 4. SUBMISSION FORM (/my/resignation/new)             -->
+    <!-- Matches Image 2 Profile Structure & Requirements     -->
+    <!-- ==================================================== -->
+
+    <template id="portal_resignation_new_form" name="Submit Resignation Form">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="row justify-content-center mt-3 mb-5">
+                <div class="col-lg-10">
+
+                    <!-- Error Alert -->
+                    <t t-if="error_msg == 'reason_required'">
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+                            <strong>Validation Error:</strong> Resignation reason/remarks are mandatory. Please provide a reason.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+
+                    <form action="/my/resignation/submit" method="post" class="card shadow-sm border-0">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                        <!-- Header Banner -->
+                        <div class="card-header bg-primary text-white py-3 px-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="mb-0 fw-bold">Employee Resignation Form</h4>
+                                    <small class="text-white-50">Allied Engineering &amp; Services Ltd.</small>
+                                </div>
+                                <span class="badge bg-warning text-dark px-3 py-2 fw-bold">Stage: New</span>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+
+                            <!-- Section 1: Employee Details (Read-only from profile as shown in Image 2) -->
+                            <h5 class="fw-bold text-secondary mb-3 border-bottom pb-2">
+                                <i class="fa fa-id-card-o me-2"/> Employee Information
+                            </h5>
+
+                            <div class="row g-3 mb-4">
+                                <!-- Left Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Employee Name</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.name" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Designation</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.job_id.name or '-'" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Division</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.division or '-'" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Badge ID / Emp No.</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.barcode or employee.id" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Company</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.company_id.name or 'Allied Engineering &amp; Services Ltd.'" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Department</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.department_id.name or '-'" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Immediate Boss (Reporting Manager)</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.parent_id.name or 'Not Assigned'" readonly="readonly"/>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column -->
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Station / Work Location</label>
+                                        <input type="text" class="form-control bg-light" t-att-value="employee.work_location_name or 'Karachi'" readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Appointment Date (Joining Date)</label>
+                                        <input type="text" class="form-control bg-light"
+                                               t-att-value="employee.appointment_date.strftime('%B %d, %Y') if employee.appointment_date else '-'"
+                                               readonly="readonly"/>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small fw-bold">Leaving Type</label>
+                                        <input type="text" class="form-control bg-light fw-bold text-danger" value="Resignation" readonly="readonly"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Resignation Submission Fields (Functional Requirements) -->
+                            <h5 class="fw-bold text-secondary mb-3 border-bottom pb-2">
+                                <i class="fa fa-calendar-check-o me-2"/> Resignation Submission Details
+                            </h5>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="resignation_date" class="form-label fw-bold">Resignation Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="resignation_date" name="resignation_date"
+                                           t-att-value="today_date" required="required"/>
+                                    <small class="text-muted">The date on which you are tendering your resignation.</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="notice_period_duration" class="form-label fw-bold">Proposed Notice Period <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="notice_period_duration" name="notice_period_duration" required="required">
+                                        <option value="15_days">15 Days</option>
+                                        <option value="1_month" selected="selected">1 Month</option>
+                                        <option value="2_month">2 Months</option>
+                                        <option value="3_month">3 Months</option>
+                                        <option value="custom">Custom Days</option>
+                                    </select>
+                                    <small class="text-muted">Select your proposed notice period duration.</small>
+                                </div>
+
+                                <div class="col-md-6 d-none" id="custom_days_wrapper">
+                                    <label for="notice_period_custom_days" class="form-label fw-bold">Custom Days Duration</label>
+                                    <input type="number" class="form-control" id="notice_period_custom_days" name="notice_period_custom_days" value="30" min="1"/>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="reason" class="form-label fw-bold">Resignation Reason / Remarks <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="reason" name="reason" rows="4"
+                                              placeholder="Please enter the details and reasons for your resignation..." required="required"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Submission Notice -->
+                            <div class="alert alert-info py-2 px-3 small mb-4">
+                                <i class="fa fa-info-circle me-1"/> Upon submission, this request will be forwarded to your Reporting Manager (<strong><t t-esc="employee.parent_id.name or 'Immediate Boss'"/></strong>) for review.
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="/my/resignations" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                                <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">
+                                    <i class="fa fa-paper-plane me-1"/> Submit Resignation
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+            <!-- Simple inline script to show/hide custom days -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const select = document.getElementById('notice_period_duration');
+                    const customWrapper = document.getElementById('custom_days_wrapper');
+                    if (select &amp;&amp; customWrapper) {
+                        select.addEventListener('change', function () {
+                            if (this.value === 'custom') {
+                                customWrapper.classList.remove('d-none');
+                            } else {
+                                customWrapper.classList.add('d-none');
+                            }
+                        });
+                    }
+                });
+            </script>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 5. DETAIL VIEW (/my/resignation/<id>)                -->
+    <!-- Includes Manager Accept/Reject and Employee Revoke   -->
+    <!-- ==================================================== -->
+
+    <template id="portal_resignation_detail_view" name="Resignation Detail View">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="row justify-content-center mt-3 mb-5">
+                <div class="col-lg-10">
+
+                    <!-- Feedback Alert Banners -->
+                    <t t-if="msg_submitted">
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Success!</strong> Your resignation request has been successfully submitted and routed to your Reporting Manager.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_warning == 'active_exists'">
+                        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Active Resignation Exists:</strong> You already have an active resignation request currently in progress.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_success == 'accepted'">
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Success!</strong> Resignation has been accepted. Notice period has started, and official Allied CAT memorandum email has been sent.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_success == 'rejected'">
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Resignation Rejected:</strong> The resignation request has been rejected with your remarks.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_success == 'revoke_requested'">
+                        <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Revoke Submitted!</strong> Your revocation request has been forwarded to your Reporting Manager for review.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_success == 'revoke_accepted'">
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Revoke Accepted!</strong> The resignation has been cancelled and regular employment is restored.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_success == 'revoke_rejected'">
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Revoke Rejected:</strong> Revoke request was rejected. The notice period continues as scheduled.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_error == 'rejection_remarks_required'">
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Action Required:</strong> Remarks are strictly mandatory when rejecting a resignation request.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+                    <t t-if="msg_error == 'revoke_reason_required'">
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Action Required:</strong> Please enter a reason explaining why you want to revoke your resignation.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+
+                    <!-- Main Detail Card -->
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-3 px-4 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1 text-primary">
+                                        <t t-esc="resignation.name or 'Resignation Request'"/>
+                                    </h4>
+                                    <div class="text-muted small">
+                                        Employee: <strong><t t-esc="resignation.emp_name.name"/></strong> &#183;
+                                        Manager: <strong><t t-esc="resignation.immediate_boss.name or '-'"/></strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <t t-if="resignation.state == 'pending_manager'">
+                                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Pending Manager Approval</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'serving_notice'">
+                                        <span class="badge bg-info text-white fs-6 px-3 py-2">Serving Notice Period</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'clearance_in_progress'">
+                                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Clearance In Progress</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'clearance_complete'">
+                                        <span class="badge bg-info text-white fs-6 px-3 py-2">Clearance Complete</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'exit_interview_pending'">
+                                        <span class="badge bg-primary fs-6 px-3 py-2">Exit Interview Pending</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'exit_interview_done'">
+                                        <span class="badge bg-success fs-6 px-3 py-2">Exit Interview Completed</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'archived'">
+                                        <span class="badge bg-dark fs-6 px-3 py-2">Employee Archived / Completed</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'rejected'">
+                                        <span class="badge bg-danger fs-6 px-3 py-2">Resignation Rejected</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'revoke_pending'">
+                                        <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-2">Revoke Pending Manager Decision</span>
+                                    </t>
+                                    <t t-elif="resignation.state == 'revoked'">
+                                        <span class="badge bg-success fs-6 px-3 py-2">Resignation Revoked (Employment Active)</span>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="badge bg-secondary fs-6 px-3 py-2"><t t-esc="resignation.state"/></span>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Alert Section -->
+                        <div class="card-body p-4">
+
+                            <t t-if="resignation.state in ['serving_notice', 'clearance_in_progress']">
+                                <div class="alert alert-info border-info d-flex align-items-center mb-4">
+                                    <i class="fa fa-cubes fa-2x text-info me-3"/>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Notice Period &amp; Department Asset Clearance Active</h6>
+                                        <p class="mb-0 small">
+                                            The resignation is accepted. Asset clearance forms have been dispatched to <strong>Admin, IT, and HSE</strong> department heads.
+                                            Notice period active until <strong><t t-esc="resignation.expected_exit_date.strftime('%B %d, %Y') if resignation.expected_exit_date else (resignation.exit_date or '-')"/></strong>.
+                                        </p>
+                                    </div>
+                                    <t t-if="can_revoke">
+                                        <button type="button" class="btn btn-warning text-dark btn-sm rounded-pill px-3 fw-bold shadow-sm ms-2"
+                                                data-bs-toggle="modal" data-bs-target="#modalRequestRevoke">
+                                            <i class="fa fa-undo me-1"/> Revoke Resignation
+                                        </button>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'exit_interview_pending'">
+                                <div class="alert alert-primary border-primary d-flex align-items-center mb-4">
+                                    <i class="fa fa-comments-o fa-2x text-primary me-3"/>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Clearance Completed &#183; Exit Interview Pending</h6>
+                                        <p class="mb-0 small">
+                                            Admin, IT, and HSE have completed the asset clearances. Next stage: HR must conduct the confidential <strong>Exit Interview</strong> with the employee.
+                                        </p>
+                                    </div>
+                                    <t t-if="can_do_exit_interview">
+                                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm ms-2"
+                                                data-bs-toggle="modal" data-bs-target="#modalExitInterview">
+                                            <i class="fa fa-check me-1"/> Complete Exit Interview
+                                        </button>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'exit_interview_done'">
+                                <div class="alert alert-success border-success d-flex align-items-center mb-4">
+                                    <i class="fa fa-check-circle fa-2x text-success me-3"/>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Exit Interview Completed &#183; Ready for Employee Archival</h6>
+                                        <p class="mb-0 small">
+                                            Exit interview is concluded. HR can now proceed to archive the employee profile and deactivate their portal user account.
+                                        </p>
+                                    </div>
+                                    <t t-if="can_archive">
+                                        <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold shadow-sm ms-2"
+                                                data-bs-toggle="modal" data-bs-target="#modalArchiveEmployee">
+                                            <i class="fa fa-archive me-1"/> Archive Employee &amp; User
+                                        </button>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'archived'">
+                                <div class="alert alert-dark border-dark d-flex align-items-center mb-4">
+                                    <i class="fa fa-lock fa-2x text-secondary me-3"/>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Offboarding Completed: Employee Archived</h6>
+                                        <p class="mb-0 small">
+                                            This employee record and linked portal user account have been deactivated in Odoo.
+                                            <t t-if="resignation.archived_date">
+                                                Archived on <strong><t t-esc="resignation.archived_date.strftime('%B %d, %Y at %I:%M %p')"/></strong>.
+                                            </t>
+                                        </p>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'revoke_pending'">
+                                <div class="alert alert-warning border-warning d-flex align-items-center mb-4">
+                                    <i class="fa fa-exclamation-triangle fa-2x text-warning me-3"/>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">Revocation Request Submitted</h6>
+                                        <p class="mb-0 small">
+                                            The employee has requested to withdraw this resignation on <strong><t t-esc="resignation.revoke_date.strftime('%B %d, %Y') if resignation.revoke_date else ''"/></strong>.
+                                            Awaiting Reporting Manager decision.
+                                        </p>
+                                        <p class="mb-0 mt-1 small">
+                                            <strong>Reason:</strong> <em><t t-esc="resignation.revoke_reason"/></em>
+                                        </p>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'rejected'">
+                                <div class="alert alert-danger border-danger mb-4">
+                                    <h6 class="fw-bold mb-1"><i class="fa fa-times-circle me-1"/> Resignation Request Rejected</h6>
+                                    <p class="mb-1 small">This resignation was rejected by the Reporting Manager. Regular employment continues.</p>
+                                    <div class="bg-white p-2 rounded border border-danger-subtle small mt-2">
+                                        <strong>Manager Remarks:</strong> <t t-esc="resignation.rejection_reason or resignation.boss_remarks or 'No remarks provided'"/>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <t t-if="resignation.state == 'revoked'">
+                                <div class="alert alert-success border-success mb-4">
+                                    <h6 class="fw-bold mb-1"><i class="fa fa-check-circle me-1"/> Resignation Successfully Revoked</h6>
+                                    <p class="mb-0 small">The resignation has been cancelled with mutual consent. The notice period is stopped and normal employment continues.</p>
+                                    <t t-if="resignation.revoke_response_remarks">
+                                        <div class="bg-white p-2 rounded border border-success-subtle small mt-2">
+                                            <strong>Manager Remarks:</strong> <t t-esc="resignation.revoke_response_remarks"/>
+                                        </div>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <!-- Resignation Overview Cards -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded border h-100">
+                                        <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Employee Information</h6>
+                                        <table class="table table-sm table-borderless mb-0 small">
+                                            <tr>
+                                                <td class="text-muted" style="width: 40%;">Name:</td>
+                                                <td><strong><t t-esc="resignation.emp_name.name"/></strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Designation:</td>
+                                                <td><t t-esc="resignation.emp_designation.name or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Department:</td>
+                                                <td><t t-esc="resignation.department.name or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Division:</td>
+                                                <td><t t-esc="resignation.emp_division or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Badge ID:</td>
+                                                <td><t t-esc="resignation.emp_badge or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Station:</td>
+                                                <td><t t-esc="resignation.station or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Appointment Date:</td>
+                                                <td>
+                                                    <t t-if="resignation.appointment_date">
+                                                        <t t-esc="resignation.appointment_date.strftime('%B %d, %Y')"/>
+                                                    </t>
+                                                    <t t-else="">-</t>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded border h-100">
+                                        <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Notice &amp; Timeline</h6>
+                                        <table class="table table-sm table-borderless mb-0 small">
+                                            <tr>
+                                                <td class="text-muted" style="width: 45%;">Resignation Date:</td>
+                                                <td>
+                                                    <strong>
+                                                        <t t-if="resignation.resignation_date">
+                                                            <t t-esc="resignation.resignation_date.strftime('%B %d, %Y')"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Proposed Notice Period:</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">
+                                                        <t t-esc="resignation.notice_period_display or '1 Month'"/>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Calculated Exit Date:</td>
+                                                <td>
+                                                    <span class="text-danger fw-bold">
+                                                        <t t-if="resignation.expected_exit_date">
+                                                            <t t-esc="resignation.expected_exit_date.strftime('%B %d, %Y')"/>
+                                                        </t>
+                                                        <t t-elif="resignation.exit_date">
+                                                            <t t-esc="resignation.exit_date"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Leaving Type:</td>
+                                                <td><span class="badge bg-danger">Resignation</span></td>
+                                            </tr>
+                                            <tr t-if="resignation.acceptance_date">
+                                                <td class="text-muted">Acceptance Date:</td>
+                                                <td><t t-esc="resignation.acceptance_date.strftime('%B %d, %Y')"/></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resignation Reason Text -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-secondary mb-2">Resignation Reason / Remarks</h6>
+                                <div class="p-3 bg-white border rounded">
+                                    <p class="mb-0 text-dark" style="white-space: pre-wrap;"><t t-esc="resignation.reason or 'No remarks entered.'"/></p>
+                                </div>
+                            </div>
+
+                            <!-- Manager Remarks (If accepted) -->
+                            <t t-if="resignation.manager_remarks">
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-secondary mb-2">Manager Acceptance Remarks</h6>
+                                    <div class="p-3 bg-white border rounded border-success-subtle">
+                                        <p class="mb-0 text-dark" style="white-space: pre-wrap;"><t t-esc="resignation.manager_remarks"/></p>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- ============================================== -->
+                            <!-- DEPARTMENTAL CLEARANCE OVERVIEW (Admin, IT, HSE) -->
+                            <!-- Requirement 1: Visibility & Progress           -->
+                            <!-- ============================================== -->
+                            <t t-if="resignation.clearance_ids and resignation.state not in ['draft', 'pending_manager', 'rejected', 'revoked']">
+                                <div class="card border-0 shadow-sm mb-4" style="background: #f8fbfd; border: 1px solid #d0e3ec !important;">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                            <h6 class="fw-bold text-dark mb-0">
+                                                <i class="fa fa-cubes text-primary me-2"/> Department Asset Clearance Progress
+                                            </h6>
+                                            <div>
+                                                <t t-if="resignation.state == 'clearance_in_progress'">
+                                                    <span class="badge bg-warning text-dark"><i class="fa fa-clock-o me-1"/> Clearance In Progress</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-success"><i class="fa fa-check me-1"/> Clearance Complete</span>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <p class="small text-muted mb-3">
+                                            The clearance process verifies company property returned to <strong>Admin</strong>, <strong>IT</strong>, and <strong>HSE</strong> departments.
+                                            Final clearance completes automatically once all 3 departments have approved.
+                                        </p>
+
+                                        <div class="row g-3">
+                                            <t t-foreach="resignation.clearance_ids" t-as="cl">
+                                                <div class="col-md-4">
+                                                    <div class="card h-100 border bg-white shadow-none">
+                                                        <div class="card-body p-3">
+                                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                <h6 class="fw-bold mb-0 text-dark">
+                                                                    <t t-esc="cl.department_name"/>
+                                                                </h6>
+                                                                <t t-if="cl.state == 'approved'">
+                                                                    <span class="badge bg-success small"><i class="fa fa-check"/> Approved</span>
+                                                                </t>
+                                                                <t t-else="">
+                                                                    <span class="badge bg-warning text-dark small"><i class="fa fa-clock-o"/> Pending</span>
+                                                                </t>
+                                                            </div>
+                                                            <div class="small text-muted mb-2">
+                                                                Head: <strong><t t-esc="cl.department_head_id.name or 'Unassigned'"/></strong><br/>
+                                                                Returned: <strong><t t-esc="cl.returned_count"/></strong> / <t t-esc="cl.total_count"/> Items
+                                                            </div>
+                                                            <t t-if="cl.remarks">
+                                                                <div class="p-2 bg-light rounded small text-muted mb-2 text-truncate" t-att-title="cl.remarks">
+                                                                    <i class="fa fa-commenting-o me-1"/> <t t-esc="cl.remarks"/>
+                                                                </div>
+                                                            </t>
+                                                            <t t-if="request.env.user.id == cl.department_head_id.id or is_hr">
+                                                                <a t-attf-href="/my/clearance/{{cl.id}}" class="btn btn-outline-primary btn-sm w-100 rounded-pill fw-bold">
+                                                                    <t t-if="cl.state == 'pending' and request.env.user.id == cl.department_head_id.id">
+                                                                        <i class="fa fa-edit me-1"/> Complete Clearance
+                                                                    </t>
+                                                                    <t t-else="">
+                                                                        <i class="fa fa-eye me-1"/> View Checklist
+                                                                    </t>
+                                                                </a>
+                                                            </t>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- ============================================== -->
+                            <!-- EXIT INTERVIEW & ARCHIVING SECTION (Req 2 & 3) -->
+                            <!-- ============================================== -->
+                            <t t-if="resignation.state in ['exit_interview_pending', 'exit_interview_done', 'archived']">
+                                <div class="card border-0 shadow-sm mb-4" style="background: #fbfbfc; border: 1px solid #e1e4e8 !important;">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                            <h6 class="fw-bold text-dark mb-0">
+                                                <i class="fa fa-user-times text-danger me-2"/> Exit Interview &amp; Employee Archiving
+                                            </h6>
+                                            <div>
+                                                <t t-if="resignation.state == 'exit_interview_pending'">
+                                                    <span class="badge bg-primary"><i class="fa fa-clock-o me-1"/> Interview Pending (HR)</span>
+                                                </t>
+                                                <t t-elif="resignation.state == 'exit_interview_done'">
+                                                    <span class="badge bg-success"><i class="fa fa-check me-1"/> Interview Completed</span>
+                                                </t>
+                                                <t t-elif="resignation.state == 'archived'">
+                                                    <span class="badge bg-dark"><i class="fa fa-archive me-1"/> Employee &amp; User Archived</span>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <div class="p-3 bg-white rounded border small h-100">
+                                                    <h6 class="fw-bold text-dark mb-2">Exit Interview Details</h6>
+                                                    <p class="mb-1 text-muted">Date: <strong><t t-esc="resignation.exit_interview_date.strftime('%B %d, %Y') if resignation.exit_interview_date else 'Pending'"/></strong></p>
+                                                    <p class="mb-1 text-muted">Interviewer: <strong><t t-esc="resignation.exit_interview_conducted_by.name or 'HR Department'"/></strong></p>
+                                                    <p class="mb-1 text-muted">Primary Reason: <strong><t t-esc="dict(resignation._fields['exit_interview_reason_for_leaving'].selection).get(resignation.exit_interview_reason_for_leaving) or 'Not Specified'"/></strong></p>
+                                                    <t t-if="resignation.exit_interview_feedback">
+                                                        <p class="mb-0 text-muted mt-2"><strong>Employee Feedback:</strong><br/><t t-esc="resignation.exit_interview_feedback"/></p>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="p-3 bg-white rounded border small h-100">
+                                                    <h6 class="fw-bold text-dark mb-2">Offboarding &amp; Login Access</h6>
+                                                    <p class="mb-1 text-muted">Portal Login Status:
+                                                        <t t-if="resignation.state == 'archived'">
+                                                            <span class="badge bg-danger">Deactivated / Disabled</span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-success">Active</span>
+                                                        </t>
+                                                    </p>
+                                                    <t t-if="resignation.archived_date">
+                                                        <p class="mb-1 text-muted">Archived On: <strong><t t-esc="resignation.archived_date.strftime('%B %d, %Y at %I:%M %p')"/></strong></p>
+                                                        <p class="mb-1 text-muted">Archived By: <strong><t t-esc="resignation.archived_by_id.name or 'HR Admin'"/></strong></p>
+                                                    </t>
+
+                                                    <!-- HR Actions -->
+                                                    <div class="mt-3">
+                                                        <t t-if="can_do_exit_interview">
+                                                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm"
+                                                                    data-bs-toggle="modal" data-bs-target="#modalExitInterview">
+                                                                <i class="fa fa-check me-1"/> Mark Exit Interview as Done
+                                                            </button>
+                                                        </t>
+                                                        <t t-elif="can_archive">
+                                                            <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold shadow-sm"
+                                                                    data-bs-toggle="modal" data-bs-target="#modalArchiveEmployee">
+                                                                <i class="fa fa-archive me-1"/> Archive Employee &amp; User
+                                                            </button>
+                                                        </t>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- ============================================== -->
+                            <!-- ACTION BUTTONS SECTION                         -->
+                            <!-- ============================================== -->
+
+                            <!-- 1. MANAGER REVIEW ACTIONS (Pending Manager State) -->
+                            <t t-if="can_review_resignation">
+                                <div class="card bg-light border-warning mb-4">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-dark mb-2">Reporting Manager Action Required</h6>
+                                        <p class="small text-muted mb-3">
+                                            As the Reporting Manager, please review this resignation. Accepting will start the notice period and dispatch the official Allied CAT memorandum. Rejecting requires remarks.
+                                        </p>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <button type="button" class="btn btn-success px-4 rounded-pill fw-bold"
+                                                    data-bs-toggle="modal" data-bs-target="#modalManagerAccept">
+                                                <i class="fa fa-check me-1"/> Accept Resignation
+                                            </button>
+                                            <button type="button" class="btn btn-danger px-4 rounded-pill fw-bold"
+                                                    data-bs-toggle="modal" data-bs-target="#modalManagerReject">
+                                                <i class="fa fa-times me-1"/> Reject Resignation
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- 2. MANAGER REVOKE ACTIONS (Revoke Pending State) -->
+                            <t t-if="can_review_revoke">
+                                <div class="card bg-light border-warning mb-4">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-dark mb-2">Employee Revoke Request Decision Required</h6>
+                                        <p class="small text-muted mb-3">
+                                            The employee has requested to withdraw their resignation. You can Accept Revoke (cancelling the resignation) or Reject Revoke (continuing notice period).
+                                        </p>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <button type="button" class="btn btn-success px-4 rounded-pill fw-bold"
+                                                    data-bs-toggle="modal" data-bs-target="#modalAcceptRevoke">
+                                                <i class="fa fa-check me-1"/> Accept Revoke (Keep Employee)
+                                            </button>
+                                            <button type="button" class="btn btn-danger px-4 rounded-pill fw-bold"
+                                                    data-bs-toggle="modal" data-bs-target="#modalRejectRevoke">
+                                                <i class="fa fa-times me-1"/> Reject Revoke (Continue Notice)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Back Navigation -->
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <a href="/my/resignations" class="btn btn-outline-secondary rounded-pill px-3">
+                                    <i class="fa fa-arrow-left me-1"/> Back to List
+                                </a>
+                                <t t-if="can_revoke">
+                                    <button type="button" class="btn btn-warning text-dark rounded-pill px-3 fw-bold"
+                                            data-bs-toggle="modal" data-bs-target="#modalRequestRevoke">
+                                        <i class="fa fa-undo me-1"/> Request Revoke
+                                    </button>
+                                </t>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ==================================================== -->
+            <!-- MODALS FOR WORKFLOW ACTIONS                          -->
+            <!-- ==================================================== -->
+
+            <!-- Modal: Manager Accept Resignation -->
+            <div class="modal fade" id="modalManagerAccept" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="manager_accept"/>
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-check-circle me-1"/> Accept Resignation</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-3">
+                            <p class="mb-2">
+                                Are you sure you want to <strong>Accept</strong> the resignation of <strong><t t-esc="resignation.emp_name.name"/></strong>?
+                            </p>
+                            <div class="alert alert-light border small mb-3">
+                                &#183; Notice Period starts based on: <strong><t t-esc="resignation.notice_period_display or '1 Month'"/></strong><br/>
+                                &#183; Expected Relieving/Exit Date: <strong><t t-esc="resignation.expected_exit_date.strftime('%B %d, %Y') if resignation.expected_exit_date else resignation.exit_date"/></strong><br/>
+                                &#183; Official Allied CAT Memorandum email will be dispatched to employee.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Manager Remarks (Optional):</label>
+                                <textarea name="remarks" class="form-control" rows="3" placeholder="Enter any acceptance remarks or notes for HR..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">Confirm &amp; Accept</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: Manager Reject Resignation (Remarks Mandatory) -->
+            <div class="modal fade" id="modalManagerReject" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="manager_reject"/>
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-times-circle me-1"/> Reject Resignation</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-3">
+                            <p class="mb-2">
+                                Rejecting this resignation request means employment will continue as normal.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-danger">Rejection Remarks (Mandatory) <span class="text-danger">*</span>:</label>
+                                <textarea name="remarks" class="form-control" rows="3"
+                                          placeholder="Please enter specific reasons for rejecting this resignation..." required="required"></textarea>
+                                <small class="text-muted">The employee will be notified with these remarks.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Confirm Rejection</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: Employee Request Revoke -->
+            <div class="modal fade" id="modalRequestRevoke" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="request_revoke"/>
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-undo me-1"/> Revoke Resignation Request</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-3">
+                            <p class="mb-2 small">
+                                If you no longer wish to resign and want to continue your employment, submit this revocation request to your Reporting Manager.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Revocation Reason <span class="text-danger">*</span>:</label>
+                                <textarea name="revoke_reason" class="form-control" rows="3"
+                                          placeholder="Please explain why you wish to cancel your resignation..." required="required"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning text-dark rounded-pill px-4 fw-bold">Submit Revoke Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: Manager Accept Revoke -->
+            <div class="modal fade" id="modalAcceptRevoke" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="accept_revoke"/>
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-check-circle me-1"/> Accept Revoke Request</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-3">
+                            <p class="mb-2">
+                                Accepting the revoke request will cancel <strong><t t-esc="resignation.emp_name.name"/></strong>'s resignation, stop their notice period, and restore normal employment.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Manager Remarks (Optional):</label>
+                                <textarea name="remarks" class="form-control" rows="3" placeholder="Enter remarks for the employee and HR..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold">Accept Revoke</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: Manager Reject Revoke -->
+            <div class="modal fade" id="modalRejectRevoke" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="reject_revoke"/>
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-times-circle me-1"/> Reject Revoke Request</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-3">
+                            <p class="mb-2">
+                                Rejecting the revoke will keep the resignation active. The notice period will continue as scheduled.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Manager Remarks (Optional):</label>
+                                <textarea name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Reject Revoke</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: HR Mark Exit Interview Done (Requirement 2) -->
+            <div class="modal fade" id="modalExitInterview" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="done_exit_interview"/>
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-comments me-1"/> Conclude Exit Interview</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-4">
+                            <p class="mb-3 text-muted">
+                                Conducted by HR for <strong><t t-esc="resignation.emp_name.name"/></strong>. Once marked as done, the <strong>Archive Employee</strong> stage will be unlocked.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Primary Reason for Leaving <span class="text-danger">*</span>:</label>
+                                <select name="exit_interview_reason_for_leaving" class="form-select" required="required">
+                                    <option value="">-- Select Reason --</option>
+                                    <option value="better_opportunity">Better Opportunity / Career Growth</option>
+                                    <option value="higher_compensation">Higher Compensation / Salary Package</option>
+                                    <option value="relocation">Relocation / Personal / Family Reasons</option>
+                                    <option value="work_environment">Work Environment / Culture</option>
+                                    <option value="further_education">Higher Studies / Education</option>
+                                    <option value="health">Health Reasons</option>
+                                    <option value="other">Other Reasons</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Employee Feedback &amp; Suggestions:</label>
+                                <textarea name="exit_interview_feedback" class="form-control" rows="3"
+                                          placeholder="Employee thoughts regarding organizational culture, team, and suggestions for improvement..."></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Confidential HR Interview Assessment &amp; Notes:</label>
+                                <textarea name="exit_interview_notes" class="form-control" rows="3"
+                                          placeholder="Confidential notes and assessment from HR officer..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                                <i class="fa fa-check me-1"/> Mark Exit Interview as Done
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal: HR Archive Employee & User (Requirement 3) -->
+            <div class="modal fade" id="modalArchiveEmployee" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form t-attf-action="/my/resignation/{{resignation.id}}/action" method="post" class="modal-content">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="action" value="archive_employee"/>
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title fw-bold"><i class="fa fa-archive me-1"/> Archive Employee &amp; User Account</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"/>
+                        </div>
+                        <div class="modal-content-body p-4">
+                            <div class="alert alert-danger border-danger small mb-3">
+                                <i class="fa fa-exclamation-triangle me-1"/> <strong>Warning: High-Impact Action</strong><br/>
+                                This action will:
+                                <ul class="mb-0 mt-1 ps-3">
+                                    <li>Archive the <strong>Employee record</strong> in Odoo.</li>
+                                    <li>Deactivate the <strong>User login account</strong> in Odoo.</li>
+                                    <li>Permanently revoke portal and system login access for this employee.</li>
+                                    <li>Mark the resignation offboarding workflow as <strong>Completed / Employee Archived</strong>.</li>
+                                </ul>
+                            </div>
+                            <p class="mb-0 text-muted small">
+                                Are you sure you wish to conclude the offboarding and archive <strong><t t-esc="resignation.emp_name.name"/></strong>?
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                                <i class="fa fa-archive me-1"/> Confirm &amp; Archive Employee
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 6. ERROR PAGE                                        -->
+    <!-- ==================================================== -->
+
+    <template id="portal_resignation_error" name="Resignation Error Page">
+        <t t-call="portal.portal_layout">
+            <div class="container my-5 text-center">
+                <div class="card shadow-sm border-0 py-5 px-4 mx-auto" style="max-width: 550px;">
+                    <i class="fa fa-exclamation-triangle fa-3x text-warning mb-3"/>
+                    <h4 class="fw-bold text-dark mb-2"><t t-esc="error_title or 'Access Error'"/></h4>
+                    <p class="text-muted mb-4"><t t-esc="error_message or 'An unexpected error occurred.'"/></p>
+                    <div>
+                        <a href="/my/home" class="btn btn-primary rounded-pill px-4">
+                            <i class="fa fa-home me-1"/> Return to Portal Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

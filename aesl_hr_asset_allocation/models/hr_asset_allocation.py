@@ -62,6 +62,11 @@ class HrAssetAllocation(models.Model):
         default=lambda self: self.env.company,
         required=True
     )
+    active = fields.Boolean(
+        string='Active',
+        default=True,
+        index=True
+    )
     state = fields.Selection([
         ('pending', 'Pending Allocation'),
         ('approved', 'Allocated & Approved'),

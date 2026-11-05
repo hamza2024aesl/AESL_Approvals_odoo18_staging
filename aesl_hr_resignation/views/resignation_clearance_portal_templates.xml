@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================== -->
+    <!-- 1. PORTAL HOME: ALERT BANNER & CLEARANCE MENU CARD   -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_home_resignation_clearance" name="Portal Home: Asset Clearance Menu" inherit_id="portal.portal_my_home" priority="36">
+        <!-- Top alert if department head has pending clearances -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-if="pending_clearance_count and pending_clearance_count &gt; 0">
+                <div class="alert alert-info alert-dismissible fade show shadow-sm mb-4 border-info" role="alert" style="border-left: 5px solid #17a2b8;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-cubes fa-2x text-info me-3"/>
+                            <div>
+                                <h5 class="alert-heading mb-1 fw-bold">📦 Department Asset Clearance Pending</h5>
+                                <p class="mb-0 text-muted">
+                                    You have <strong><t t-esc="pending_clearance_count"/></strong> resigning employee clearance request(s) awaiting asset verification for your department.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="/my/clearances" class="btn btn-info text-white btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                            <i class="fa fa-check-square-o me-1"/> Review Clearances
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Menu card in portal home (Visible to Admin, IT, HSE heads and HR) -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-if="is_department_head or is_hr_user">
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="title">Asset Clearance</t>
+                    <t t-set="text">Verify returned company assets for resigning employees</t>
+                    <t t-set="url" t-value="'/my/clearances'"/>
+                    <t t-set="placeholder_count" t-value="'clearance_count'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 2. BREADCRUMBS                                       -->
+    <!-- ==================================================== -->
+
+    <template id="portal_breadcrumbs_clearance" name="Portal Breadcrumbs: Clearance" inherit_id="portal.portal_breadcrumbs" priority="36">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name in ['clearances', 'clearance_detail']" class="breadcrumb-item">
+                <a t-if="page_name != 'clearances'" href="/my/clearances">Asset Clearances</a>
+                <t t-else="">Asset Clearances</t>
+            </li>
+            <li t-if="page_name == 'clearance_detail'" class="breadcrumb-item active">
+                <t t-out="clearance.department_name or 'Department Clearance'"/>
+            </li>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 3. CLEARANCE LIST VIEW (/my/clearances)              -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_clearances_list" name="My Department Clearances">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-3">
+                <div>
+                    <h3 class="fw-bold text-dark mb-0">Department Asset Clearance</h3>
+                    <p class="text-muted small mb-0">Verify and confirm the return of company property for resigning employees</p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-0">
+                    <t t-if="not clearances">
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa fa-check-circle-o fa-3x mb-2 text-success"/>
+                            <p class="mb-0">No pending asset clearance requests for your department.</p>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Resignation Ref</th>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Exit Date</th>
+                                        <th>Returned Assets</th>
+                                        <th>Status</th>
+                                        <th class="text-end pe-3">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="clearances" t-as="cl">
+                                        <tr>
+                                            <td class="ps-3 fw-bold text-primary">
+                                                <a t-attf-href="/my/clearance/{{cl.id}}">
+                                                    <t t-esc="cl.resignation_id.name or 'Resignation'"/>
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <strong><t t-esc="cl.employee_id.name"/></strong>
+                                                <div class="small text-muted"><t t-esc="cl.employee_id.job_id.name or '-'"/></div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">
+                                                    <t t-esc="cl.department_name"/>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-danger fw-bold">
+                                                    <t t-if="cl.resignation_id.expected_exit_date">
+                                                        <t t-esc="cl.resignation_id.expected_exit_date.strftime('%B %d, %Y')"/>
+                                                    </t>
+                                                    <t t-elif="cl.resignation_id.exit_date">
+                                                        <t t-esc="cl.resignation_id.exit_date"/>
+                                                    </t>
+                                                    <t t-else="">-</t>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="small">
+                                                    <strong><t t-esc="cl.returned_count"/></strong> of <strong><t t-esc="cl.total_count"/></strong> returned
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <t t-if="cl.state == 'pending'">
+                                                    <span class="badge bg-warning text-dark">Clearance In Progress</span>
+                                                </t>
+                                                <t t-elif="cl.state == 'approved'">
+                                                    <span class="badge bg-success">Clearance Approved</span>
+                                                </t>
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <a t-attf-href="/my/clearance/{{cl.id}}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                    <t t-if="cl.state == 'pending'">
+                                                        <strong>Verify &amp; Approve</strong>
+                                                    </t>
+                                                    <t t-else="">View Details</t>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Pager -->
+            <div t-if="pager['page_count'] &gt; 1" class="d-flex justify-content-center">
+                <t t-call="portal.pager"/>
+            </div>
+
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 4. CLEARANCE FORM VIEW (/my/clearance/<id>)          -->
+    <!-- Uncheck returned assets + Remarks + Approve          -->
+    <!-- ==================================================== -->
+
+    <template id="portal_clearance_detail_view" name="Asset Clearance Checklist">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="row justify-content-center mt-3 mb-5">
+                <div class="col-lg-10">
+
+                    <!-- Success Alert -->
+                    <t t-if="msg_approved">
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-3" role="alert">
+                            <strong>Success!</strong> Clearance for <strong><t t-esc="clearance.department_name"/></strong> has been approved successfully.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+                        </div>
+                    </t>
+
+                    <form t-attf-action="/my/clearance/{{clearance.id}}/submit" method="post" class="card shadow-sm border-0">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                        <!-- Header Banner -->
+                        <div class="card-header bg-white py-3 px-4 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h4 class="fw-bold mb-1 text-primary">
+                                        <t t-esc="clearance.department_name"/> Asset Clearance
+                                    </h4>
+                                    <div class="text-muted small">
+                                        Employee: <strong><t t-esc="clearance.employee_id.name"/></strong> &#183;
+                                        Ref: <strong><t t-esc="clearance.resignation_id.name or 'Resignation'"/></strong>
+                                    </div>
+                                </div>
+                                <div>
+                                    <t t-if="clearance.state == 'pending'">
+                                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Clearance In Progress</span>
+                                    </t>
+                                    <t t-elif="clearance.state == 'approved'">
+                                        <span class="badge bg-success fs-6 px-3 py-2">Clearance Approved</span>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+
+                            <!-- Employee Summary Overview -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded border h-100">
+                                        <h6 class="fw-bold text-dark mb-2">Employee Details</h6>
+                                        <table class="table table-sm table-borderless mb-0 small">
+                                            <tr>
+                                                <td class="text-muted" style="width: 40%;">Name:</td>
+                                                <td><strong><t t-esc="clearance.employee_id.name"/></strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Designation:</td>
+                                                <td><t t-esc="clearance.employee_id.job_id.name or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Department:</td>
+                                                <td><t t-esc="clearance.employee_id.department_id.name or '-'"/></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Station:</td>
+                                                <td><t t-esc="clearance.employee_id.work_location_name or 'Karachi'"/></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded border h-100">
+                                        <h6 class="fw-bold text-dark mb-2">Offboarding Timeline</h6>
+                                        <table class="table table-sm table-borderless mb-0 small">
+                                            <tr>
+                                                <td class="text-muted" style="width: 45%;">Resignation Date:</td>
+                                                <td>
+                                                    <t t-if="clearance.resignation_id.resignation_date">
+                                                        <t t-esc="clearance.resignation_id.resignation_date.strftime('%B %d, %Y')"/>
+                                                    </t>
+                                                    <t t-else="">-</t>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Notice Period:</td>
+                                                <td><span class="badge bg-secondary"><t t-esc="clearance.resignation_id.notice_period_display or '1 Month'"/></span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-muted">Expected Exit Date:</td>
+                                                <td>
+                                                    <span class="text-danger fw-bold">
+                                                        <t t-if="clearance.resignation_id.expected_exit_date">
+                                                            <t t-esc="clearance.resignation_id.expected_exit_date.strftime('%B %d, %Y')"/>
+                                                        </t>
+                                                        <t t-elif="clearance.resignation_id.exit_date">
+                                                            <t t-esc="clearance.resignation_id.exit_date"/>
+                                                        </t>
+                                                        <t t-else="">-</t>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Clearance Instructions Alert -->
+                            <div class="alert alert-light border-start border-primary border-4 p-3 mb-4 shadow-sm">
+                                <h6 class="fw-bold text-primary mb-1"><i class="fa fa-info-circle me-1"/> Department Clearance Instructions</h6>
+                                <p class="mb-0 small text-muted">
+                                    Please verify all assets below allocated to this employee. <strong>Uncheck</strong> the items that the employee has returned in good condition. If any item is missing, damaged, or pending, leave it checked and write specific details in the Remarks column.
+                                </p>
+                            </div>
+
+                            <!-- Asset Checklist Table (Requirement 1.2 & 1.3) -->
+                            <h5 class="fw-bold text-dark mb-3">
+                                <i class="fa fa-list-check me-2"/> <t t-esc="clearance.department_name"/> Asset Checklist
+                            </h5>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 15%;" class="text-center">Status</th>
+                                            <th style="width: 35%;">Asset / Item Description</th>
+                                            <th style="width: 25%;">Serial # / Specific Details</th>
+                                            <th style="width: 25%;">Remarks (Missing / Damaged)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="clearance.line_ids" t-as="line">
+                                            <tr>
+                                                <td class="text-center bg-light">
+                                                    <t t-if="clearance.state == 'pending'">
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                   t-attf-name="line_allocated_{{line.id}}"
+                                                                   t-att-checked="'checked' if line.is_allocated else None"
+                                                                   id="line_{{line.id}}"/>
+                                                            <label class="form-check-label small" for="line_{{line.id}}">
+                                                                <span class="text-muted d-block" style="font-size: 11px;">(Uncheck if Returned)</span>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-if="line.is_allocated">
+                                                            <span class="badge bg-danger">Not Returned</span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-success">Returned</span>
+                                                        </t>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <strong><t t-esc="line.name"/></strong>
+                                                </td>
+                                                <td>
+                                                    <t t-if="clearance.state == 'pending'">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                               t-attf-name="line_details_{{line.id}}"
+                                                               t-att-value="line.asset_details or ''"
+                                                               placeholder="Serial / Registration #"/>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="line.asset_details or '-'"/>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="clearance.state == 'pending'">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                               t-attf-name="line_remarks_{{line.id}}"
+                                                               t-att-value="line.remarks or ''"
+                                                               placeholder="Note if missing or damaged..."/>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="line.remarks or '-'"/>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Department Head Overall Remarks (Requirement 1.3) -->
+                            <div class="mb-4">
+                                <label for="remarks" class="form-label fw-bold text-dark">
+                                    Overall Department Remarks / Handover Notes
+                                </label>
+                                <t t-if="clearance.state == 'pending'">
+                                    <textarea name="remarks" id="remarks" class="form-control" rows="3"
+                                              placeholder="Enter any missing items, damaged assets, or handover details..."><t t-esc="clearance.remarks or ''"/></textarea>
+                                </t>
+                                <t t-else="">
+                                    <div class="p-3 bg-light border rounded small">
+                                        <t t-esc="clearance.remarks or 'No overall remarks entered.'"/>
+                                    </div>
+                                    <div class="small text-muted mt-2">
+                                        Approved by <strong><t t-esc="clearance.approved_by_id.name or 'Authorized Head'"/></strong> on
+                                        <t t-if="clearance.approval_date">
+                                            <t t-esc="clearance.approval_date.strftime('%B %d, %Y at %I:%M %p')"/>
+                                        </t>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <a href="/my/clearances" class="btn btn-outline-secondary rounded-pill px-4">
+                                    <i class="fa fa-arrow-left me-1"/> Back to Clearances
+                                </a>
+                                <t t-if="clearance.state == 'pending'">
+                                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                                        <i class="fa fa-check-circle me-1"/> Approve Department Clearance
+                                    </button>
+                                </t>
+                            </div>
+
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>
+

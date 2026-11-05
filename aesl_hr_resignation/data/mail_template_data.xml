@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- 1. OFFICIAL ACCEPTANCE MEMORANDUM EMAIL (Image 1 - Allied CAT Format) -->
+        <record id="mail_template_resignation_accepted_cat_memo" model="mail.template">
+            <field name="name">Employee Resignation: Acceptance Memorandum (Allied CAT)</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">RESIGNATION FROM SERVICE - {{ object.emp_name.name }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.emp_name.work_email or object.emp_name.user_id.email }}</field>
+            <field name="email_cc">{{ object.immediate_boss.work_email or object.immediate_boss.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f4f6f9; padding: 25px 15px; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width: 700px; margin: 0 auto; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); padding: 35px 40px; color: #111111; line-height: 1.6;">
+
+        <!-- Memorandum Header -->
+        <div style="font-size: 13px; font-weight: 500; color: #555555; margin-bottom: 8px;">Memorandum</div>
+        
+        <!-- Allied CAT Banner -->
+        <table style="width: 100%; border-bottom: 2px solid #222222; padding-bottom: 15px; margin-bottom: 25px;">
+            <tr>
+                <td style="vertical-align: top; width: 45%;">
+                    <div style="background-color: #ffcc00; display: inline-block; padding: 4px 14px; border-radius: 2px;">
+                        <span style="font-size: 24px; font-weight: 900; color: #000000; letter-spacing: -1px;">&#9650; ALLIED</span>
+                        <span style="font-size: 20px; font-weight: 900; background: #000000; color: #ffcc00; padding: 2px 6px; margin-left: 4px; border-radius: 2px;">CAT</span>
+                    </div>
+                </td>
+                <td style="vertical-align: top; text-align: left; font-size: 11px; color: #333333; line-height: 1.4; padding-left: 15px;">
+                    <strong style="font-size: 13px; color: #000000;">Allied Engineering &amp; Services Ltd.</strong><br/>
+                    21/3, Sector No. 22, Korangi Industrial Area, Karachi-74900, G.P.O. Box 940, Karachi - 74200,<br/>
+                    UAN: 111 250 250 Tel: (021) 506 6901-13 Fax: (021) 506 6915 &amp; 16 email: admin@aesl.com.pk
+                </td>
+            </tr>
+        </table>
+
+        <!-- Reference & Meta Info -->
+        <table style="width: 100%; font-size: 13.5px; margin-bottom: 25px; border-collapse: collapse;">
+            <tr>
+                <td style="width: 15%; padding: 4px 0; font-weight: bold; color: #000000;">Ref</td>
+                <td style="width: 3%; padding: 4px 0; font-weight: bold;">:</td>
+                <td style="width: 82%; padding: 4px 0; font-weight: bold; color: #000000;">
+                    <t t-out="object.name or 'AESL/PER/2026'"/>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 0; font-weight: bold; color: #000000;">Date</td>
+                <td style="padding: 4px 0; font-weight: bold;">:</td>
+                <td style="padding: 4px 0;">
+                    <t t-out="(object.acceptance_date or object.write_date).strftime('%B %d, %Y') if (object.acceptance_date or object.write_date) else ''"/>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 0; font-weight: bold; color: #000000; vertical-align: top;">To</td>
+                <td style="padding: 4px 0; font-weight: bold; vertical-align: top;">:</td>
+                <td style="padding: 4px 0;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="font-weight: bold; font-size: 14px; color: #000000;">
+                                Mr./Ms. <t t-out="object.emp_name.name"/>
+                            </td>
+                            <td style="text-align: right; font-weight: bold; color: #000000;">
+                                Emp.No. <t t-out="object.emp_badge or object.emp_name.barcode or object.emp_name.id"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="color: #444444; font-size: 13px;">
+                                <t t-out="object.emp_designation.name or '-'"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="color: #444444; font-size: 13px;">
+                                <u><t t-out="object.station or object.emp_name.work_location_name or 'Karachi'"/></u>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Subject -->
+        <table style="width: 100%; font-size: 14px; margin-bottom: 25px; border-collapse: collapse;">
+            <tr>
+                <td style="width: 15%; padding: 4px 0; font-weight: bold; color: #000000;">Subject</td>
+                <td style="width: 3%; padding: 4px 0; font-weight: bold;">:</td>
+                <td style="width: 82%; padding: 4px 0; font-weight: bold; color: #000000; text-decoration: underline; letter-spacing: 0.5px;">
+                    RESIGNATION FROM SERVICE
+                </td>
+            </tr>
+        </table>
+
+        <!-- Body Text matching Image 1 -->
+        <div style="font-size: 14px; line-height: 1.8; color: #222222; text-align: justify; margin-bottom: 25px;">
+            <p>
+                Kindly refer to your resignation dated: <strong><t t-out="(object.resignation_date).strftime('%B %d, %Y') if object.resignation_date else '-'"/></strong>, please be advised that your resignation has been accepted and you have been relieved of your duties with effect from <strong><t t-out="(object.expected_exit_date).strftime('%B %d, %Y') if object.expected_exit_date else (object.exit_date or '-')"/></strong>.
+            </p>
+            <p style="margin-top: 20px;">
+                You are requested to kindly coordinate with the Accounts Department for the final settlement of your dues.
+            </p>
+            <t t-if="object.manager_remarks">
+                <p style="margin-top: 15px; font-style: italic; color: #555555; background: #fafafa; padding: 10px 14px; border-left: 3px solid #ffcc00;">
+                    <strong>Manager Remarks:</strong> <t t-out="object.manager_remarks"/>
+                </p>
+            </t>
+        </div>
+
+        <div style="margin-top: 40px; border-top: 1px dashed #cccccc; padding-top: 15px; font-size: 11.5px; color: #777777; text-align: center;">
+            This is an official memorandum generated by the Allied Engineering &amp; Services Ltd. Human Resources System.
+        </div>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 2. NOTIFICATION TO REPORTING MANAGER ON RESIGNATION SUBMISSION -->
+        <record id="mail_template_resignation_submitted_manager" model="mail.template">
+            <field name="name">Employee Resignation: Manager Notification (New Submission)</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">Action Required: Resignation Request Submitted by {{ object.emp_name.name }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.immediate_boss.work_email or object.immediate_boss.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #ffc107; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #333333; font-size: 18px;">New Resignation Request Awaiting Your Review</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #444444;">
+            Dear <strong><t t-out="object.immediate_boss.name or 'Manager'"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            An employee reporting directly to you has submitted a resignation request through the portal.
+        </p>
+
+        <div style="background: #fdfdfe; border: 1px solid #ebeef2; border-radius: 4px; padding: 15px; margin: 20px 0; font-size: 13.5px;">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="padding: 4px 0; color: #666; width: 40%;"><strong>Employee Name:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><strong><t t-out="object.emp_name.name"/></strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Designation:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><t t-out="object.emp_designation.name or '-'"/></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Department:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><t t-out="object.department.name or '-'"/></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Submission Date:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><t t-out="(object.resignation_date).strftime('%B %d, %Y') if object.resignation_date else '-'"/></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Proposed Notice Period:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><strong><t t-out="object.notice_period_display or dict(object._fields['notice_period_duration'].selection).get(object.notice_period_duration) or '-'"/></strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Proposed Exit Date:</strong></td>
+                    <td style="padding: 4px 0; color: #d9534f; font-weight: bold;">
+                        <t t-out="(object.expected_exit_date).strftime('%B %d, %Y') if object.expected_exit_date else (object.exit_date or '-')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0 0 0; color: #666; vertical-align: top;"><strong>Reason/Remarks:</strong></td>
+                    <td style="padding: 6px 0 0 0; color: #333; font-style: italic;">
+                        <t t-out="object.reason or '-'"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="font-size: 13.5px; color: #555555;">
+            Please log into your portal to review this request. You can <strong>Accept</strong> or <strong>Reject</strong> (with remarks) the resignation.
+        </p>
+
+        <div style="text-align: center; margin: 25px 0;">
+            <a t-att-href="object.get_portal_url()"
+               style="background-color: #0056b3; color: #ffffff; text-decoration: none; padding: 11px 25px; font-size: 14px; font-weight: bold; border-radius: 4px; display: inline-block;">
+                Review Resignation in Portal
+            </a>
+        </div>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 3. REJECTION NOTIFICATION TO EMPLOYEE -->
+        <record id="mail_template_resignation_rejected_employee" model="mail.template">
+            <field name="name">Employee Resignation: Rejection Notification</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">Update: Resignation Request Rejected - {{ object.emp_name.name }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.emp_name.work_email or object.emp_name.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #dc3545; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #dc3545; font-size: 18px;">Resignation Request Rejected</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #333333;">
+            Dear <strong><t t-out="object.emp_name.name"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            Your resignation request submitted on <strong><t t-out="(object.resignation_date).strftime('%B %d, %Y') if object.resignation_date else '-'"/></strong> has been reviewed and <strong>REJECTED</strong> by your Reporting Manager.
+        </p>
+
+        <div style="background: #fff8f8; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <strong style="color: #721c24; font-size: 13.5px;">Manager's Rejection Remarks:</strong>
+            <p style="margin: 8px 0 0 0; color: #491217; font-size: 13.5px; font-style: italic;">
+                <t t-out="object.rejection_reason or object.boss_remarks or 'No specific remarks entered.'"/>
+            </p>
+        </div>
+
+        <p style="font-size: 13.5px; color: #555555;">
+            Your employment continues as normal. If you have any questions, please coordinate directly with your Reporting Manager or the HR Department.
+        </p>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 4. REVOKE REQUEST NOTIFICATION TO MANAGER -->
+        <record id="mail_template_resignation_revoke_requested_manager" model="mail.template">
+            <field name="name">Employee Resignation: Revoke Requested Manager Notification</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">Action Required: Resignation Revoke Request from {{ object.emp_name.name }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.immediate_boss.work_email or object.immediate_boss.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #fd7e14; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #fd7e14; font-size: 18px;">Revoke Resignation Requested</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #333333;">
+            Dear <strong><t t-out="object.immediate_boss.name or 'Manager'"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            Employee <strong><t t-out="object.emp_name.name"/></strong>, currently serving their notice period (scheduled exit: <strong><t t-out="(object.expected_exit_date).strftime('%B %d, %Y') if object.expected_exit_date else (object.exit_date or '-')"/></strong>), has requested to <strong>REVOKE</strong> their resignation and continue employment.
+        </p>
+
+        <div style="background: #fff9f0; border: 1px solid #ffeeba; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <strong style="color: #856404; font-size: 13.5px;">Employee's Revoke Reason:</strong>
+            <p style="margin: 8px 0 0 0; color: #533f03; font-size: 13.5px; font-style: italic;">
+                <t t-out="object.revoke_reason or 'No reason specified.'"/>
+            </p>
+        </div>
+
+        <p style="font-size: 13.5px; color: #555555;">
+            Please log in to your portal to review this revoke request. You have the options to <strong>Accept Revoke</strong> (cancelling resignation and restoring employment) or <strong>Reject Revoke</strong> (continuing notice period).
+        </p>
+
+        <div style="text-align: center; margin: 25px 0;">
+            <a t-att-href="object.get_portal_url()"
+               style="background-color: #fd7e14; color: #ffffff; text-decoration: none; padding: 11px 25px; font-size: 14px; font-weight: bold; border-radius: 4px; display: inline-block;">
+                Review Revoke Request
+            </a>
+        </div>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 5. REVOKE ACCEPTANCE NOTIFICATION (EMPLOYEE & HR) -->
+        <record id="mail_template_resignation_revoke_accepted_employee" model="mail.template">
+            <field name="name">Employee Resignation: Revoke Accepted (Employment Continues)</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">Confirmed: Resignation Revoked - Employment Continues</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.emp_name.work_email or object.emp_name.user_id.email }}</field>
+            <field name="email_cc">{{ object.immediate_boss.work_email or object.immediate_boss.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #28a745; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #28a745; font-size: 18px;">Resignation Revoked - Employment Continues</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #333333;">
+            Dear <strong><t t-out="object.emp_name.name"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            Your request to revoke your resignation has been <strong>ACCEPTED</strong> by your Reporting Manager.
+        </p>
+
+        <div style="background: #f0fff4; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #155724; font-size: 13.5px;">
+                &#10004; Your resignation is officially <strong>cancelled</strong>.<br/>
+                &#10004; Your notice period has been stopped.<br/>
+                &#10004; Your regular employment with Allied Engineering &amp; Services Ltd. continues without interruption.
+            </p>
+            <t t-if="object.revoke_response_remarks">
+                <hr style="border: 0; border-top: 1px solid #c3e6cb; margin: 10px 0;"/>
+                <strong style="color: #155724; font-size: 13px;">Manager Remarks:</strong>
+                <p style="margin: 5px 0 0 0; color: #155724; font-size: 13px; font-style: italic;">
+                    <t t-out="object.revoke_response_remarks"/>
+                </p>
+            </t>
+        </div>
+
+        <p style="font-size: 13.5px; color: #555555;">
+            The HR department has been notified of this cancellation.
+        </p>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 6. REVOKE REJECTED NOTIFICATION TO EMPLOYEE -->
+        <record id="mail_template_resignation_revoke_rejected_employee" model="mail.template">
+            <field name="name">Employee Resignation: Revoke Rejected (Notice Period Continues)</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="subject">Notice: Resignation Revoke Rejected - Notice Period Continues</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.emp_name.work_email or object.emp_name.user_id.email }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #dc3545; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #dc3545; font-size: 18px;">Revoke Request Not Approved</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #333333;">
+            Dear <strong><t t-out="object.emp_name.name"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            Your request to revoke your resignation has been <strong>REJECTED</strong> by your Reporting Manager.
+        </p>
+
+        <div style="background: #fff8f8; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #721c24; font-size: 13.5px;">
+                Your resignation remains active, and your notice period continues as scheduled until <strong><t t-out="(object.expected_exit_date).strftime('%B %d, %Y') if object.expected_exit_date else (object.exit_date or '-')"/></strong>.
+            </p>
+            <t t-if="object.revoke_response_remarks">
+                <hr style="border: 0; border-top: 1px solid #f5c6cb; margin: 10px 0;"/>
+                <strong style="color: #721c24; font-size: 13px;">Manager Remarks:</strong>
+                <p style="margin: 5px 0 0 0; color: #721c24; font-size: 13px; font-style: italic;">
+                    <t t-out="object.revoke_response_remarks"/>
+                </p>
+            </t>
+        </div>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+        <!-- 7. NOTIFICATION TO DEPARTMENT HEAD FOR ASSET CLEARANCE (Admin, IT, HSE) -->
+        <record id="mail_template_resignation_clearance_head" model="mail.template">
+            <field name="name">Employee Resignation: Department Head Asset Clearance Request</field>
+            <field name="model_id" ref="aesl_hr_resignation.model_employee_resignation_clearance"/>
+            <field name="subject">Action Required: Asset Clearance for {{ object.employee_id.name }} ({{ object.department_name }})</field>
+            <field name="email_from">{{ (object.resignation_id.company_id.email or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.department_head_id.email or object.department_head_id.login }}</field>
+            <field name="body_html" type="html">
+<div style="background-color: #f7f9fc; padding: 25px 15px; font-family: Arial, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px; padding: 25px 30px;">
+        <div style="border-left: 4px solid #0056b3; padding-left: 12px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #0056b3; font-size: 18px;">Asset Clearance Request (<t t-out="object.department_name"/>)</h3>
+            <span style="font-size: 12px; color: #777777;">Allied Engineering &amp; Services Ltd.</span>
+        </div>
+
+        <p style="font-size: 14px; color: #333333;">
+            Dear <strong><t t-out="object.department_head_id.name or 'Department Head'"/></strong>,
+        </p>
+        <p style="font-size: 14px; color: #444444;">
+            A resignation has been accepted for employee <strong><t t-out="object.employee_id.name"/></strong>, currently serving their notice period. Please verify the return of all company assets allocated to this employee by your department.
+        </p>
+
+        <div style="background: #fdfdfe; border: 1px solid #ebeef2; border-radius: 4px; padding: 15px; margin: 20px 0; font-size: 13.5px;">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="padding: 4px 0; color: #666; width: 40%;"><strong>Employee:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><strong><t t-out="object.employee_id.name"/></strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Designation:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><t t-out="object.employee_id.job_id.name or '-'"/></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Department:</strong></td>
+                    <td style="padding: 4px 0; color: #111;"><strong><t t-out="object.department_name"/></strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #666;"><strong>Expected Exit Date:</strong></td>
+                    <td style="padding: 4px 0; color: #d9534f; font-weight: bold;">
+                        <t t-out="(object.resignation_id.expected_exit_date).strftime('%B %d, %Y') if object.resignation_id.expected_exit_date else (object.resignation_id.exit_date or '-')"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="font-size: 13.5px; color: #555555;">
+            Please log into your portal to verify the returned assets, uncheck items that have been received back, enter remarks for any missing or damaged property, and approve the clearance.
+        </p>
+
+        <div style="text-align: center; margin: 25px 0;">
+            <a t-att-href="object.get_portal_url()"
+               style="background-color: #0056b3; color: #ffffff; text-decoration: none; padding: 11px 25px; font-size: 14px; font-weight: bold; border-radius: 4px; display: inline-block;">
+                Review &amp; Approve Clearance
+            </a>
+        </div>
+    </div>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+
+    </data>
+</odoo>
+

@@ -1,0 +1,11 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_employee_resignation_portal,employee.resignation.portal,ivis_employee_details.model_employee_resignation,base.group_portal,1,1,1,0
+access_employee_resignation_user,employee.resignation.user,ivis_employee_details.model_employee_resignation,base.group_user,1,1,1,0
+access_employee_resignation_hr,employee.resignation.hr,ivis_employee_details.model_employee_resignation,hr.group_hr_user,1,1,1,1
+access_employee_resignation_manager,employee.resignation.manager,ivis_employee_details.model_employee_resignation,hr.group_hr_manager,1,1,1,1
+access_resignation_clearance_portal,employee.resignation.clearance.portal,model_employee_resignation_clearance,base.group_portal,1,1,0,0
+access_resignation_clearance_user,employee.resignation.clearance.user,model_employee_resignation_clearance,base.group_user,1,1,1,0
+access_resignation_clearance_hr,employee.resignation.clearance.hr,model_employee_resignation_clearance,hr.group_hr_user,1,1,1,1
+access_resignation_clearance_line_portal,employee.resignation.clearance.line.portal,model_employee_resignation_clearance_line,base.group_portal,1,1,0,0
+access_resignation_clearance_line_user,employee.resignation.clearance.line.user,model_employee_resignation_clearance_line,base.group_user,1,1,1,0
+access_resignation_clearance_line_hr,employee.resignation.clearance.line.hr,model_employee_resignation_clearance_line,hr.group_hr_user,1,1,1,1

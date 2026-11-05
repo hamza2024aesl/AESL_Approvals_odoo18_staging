@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Category -->
+        <record id="module_category_aesl_hr_resignation" model="ir.module.category">
+            <field name="name">Employee Resignation Workflow</field>
+            <field name="description">Access rights for employee resignation, departmental clearance, exit interview, and employee archiving.</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <!-- Record Rule: Portal/Employee Users see own or subordinate resignation records -->
+        <record id="rule_employee_resignation_portal_user" model="ir.rule">
+            <field name="name">Employee Resignation: Portal User Own or Subordinate Records</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="domain_force">['|', ('emp_name.user_id', '=', user.id), ('immediate_boss.user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Record Rule: Internal Users (Employee / Manager) -->
+        <record id="rule_employee_resignation_internal_user" model="ir.rule">
+            <field name="name">Employee Resignation: Internal User Own or Subordinate Records</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="domain_force">['|', ('emp_name.user_id', '=', user.id), ('immediate_boss.user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Record Rule: HR Users / Managers see all records -->
+        <record id="rule_employee_resignation_hr_user" model="ir.rule">
+            <field name="name">Employee Resignation: HR Users Full Access</field>
+            <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('hr.group_hr_user')), (4, ref('hr.group_hr_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Record Rule: Department Heads see only assigned clearance records -->
+        <record id="rule_resignation_clearance_head_user" model="ir.rule">
+            <field name="name">Department Clearance: Assigned Head Only</field>
+            <field name="model_id" ref="model_employee_resignation_clearance"/>
+            <field name="domain_force">['|', ('department_head_id', '=', user.id), ('department_head_id.partner_id', '=', user.partner_id.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user')), (4, ref('base.group_portal'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Record Rule: HR sees all clearance records -->
+        <record id="rule_resignation_clearance_hr_user" model="ir.rule">
+            <field name="name">Department Clearance: HR Users Full Access</field>
+            <field name="model_id" ref="model_employee_resignation_clearance"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('hr.group_hr_user')), (4, ref('hr.group_hr_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+    </data>
+</odoo>
