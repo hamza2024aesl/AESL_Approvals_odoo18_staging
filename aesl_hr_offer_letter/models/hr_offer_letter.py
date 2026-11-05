@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import uuid
-from odoo import api, fields, models, _
+from odoo import api, fields, models, http, _
 from odoo.exceptions import UserError, ValidationError
 
 
@@ -274,16 +274,32 @@ class HrOfferLetter(models.Model):
             if not rec.access_token:
                 rec.access_token = str(uuid.uuid4())
 
+    def _get_clean_base_url(self):
+        """Returns the actual accessible base URL, preferring the active HTTP request host over localhost."""
+        try:
+            if http.request and hasattr(http.request, 'httprequest') and http.request.httprequest:
+                host_url = http.request.httprequest.host_url.rstrip('/')
+                if host_url and 'localhost' not in host_url and '127.0.0.1' not in host_url:
+                    return host_url
+        except Exception:
+            pass
+
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
+        base_url = base_url.rstrip('/')
+        if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
+            base_url = 'http://test.aesl.com.pk:8017'
+        return base_url
+
     def get_accept_url(self):
         self.ensure_one()
         self._ensure_token()
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        base_url = self._get_clean_base_url()
         return f"{base_url}/offer/respond/{self.access_token}?action=accept"
 
     def get_reject_url(self):
         self.ensure_one()
         self._ensure_token()
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        base_url = self._get_clean_base_url()
         return f"{base_url}/offer/respond/{self.access_token}?action=reject"
 
     # ---------------------------------------------------------

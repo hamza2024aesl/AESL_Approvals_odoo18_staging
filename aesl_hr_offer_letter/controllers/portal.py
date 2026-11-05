@@ -6,7 +6,7 @@ from odoo.http import request
 
 class OfferLetterPortal(http.Controller):
 
-    @http.route('/offer/respond/<string:token>', type='http', auth='public', website=True, csrf=False)
+    @http.route('/offer/respond/<string:token>', type='http', auth='public', csrf=False)
     def offer_respond(self, token, action=None, **kw):
         """Candidate response route from email buttons (Accept / Reject)."""
         offer = request.env['hr.offer.letter'].sudo().search([('access_token', '=', token)], limit=1)
@@ -59,7 +59,7 @@ class OfferLetterPortal(http.Controller):
         # Default fallback view
         return request.render('aesl_hr_offer_letter.portal_offer_summary', {'offer': offer, 'token': token})
 
-    @http.route('/offer/download/<string:token>', type='http', auth='public', website=True)
+    @http.route('/offer/download/<string:token>', type='http', auth='public')
     def offer_download_pdf(self, token, **kw):
         """Allows candidate to view and download their official PDF Offer Letter."""
         offer = request.env['hr.offer.letter'].sudo().search([('access_token', '=', token)], limit=1)
