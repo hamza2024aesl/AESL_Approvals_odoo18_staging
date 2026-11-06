@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from markupsafe import Markup
 from odoo import api, fields, models, http, _
 from odoo.exceptions import UserError
 import uuid
@@ -137,7 +138,7 @@ class HrAssetAllocation(models.Model):
 
         # Post in allocation record chatter
         self.message_post(
-            body=_("<b>Asset Allocation Approved</b><br/>Department: %s<br/>Approved By: %s<br/>Allocated Items: %d of %d") % (
+            body=Markup("<b>Asset Allocation Approved</b><br/>Department: %s<br/>Approved By: %s<br/>Allocated Items: %d of %d") % (
                 dept_label, user_name, self.allocated_count, self.total_count
             ),
             subtype_xmlid='mail.mt_comment'
@@ -146,7 +147,7 @@ class HrAssetAllocation(models.Model):
         # Post in employee record chatter
         if self.employee_id:
             self.employee_id.message_post(
-                body=_("<b>%s Asset Allocation Completed</b><br/>Checklist approved by %s on %s.") % (
+                body=Markup("<b>%s Asset Allocation Completed</b><br/>Checklist approved by %s on %s.") % (
                     dept_label,
                     user_name,
                     fields.Datetime.now().strftime('%Y-%m-%d %H:%M')

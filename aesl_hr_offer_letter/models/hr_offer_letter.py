@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import uuid
+from markupsafe import Markup
 from odoo import api, fields, models, http, _
 from odoo.exceptions import UserError, ValidationError
 
@@ -338,7 +339,7 @@ class HrOfferLetter(models.Model):
 
         self.state = 'sent'
         self.message_post(
-            body=_(
+            body=Markup(
                 "<strong>Employment Offer Letter Sent:</strong><br/>"
                 "- Recipient: %s (%s)<br/>"
                 "- Gross Salary: %s %s<br/>"
@@ -418,7 +419,7 @@ class HrOfferLetter(models.Model):
         # 4. Notify predefined group (HR, Managers, Admins)
         self._send_onboarding_notification(employee)
 
-        self.message_post(body=_(
+        self.message_post(body=Markup(
             "<strong>Employee Record Created Successfully:</strong><br/>"
             "- Employee: <a href='#' data-oe-model='hr.employee' data-oe-id='%s'>%s</a><br/>"
             "- Contract: <a href='#' data-oe-model='hr.contract' data-oe-id='%s'>%s</a><br/>"

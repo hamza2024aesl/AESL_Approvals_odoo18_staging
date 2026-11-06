@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from markupsafe import Markup
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
@@ -101,7 +102,7 @@ class EmployeeResignationClearance(models.Model):
             })
 
             rec.message_post(
-                body=_("<b>%s Clearance Approved</b><br/>Approved by: %s<br/>Returned Assets: %d of %d<br/>Remarks: %s") % (
+                body=Markup("<b>%s Clearance Approved</b><br/>Approved by: %s<br/>Returned Assets: %d of %d<br/>Remarks: %s") % (
                     rec.department_name,
                     self.env.user.name,
                     rec.returned_count,

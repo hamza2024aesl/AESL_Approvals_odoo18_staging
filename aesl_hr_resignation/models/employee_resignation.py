@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from markupsafe import Markup
 from dateutil.relativedelta import relativedelta
 from odoo import models, fields, api, http, _
 from odoo.exceptions import ValidationError, UserError
@@ -397,7 +398,7 @@ class EmployeeResignation(models.Model):
                 rec._process_asset_removal()
 
                 rec.message_post(
-                    body=_(
+                    body=Markup(
                         "<b>🎉 Departmental Clearance Completed!</b><br/>"
                         "Admin, IT, and HSE departments have all approved the asset clearance.<br/>"
                         "Next Stage: <b>Exit Interview Pending</b> (to be conducted by HR)."
@@ -436,7 +437,7 @@ class EmployeeResignation(models.Model):
                 'exit_interview_date': rec.exit_interview_date or fields.Date.today(),
             })
             rec.message_post(
-                body=_("<b>Exit Interview Completed</b> by HR %s.") % (self.env.user.name),
+                body=Markup("<b>Exit Interview Completed</b> by HR %s.") % (self.env.user.name),
                 subtype_xmlid="mail.mt_comment"
             )
 
@@ -467,7 +468,7 @@ class EmployeeResignation(models.Model):
             })
 
             rec.message_post(
-                body=_(
+                body=Markup(
                     "<b>🔒 Offboarding Complete: Employee & User Archived</b><br/>"
                     "Employee: %s (Archived)<br/>"
                     "Portal User: %s (Deactivated - Login Disabled)<br/>"
@@ -572,7 +573,7 @@ class EmployeeResignation(models.Model):
                 rec._process_asset_removal()
 
                 rec.message_post(
-                    body=_(
+                    body=Markup(
                         "<b>🎉 Departmental Clearance Completed!</b><br/>"
                         "Admin, IT, and HSE departments have all approved the asset clearance.<br/>"
                         "Next Stage: <b>Exit Interview Pending</b> (to be conducted by HR)."
@@ -605,7 +606,7 @@ class EmployeeResignation(models.Model):
                 'exit_interview_date': rec.exit_interview_date or fields.Date.today(),
             })
             rec.message_post(
-                body=_("<b>Exit Interview Completed</b> by HR %s.") % (self.env.user.name),
+                body=Markup("<b>Exit Interview Completed</b> by HR %s.") % (self.env.user.name),
                 subtype_xmlid="mail.mt_comment"
             )
 
@@ -636,7 +637,7 @@ class EmployeeResignation(models.Model):
             })
 
             rec.message_post(
-                body=_(
+                body=Markup(
                     "<b>🔒 Offboarding Complete: Employee & User Archived</b><br/>"
                     "Employee: %s (Archived)<br/>"
                     "Portal User: %s (Deactivated - Login Disabled)<br/>"

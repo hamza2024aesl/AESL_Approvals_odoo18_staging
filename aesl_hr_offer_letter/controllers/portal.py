@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from markupsafe import Markup
 from odoo import http, fields, _
 from odoo.http import request
 
@@ -21,7 +22,7 @@ class OfferLetterPortal(http.Controller):
                     'response_date': fields.Datetime.now(),
                 })
                 offer.sudo().message_post(
-                    body=_(
+                    body=Markup(
                         "<p style='color: green;'><strong>🎉 Offer Accepted by Candidate</strong></p>"
                         "<p>The candidate <strong>%s</strong> has accepted the employment offer via email link on %s.</p>"
                         "<p>HR may now review and proceed with <strong>Create Employee</strong>.</p>"
@@ -44,7 +45,7 @@ class OfferLetterPortal(http.Controller):
                         'response_date': fields.Datetime.now(),
                     })
                     offer.sudo().message_post(
-                        body=_(
+                        body=Markup(
                             "<p style='color: #c92a2a;'><strong>❌ Offer Rejected by Candidate</strong></p>"
                             "<p>Candidate <strong>%s</strong> rejected the offer on %s.</p>"
                             "<p><strong>Reason / Feedback provided:</strong><br/>%s</p>"
