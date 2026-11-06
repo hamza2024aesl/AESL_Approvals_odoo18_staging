@@ -122,6 +122,14 @@
                                     <field name="trustee_ids" widget="many2many_tags" readonly="1"/>
                                     <field name="second_trustee_ids" widget="many2many_tags" readonly="1"/>
                                 </group>
+                                <group>
+                                    <field name="hr_approved_date" readonly="1"/>
+                                    <field name="hod_approved_date" readonly="1"/>
+                                    <field name="finance_approved_date" readonly="1"/>
+                                    <field name="trustee1_approved_date" readonly="1"/>
+                                    <field name="trustee2_approved_date" readonly="1"/>
+                                    <field name="applicant_approved_date" readonly="1"/>
+                                </group>
                             </group>
                         </page>
                     </notebook>

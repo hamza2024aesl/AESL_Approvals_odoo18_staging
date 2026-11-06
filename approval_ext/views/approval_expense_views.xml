@@ -200,11 +200,14 @@
                 <header>
                     <button name="action_approve" string="Approve"
                             type="object" class="oe_highlight" invisible="state in ('draft','approved')"/>
+                    <button name="action_adjust_by_allowance" string="Adjusted"
+                            type="object" class="oe_highlight" invisible="state in ('draft','adjusted','approved')"/>
+
                     <button name="action_refuse" string="Refuse" invisible="state in ('draft','approved')"
                             type="object"/>
                     <field name="state"
                            widget="statusbar"
-                           statusbar_visible="draft,submitted,hr_approved,approved,refused"/>
+                           statusbar_visible="draft,submitted,hr_approved,adjusted,approved,refused"/>
                 </header>
                 <sheet>
                     <div class="oe_title">

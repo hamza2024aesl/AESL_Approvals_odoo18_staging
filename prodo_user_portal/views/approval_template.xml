@@ -271,25 +271,48 @@
                                     </t>
                                 </select>
                             </div>
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label class="fw-bold">Employee Name</label>-->
+<!--                                <input type="text" class="form-control" t-att-value="employee_name"/>-->
+<!--                            </div>-->
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Employee Name</label>
-                                <input type="text" class="form-control" t-att-value="employee_name" readonly="1"/>
+                                <t t-if="is_assistant">
+                                    <select name="employee_id" id="employee_select" class="form-control" required="required">
+                                        <t t-foreach="employees" t-as="emp">
+                                            <option t-att-value="emp.id"
+                                                    t-att-selected="emp.id == selected_employee_id"
+                                                    t-att-data-cnic="emp.ssnid or ''"
+                                                    t-att-data-mobile="emp.mobile_phone or ''"
+                                                    t-att-data-job="emp.job_id.name or ''"
+                                                    t-att-data-location="emp.work_location_id.name or ''"
+                                                    t-att-data-dept="emp.travel_department_id.name or ''"
+                                                    t-att-data-regno="emp.identification_id or ''">
+                                                <t t-esc="emp.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </t>
+                                <t t-else="">
+                                    <input type="text" class="form-control" t-att-value="employee_name" readonly="readonly"/>
+                                    <input type="hidden" name="employee_id" t-att-value="selected_employee_id"/>
+                                </t>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Registration No</label>
-                                <input type="text" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
+                                <input type="text" id="employee_regno" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Department</label>
-                                <input type="text" class="form-control" t-att-value="employee_department_id" readonly="1"/>
+                                <input type="text" id="employee_dept" class="form-control" t-att-value="employee_travel_department_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Region</label>
-                                <input type="text" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
+                                <input type="text" id="employee_location" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Designation</label>
-                                <input type="text" class="form-control" t-att-value="employee_job_id" readonly="1"/>
+                                <input type="text" id="employee_job" class="form-control" t-att-value="employee_job_id" readonly="1"/>
                             </div>
                         </div>
 
@@ -431,6 +454,26 @@
                     </form>
                 </div>
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    var sel = document.getElementById('employee_select');
+                    if (!sel) return;
+                    sel.addEventListener('change', function () {
+                        var o = sel.selectedOptions[0];
+                        if (!o) return;
+                        var map = {
+                            employee_regno: o.dataset.regno,
+                            employee_dept: o.dataset.dept,
+                            employee_location: o.dataset.location,
+                            employee_job: o.dataset.job
+                        };
+                        Object.keys(map).forEach(function (id) {
+                            var el = document.getElementById(id);
+                            if (el) el.value = map[id] || '';
+                        });
+                    });
+                });
+            </script>
         </t>
     </template>
     <template id="travel_request_detail_template">
@@ -504,25 +547,48 @@
                                     <input type="hidden" name="category_id" t-att-value="request_rec.category_id.id"/>
                                 </t>
                             </div>
+<!--                            <div class="col-md-6 mb-3">-->
+<!--                                <label class="fw-bold">Employee Name</label>-->
+<!--                                <input type="text" class="form-control" t-att-value="employee_name"/>-->
+<!--                            </div>-->
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Employee Name</label>
-                                <input type="text" class="form-control" t-att-value="employee_name" readonly="1"/>
+                                <t t-if="is_assistant and is_editable">
+                                    <select name="employee_id" id="employee_select" class="form-control" required="required">
+                                        <t t-foreach="employees" t-as="emp">
+                                            <option t-att-value="emp.id"
+                                                    t-att-selected="emp.id == selected_employee_id"
+                                                    t-att-data-cnic="emp.ssnid or ''"
+                                                    t-att-data-mobile="emp.mobile_phone or ''"
+                                                    t-att-data-job="emp.job_id.name or ''"
+                                                    t-att-data-location="emp.work_location_id.name or ''"
+                                                    t-att-data-dept="emp.travel_department_id.name or ''"
+                                                    t-att-data-regno="emp.identification_id or ''">
+                                                <t t-esc="emp.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </t>
+                                <t t-else="">
+                                    <input type="text" class="form-control" t-att-value="employee_name" readonly="readonly"/>
+                                    <input type="hidden" name="employee_id" t-att-value="selected_employee_id"/>
+                                </t>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Registration No</label>
-                                <input type="text" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
+                                <input type="text" id="employee_regno" class="form-control" t-att-value="employee_identification_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Department</label>
-                                <input type="text" class="form-control" t-att-value="employee_department_id" readonly="1"/>
+                                <input type="text" id="employee_dept" class="form-control" t-att-value="employee_travel_department_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Region</label>
-                                <input type="text" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
+                                <input type="text" id="employee_location" class="form-control" t-att-value="employee_work_location_id" readonly="1"/>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Designation</label>
-                                <input type="text" class="form-control" t-att-value="employee_job_id" readonly="1"/>
+                                <input type="text" id="employee_job" class="form-control" t-att-value="employee_job_id" readonly="1"/>
                             </div>
                         </div>
 
@@ -727,6 +793,26 @@
                     </t>
                 </div>
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    var sel = document.getElementById('employee_select');
+                    if (!sel) return;
+                    sel.addEventListener('change', function () {
+                        var o = sel.selectedOptions[0];
+                        if (!o) return;
+                        var map = {
+                            employee_regno: o.dataset.regno,
+                            employee_dept: o.dataset.dept,
+                            employee_location: o.dataset.location,
+                            employee_job: o.dataset.job
+                        };
+                        Object.keys(map).forEach(function (id) {
+                            var el = document.getElementById(id);
+                            if (el) el.value = map[id] || '';
+                        });
+                    });
+                });
+            </script>
         </t>
     </template>
 <template id="travel_expense_list_portal">
@@ -818,7 +904,7 @@
                                     onchange="if (this.value) window.location = '/my/travel/expense/new/' + this.value;">
                                 <option value="">-- Not linked / enter manually --</option>
                                 <t t-foreach="linkable_requests" t-as="lr">
-                                    <option t-att-value="lr.id"><t t-esc="lr.name"/> - <t t-esa="lr.travel_request_type"/> - <t t-if="lr.travel_schedule_ids">
+                                    <option t-att-value="lr.id"><t t-esc="lr.name"/> - <t t-esc="lr.travel_request_type"/> - <t t-if="lr.travel_schedule_ids">
                                         <t t-esc="lr.travel_schedule_ids[0].arrival_destination"/>
                                     </t></option>
                                 </t>
@@ -1744,4 +1830,3 @@
 <!--        </t>-->
 <!--    </template>-->
 </odoo>
-

@@ -8,6 +8,7 @@
 
             <xpath expr="//field[@name='department_id']" position="after">
                 <field name="travel_department_id"/>
+                <field name="is_manager_assistant" widget="boolean_toggle"/>
             </xpath>
 
         </field>

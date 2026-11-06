@@ -668,6 +668,8 @@ class HrLeaveInherit(models.Model):
             leave.duration_display = display
 
     def _validate_leave_days(self):
+        if self.env.user.has_group('hr_payroll.group_hr_payroll_manager'):
+            return
         for leave in self:
             # Block full-day leaves on weekends if no working days exist
             if leave.number_of_days == 0:

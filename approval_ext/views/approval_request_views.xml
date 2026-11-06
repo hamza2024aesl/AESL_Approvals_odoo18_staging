@@ -114,6 +114,7 @@
                 <!-- 4. Administration Section -->
                 <group name="administration_section" string="Administration Section" class="mt-3">
                     <field name="admin_remarks"/>
+                    <field name="is_current_user_assistant" invisible="1"/>
                 </group>
                 
                 <hr class="mt-4 mb-4" style="border-top: 1px solid #dee2e6;"/>

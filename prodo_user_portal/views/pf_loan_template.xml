@@ -447,19 +447,34 @@
                                 <label class="fw-bold mb-1">Remarks / Approval Notes :</label>
                                 <textarea class="form-control bg-light" rows="2" readonly="1" placeholder="Approver notes will appear here..."><t t-esc="loan.remarks if loan and loan.remarks else ''"/></textarea>
                             </div>
+                            <div class="col-md-6 mt-3">
+                                <div class="border rounded p-3 text-center bg-light">
+                                    <div class="fw-bold text-muted mb-4">HR Approved:<br/> <t t-esc="loan.hr_approver_id.name if loan and loan.state not in ('draft','cancel') and loan.hr_approver_id.name else ''"/>
+                                        <t t-if="loan and loan.hr_approved_date and loan.state not in ('draft','cancel')">
+                                                <br/>
+                                                <span class="small fw-normal">
+                                                    <t t-esc="loan.hr_approved_date" t-options="{'widget': 'datetime'}"/>
+                                                </span>
+                                        </t>
+                                    </div>
+                                    <div class="border-top pt-1 text-muted small"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <div class="border rounded p-3 text-center bg-light">
+                                    <div class="fw-bold text-muted mb-4">Head of Department:<br/> <t t-esc="loan.hod_approver_id.name if loan and loan.state not in ('draft','cancel','waiting_hod') and loan.hod_approver_id.name else ''"/>
+                                        <t t-if="loan and loan.hr_approved_date and loan.state not in ('draft','cancel','waiting_hod')">
+                                                <br/>
+                                                <span class="small fw-normal">
+                                                    <t t-esc="loan.hod_approved_date" t-options="{'widget': 'datetime'}"/>
+                                                </span>
+                                        </t>
+                                    </div>
 
-                            <div class="col-md-6 mt-3">
-                                <div class="border rounded p-3 text-center bg-light">
-                                    <div class="fw-bold text-muted mb-4">Head of Department: <t t-esc="loan.hod_approver_id.name if loan and loan.hod_approver_id.name else ''"/></div>
                                     <div class="border-top pt-1 text-muted small"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6 mt-3">
-                                <div class="border rounded p-3 text-center bg-light">
-                                    <div class="fw-bold text-muted mb-4">HR Approved: <t t-esc="loan.hr_approver_id.name if loan and loan.hr_approver_id.name else ''"/></div>
-                                    <div class="border-top pt-1 text-muted small"></div>
-                                </div>
-                            </div>
+
 
                         </div>
 
@@ -706,22 +721,60 @@
                             <div class="row text-center mt-4">
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Prepared by: <t t-esc="loan.finance_approver_id if loan and loan.finance_approver_id else ''"/></div>
-                                        <div class="border-top pt-1 text-muted small">Signature</div>
+                                        <div class="fw-bold text-muted mb-4">Prepared/Approved by Finance: <br/>
+                                            <t t-esc="loan.finance_approver_id.name if loan and loan.state not in ('draft','cancel','waiting_hod','waiting_finance') and loan.finance_approver_id else ''"/>
+                                            <t t-if="loan and loan.finance_approved_date and loan.state not in ('draft','cancel','waiting_hod')">
+                                                <br/>
+                                                <span class="small fw-normal">
+                                                    <t t-esc="loan.finance_approved_date" t-options="{'widget': 'datetime'}"/>
+                                                </span>
+                                        </t>
+                                        </div>
+                                        <div class="border-top pt-1 text-muted small"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Approved by Trustee1 <t t-esc="loan.trustee_approver_id if loan and loan.trustee_approver_id else ''"/></div>
-                                        <div class="border-top pt-1 text-muted small">Signature</div>
+                                        <div class="fw-bold text-muted mb-4">Approved by Trustee1 <br/>
+                                            <t t-esc="loan.trustee_approver_id.name if loan and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee') and loan.trustee_approver_id else ''"/>
+                                            <t t-if="loan and loan.trustee1_approved_date and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee')">
+                                                <br/>
+                                                <span class="small fw-normal">
+                                                    <t t-esc="loan.trustee1_approved_date" t-options="{'widget': 'datetime'}"/>
+                                                </span>
+                                        </t>
+                                        </div>
+                                        <div class="border-top pt-1 text-muted small"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="border rounded p-3 bg-white">
-                                        <div class="fw-bold text-muted mb-4">Approved by Trustee2 <t t-esc="loan.second_trustee_approver_id if loan and loan.second_trustee_approver_id else ''"/></div>
-                                        <div class="border-top pt-1 text-muted small">Signature</div>
+                                        <div class="fw-bold text-muted mb-4">Approved by Trustee2 <br/>
+                                            <t t-esc="loan.second_trustee_approver_id.name if loan and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee','waiting_trustee_second') and loan.second_trustee_approver_id else ''"/>
+                                            <t t-if="loan and loan.trustee2_approved_date and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee','waiting_trustee_second')">
+                                                <br/>
+                                                <span class="small fw-normal">
+                                                    <t t-esc="loan.trustee2_approved_date" t-options="{'widget': 'datetime'}"/>
+                                                </span>
+                                        </t>
+                                        </div>
+                                        <div class="border-top pt-1 text-muted small"></div>
                                     </div>
                                 </div>
+                                <div class="col-md-4 mb-2">
+                                <div class="border rounded p-3 bg-white">
+                                    <div class="fw-bold text-muted mb-4">Approved by Trustee2 <br/>
+                                        <t t-esc="loan.second_trustee_approver_id.name if loan and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee','waiting_trustee_second') and loan.second_trustee_approver_id else ''"/>
+                                        <t t-if="loan and loan.trustee2_approved_date and loan.state not in ('draft','cancel','waiting_hod','waiting_finance','waiting_trustee','waiting_trustee_second')">
+                                            <br/>
+                                            <span class="small fw-normal">
+                                                <t t-esc="loan.trustee2_approved_date" t-options="{'widget': 'datetime'}"/>
+                                            </span>
+                                        </t>
+                                    </div>
+                                    <div class="border-top pt-1 text-muted small"></div>
+                                </div>
+                            </div>
                             </div>
                         </div>
 

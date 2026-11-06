@@ -67,14 +67,25 @@ class HrAppraisal(models.Model):
 
     @api.depends('employee_id','appraisal_employee_id')
     def _compute_appraisal_vals(self):
+        certificate_selection = dict(
+            self.env['hr.employee']._fields['certificate']._description_selection(self.env)
+        )
         for rec in self:
+            rec.degree = ''
+            rec.education = ''
+            found = False
             for resume in rec.employee_id.resume_line_ids:
                 if resume.line_type_id.name.lower() == 'education':
                     rec.degree = resume.degree
                     rec.education = resume.name
-                else:
-                    rec.degree = ''
-                    rec.education = ''
+                    found = True
+                    break
+            if not found and rec.employee_id.study_field:
+                rec.degree = rec.employee_id.study_field
+                # key's label (e.g. 'dae' -> 'D.A.E')
+                rec.education = certificate_selection.get(
+                    rec.employee_id.certificate, rec.employee_id.certificate or ''
+                )
 
     def _compute_is_first_manager(self):
         for rec in self:
@@ -852,3 +863,13 @@ class HrAppraisal(models.Model):
     def _unlink_if_new_or_cancel(self):
         if any(appraisal.state not in ['draft', 'cancel'] for appraisal in self):
             raise UserError(_("You cannot delete appraisal which is not in draft or cancelled state"))
+
+    def message_notify(self, *args, **kwargs):
+        if self.env.context.get('skip_appraisal_done_notify'):
+            return self.env['mail.message']
+        return super().message_notify(*args, **kwargs)
+
+    def write(self, vals):
+        if vals.get('state') == 'done':
+            self = self.with_context(skip_appraisal_done_notify=True)
+        return super().write(vals)

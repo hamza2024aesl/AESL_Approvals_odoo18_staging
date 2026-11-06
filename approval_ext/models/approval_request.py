@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, AccessError
+
 
 class ApprovalRequest(models.Model):
     _inherit = 'approval.request'
 
     # Employee Section Fields
-    employee_id = fields.Many2one('hr.employee', string='Employee')
+    employee_id = fields.Many2one('hr.employee', string='Employee', default=lambda self: self.env.user.employee_id, )
     employee_reg_no = fields.Char(string='Employee Reg No', related='employee_id.identification_id', readonly=True)
-    employee_location_id = fields.Many2one('hr.work.location', string='Region', related='employee_id.work_location_id', readonly=True)
-    employee_department_id = fields.Many2one('hr.department', string='Department', related='employee_id.department_id', readonly=True)
-    employee_travel_department_id = fields.Many2one('hr.department', string='Travel Department', related='employee_id.travel_department_id', readonly=True)
+    employee_location_id = fields.Many2one('hr.work.location', string='Region', related='employee_id.work_location_id',
+                                           readonly=True)
+    employee_department_id = fields.Many2one('hr.department', string='Department', related='employee_id.department_id',
+                                             readonly=True)
+    employee_travel_department_id = fields.Many2one('hr.department', string='Travel Department',
+                                                    related='employee_id.travel_department_id', readonly=True)
     employee_cnic = fields.Char(string='CNIC', related='employee_id.identification_id', readonly=True)
     employee_dob = fields.Date(string='DOB', related='employee_id.birthday', readonly=True)
-    employee_designation_id = fields.Many2one('hr.job', string='Designation', related='employee_id.job_id', readonly=True)
+    employee_designation_id = fields.Many2one('hr.job', string='Designation', related='employee_id.job_id',
+                                              readonly=True)
     employee_mobile = fields.Char(string='Mobile No', related='employee_id.mobile_phone', readonly=True)
     # Employee Section
     employee_remarks = fields.Text(string='Details:')
@@ -37,12 +42,12 @@ class ApprovalRequest(models.Model):
         ('car', 'Car'),
         ('bus', 'Bus')
     ], string='Travel Mode')
-    
+
     travel_request_type = fields.Selection([
         ('domestic', 'Domestic'),
         ('international', 'International')
     ], string='Travel Request Type')
-    
+
     tickets_required = fields.Selection([
         ('yes', 'Yes'),
         ('no', 'No')
@@ -61,22 +66,59 @@ class ApprovalRequest(models.Model):
     second_approver_id = fields.Many2one('res.users', string="Second Approver", readonly=True)
     second_approver_remarks = fields.Text(string="Second Approver Remarks")
     second_approver_date = fields.Datetime(string="Second Approval Date", readonly=True)
+    is_current_user_assistant = fields.Boolean(compute='_compute_is_current_user_assistant')
+
+    @api.depends_context('uid')
+    def _compute_is_current_user_assistant(self):
+        flag = bool(
+            self.env.user.employee_id.is_manager_assistant)  # yahan apni hr.employee wali field ka asli naam likhna
+        for rec in self:
+            rec.is_current_user_assistant = flag
+
+    # @api.onchange('request_owner_id')
+    # def _onchange_request_owner_id_set_employee(self):
+    #     if self.request_owner_id:
+    #         employee = self.env['hr.employee'].search([('user_id', '=', self.request_owner_id.id)], limit=1)
+    #         if employee:
+    #             self.employee_id = employee.id
 
     @api.onchange('request_owner_id')
     def _onchange_request_owner_id_set_employee(self):
-        if self.request_owner_id:
-            employee = self.env['hr.employee'].search([('user_id', '=', self.request_owner_id.id)], limit=1)
+        # assistant ne agar khud select kiya ho to override mat karo
+        if self.request_owner_id and not self.is_current_user_assistant:
+            employee = self.env['hr.employee'].search(
+                [('user_id', '=', self.request_owner_id.id)], limit=1)
             if employee:
                 self.employee_id = employee.id
+
+    def _check_employee_change_allowed(self, vals):
+        if 'employee_id' not in vals or self.env.su:
+            return
+        user = self.env.user
+        if user.employee_id.is_manager_assistant or user.has_group('hr.group_hr_manager'):
+            return
+        if vals['employee_id'] != user.employee_id.id:
+            raise AccessError("You can create your request only.")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self._check_employee_change_allowed(vals)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._check_employee_change_allowed(vals)
+        return super().write(vals)
 
     @api.onchange('employee_id')
     def _onchange_employee_sync_location(self):
         """ Sync standard 'location' field for Odoo's validation """
         if self.employee_id and self.employee_id.work_location_id:
             self.location = self.employee_id.work_location_id.name
+
     def action_confirm(self):
-        """ 
-        Simplified approval flow: 
+        """
+        Simplified approval flow:
         1. Match Requester's Region & Department with Approval Configuration.
         2. Assign the specific Approver(s) from the configuration.
         3. Only these approvers will have Approve/Refuse access.
@@ -89,17 +131,17 @@ class ApprovalRequest(models.Model):
                 rec.location = rec.employee_id.work_location_id.name
             if rec.request_status == 'refused':
                 rec.sudo().write({'request_status': 'draft'})
-            
+
             # Unlink default approvers BEFORE super() to prevent default notifications to line managers
             rec.sudo().approver_ids.unlink()
 
             # if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
             if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.travel_department_id:
                 continue
-            
+
             # Determine Config Type
             c_type = rec.travel_request_type or 'domestic'
-            
+
             # Find matching approver lines (1st approver only)
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
@@ -114,7 +156,7 @@ class ApprovalRequest(models.Model):
                     dict(self._fields['travel_request_type'].selection).get(c_type, c_type).capitalize(),
                     rec.employee_id.work_location_id.name,
                     # rec.employee_id.department_id.name
-                    rec.employee_id.traveldepartment_id.name
+                    rec.employee_id.travel_department_id.name
                 ))
 
             # Set custom ones so super().action_confirm() sees them
@@ -129,14 +171,15 @@ class ApprovalRequest(models.Model):
                     rec.sudo().write({'first_approver_id': line.employee_id.user_id.id})
 
         # Call super with context to suppress standard approval notifications
-        ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
+        ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True,
+                   tracking_disable=True, mail_notrack=True)
         res = super(ApprovalRequest, self.with_context(ctx)).action_confirm()
 
         for rec in self:
             # if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.department_id:
             if not rec.employee_id or not rec.employee_id.work_location_id or not rec.employee_id.travel_department_id:
                 continue
-            
+
             c_type = rec.travel_request_type or 'domestic'
             approver_lines = self.env['approval.config.line'].sudo().search([
                 ('config_id.config_type', '=', c_type),
@@ -164,6 +207,8 @@ class ApprovalRequest(models.Model):
             if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
                 base_url = 'http://odoo.aesl.com.pk:8018'
             travel_url = f"{base_url}/my/travel/view/{request.id}"
+            days = (request.date_end - request.date_start).days + 1 if request.date_start and request.date_end else 1
+            date_start_str = request.date_start.strftime('%d-%b-%Y') if request.date_start else ''
             subject = _("Approval Required: %s ") % request.name
             # body = _("please review the request and take action")
             body = f"""
@@ -187,19 +232,20 @@ class ApprovalRequest(models.Model):
         """ Create or update a pending time off record linked to this travel request. """
         if request.date_start and request.date_end:
             # Context to prevent automatic notifications/activities to Line Manager
-            ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
-            
+            ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True,
+                       tracking_disable=True, mail_notrack=True)
+
             # Search for 'Official Visit' leave type dynamically based on employee's company
             leave_type = self.env['hr.leave.type'].sudo().search([
                 ('name', 'ilike', 'Official Visit'),
                 '|', ('company_id', '=', False), ('company_id', '=', request.employee_id.company_id.id)
             ], limit=1)
-            
+
             if not leave_type:
                 leave_type = self.env['hr.leave.type'].sudo().search([
                     '|', ('company_id', '=', False), ('company_id', '=', request.employee_id.company_id.id)
                 ], limit=1)
-            
+
             if leave_type:
                 leave_vals = {
                     'name': f"Travel Approval: {request.name}",
@@ -210,9 +256,9 @@ class ApprovalRequest(models.Model):
                     'date_from': request.date_start,
                     'date_to': request.date_end,
                     'number_of_days': (request.date_end - request.date_start).days + 1,
-                    'state': 'confirm', # Force 'To Approve' state on creation
+                    'state': 'confirm',  # Force 'To Approve' state on creation
                 }
-                
+
                 if request.time_off_id:
                     # Update existing record if it was refused or still pending
                     request.time_off_id.sudo().with_context(ctx).write(leave_vals)
@@ -220,7 +266,7 @@ class ApprovalRequest(models.Model):
                 else:
                     leave = self.env['hr.leave'].sudo().with_context(ctx).create(leave_vals)
                     request.sudo().write({'time_off_id': leave.id})
-                
+
                 # Double check it stays in 'To Approve' (confirm) state
                 if leave.state in ['refuse', 'cancel']:
                     leave.sudo().with_context(ctx).action_reset_confirm()
@@ -236,7 +282,8 @@ class ApprovalRequest(models.Model):
     def action_approve(self, approver=None):
         """ When approved, handle sequential approver for international, approve Time Off, and send notifications. """
         for rec in self:
-            curr_approver = approver or rec.approver_ids.filtered(lambda a: a.user_id == self.env.user and a.status == 'pending')
+            curr_approver = approver or rec.approver_ids.filtered(
+                lambda a: a.user_id == self.env.user and a.status == 'pending')
             if curr_approver and rec.first_approver_id and curr_approver.user_id.id == rec.first_approver_id.id:
                 rec.sudo().write({'first_approver_date': fields.Datetime.now()})
             elif curr_approver and rec.second_approver_id and curr_approver.user_id.id == rec.second_approver_id.id:
@@ -251,16 +298,18 @@ class ApprovalRequest(models.Model):
                     ('travel_department_id', '=', rec.employee_id.travel_department_id.id),
                     ('line_type', '=', 'second_approver'),
                 ], limit=1)
-                
+
                 if second_approver_line:
                     # Check if second approver record is already created
-                    second_approver = rec.approver_ids.filtered(lambda a: a.user_id.id == second_approver_line.employee_id.user_id.id)
+                    second_approver = rec.approver_ids.filtered(
+                        lambda a: a.user_id.id == second_approver_line.employee_id.user_id.id)
                     if not second_approver:
                         # 1st approver approved. Write status for current approver line.
-                        curr_approver = approver or rec.approver_ids.filtered(lambda a: a.user_id == self.env.user and a.status == 'pending')
+                        curr_approver = approver or rec.approver_ids.filtered(
+                            lambda a: a.user_id == self.env.user and a.status == 'pending')
                         if curr_approver:
                             curr_approver.sudo().write({'status': 'approved'})
-                        
+
                         # Create the 2nd approver record
                         self.env['approval.approver'].sudo().create({
                             'request_id': rec.id,
@@ -269,21 +318,22 @@ class ApprovalRequest(models.Model):
                             'required': True
                         })
                         rec.sudo().write({'second_approver_id': second_approver_line.employee_id.user_id.id})
-                        
+
                         # Force request status back to 'pending'
                         rec.sudo().write({'request_status': 'pending'})
-                        
+
                         # Notify the 2nd approver
                         rec._notify_matched_approvers(rec, second_approver_line)
-                        
+
                         # Skip final approval logic for now
                         continue
-            
+
             # Default approve logic for domestic or for final international approval
             super(ApprovalRequest, rec).action_approve(approver=approver)
-            
+
             if rec.request_status == 'approved' and rec.time_off_id:
-                ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True, tracking_disable=True, mail_notrack=True)
+                ctx = dict(self.env.context, mail_activity_automation_skip=True, mail_create_nosubscribe=True,
+                           tracking_disable=True, mail_notrack=True)
                 leave = rec.time_off_id.sudo().with_context(ctx)
                 if leave.state in ['refuse', 'cancel']:
                     leave.action_reset_confirm()
@@ -292,10 +342,10 @@ class ApprovalRequest(models.Model):
                         leave.action_confirm()
                     else:
                         leave.write({'state': 'confirm'})
-                
+
                 if leave.state == 'confirm':
                     leave.action_approve()
-                
+
                 rec._send_workflow_notification_emails(rec)
         return True
 
@@ -306,13 +356,13 @@ class ApprovalRequest(models.Model):
             if request.time_off_id:
                 request.time_off_id.sudo().refuse_reason = 'Auto Refusal by Manager'
                 request.time_off_id.sudo().action_refuse()
-                # Optional: request.time_off_id.sudo().unlink() 
+                # Optional: request.time_off_id.sudo().unlink()
         return res
 
     def _send_workflow_notification_emails(self, request):
         """ Send direct email to Finance & HR without creating Odoo Inbox notifications. """
         config_type = 'domestic' if request.travel_request_type == 'domestic' else 'international'
-        
+
         config_lines = self.env['approval.config.line'].sudo().search([
             ('config_id.config_type', '=', config_type),
             ('line_type', 'in', ['finance', 'hr']),
@@ -320,21 +370,22 @@ class ApprovalRequest(models.Model):
             # ('department_id', '=', request.employee_id.department_id.id),
             ('travel_department_id', '=', request.employee_id.travel_department_id.id),
         ])
-        
-        recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped('employee_id.user_id.partner_id')
-        
+
+        recipients = config_lines.mapped('employee_id.work_contact_id') or config_lines.mapped(
+            'employee_id.user_id.partner_id')
+
         if recipients:
             subject = f"Travel Request Approval: {request.name}"
             # Formatting email content similar to the image provided
             days = (request.date_end - request.date_start).days + 1 if request.date_start and request.date_end else 1
             date_start_str = request.date_start.strftime('%d-%b-%Y') if request.date_start else ''
-            
+
             base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
             if not base_url or 'localhost' in base_url or '127.0.0.1' in base_url:
                 base_url = 'http://odoo.aesl.com.pk:8018'
-            
+
             travel_url = f"{base_url}/my/travel/view/{request.id}"
-            
+
             for recipient in recipients:
                 if recipient.email:
                     body_html = f"""
@@ -347,7 +398,7 @@ class ApprovalRequest(models.Model):
                     </div>
                     <p>Thanks</p>
                     """
-                    
+
                     mail_values = {
                         'subject': subject,
                         'body_html': body_html,
@@ -355,10 +406,6 @@ class ApprovalRequest(models.Model):
                         'auto_delete': True,
                     }
                     self.env['mail.mail'].sudo().create(mail_values).send()
-
-    def write(self, vals):
-        """ Override write: admin_remarks save karo silently, koi notification nahi jati. """
-        return super(ApprovalRequest, self).write(vals)
 
 
 class ApprovalTravelSchedule(models.Model):

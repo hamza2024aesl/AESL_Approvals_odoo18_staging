@@ -6,4 +6,16 @@
         <field name="prefix">TEXP/%(year)s/</field>
         <field name="padding">4</field>
     </record>
+
+
+    <record id="approvals_manager_assistant_root" model="ir.module.category">
+        <field name="name">Manager's Assistant</field>
+    </record>
+
+
+    <record id="approvals_manager_assistant" model="res.groups">
+        <field name="name">Manager's Assistant</field>
+        <field name="category_id" ref="approvals_manager_assistant_root"/>
+    </record>
+
 </odoo>

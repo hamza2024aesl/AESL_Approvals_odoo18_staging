@@ -33,6 +33,7 @@ class ApprovalTravelExpense(models.Model):
         ('submitted', 'Pending Manager'),
         ('manager_approved', 'Pending HR'),
         ('hr_approved', 'Pending Finance'),
+        ('adjusted', 'Adj. by Allowance'),
         ('approved', 'Approved'),
         ('refused', 'Refused'),
     ], string='Status', default='draft', required=True, tracking=True)
@@ -79,6 +80,16 @@ class ApprovalTravelExpense(models.Model):
         target = cfg.hr_id if role == 'hr' else cfg.expense_payable_id
         return emp == target
     # ---------- actions ----------
+
+    def action_adjust_by_allowance(self, remarks=''):
+        for rec in self:
+            emp = rec._current_employee()
+            now = fields.Datetime.now()
+            if rec.state == 'manager_approved':
+                if not rec._is_role('hr'):
+                    raise UserError(_("Only the HR approver can approve at this stage."))
+                rec.write({'state': 'adjusted', 'hr_approver_id': emp.id,
+                           'hr_date': now, 'hr_remarks': remarks})
         # --- 4. action_approve + action_refuse replace karein ---
     def action_approve(self, remarks=''):
         for rec in self:

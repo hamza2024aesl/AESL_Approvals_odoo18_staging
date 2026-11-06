@@ -18,7 +18,7 @@ class PFLoanApplication(models.Model):
     loan_amount = fields.Float(string='Loan Amount (Rs.)', required=True, tracking=True)
     loan_amount_words = fields.Char(string='Amount in Words')
     installments_count = fields.Integer(string='Installments Count', default=1, required=True)
-    is_interest_free = fields.Boolean(string='Type of PF Interest Free', default=True)
+    is_interest_free = fields.Boolean(string='Type of PF Interest Free', default=False,related='employee_id.exclude_pf_interest')
     loan_purpose = fields.Text(string='Loan Purpose', required=True)
     remarks = fields.Text(string='Remarks / Approval Notes', tracking=True)
 
@@ -41,6 +41,12 @@ class PFLoanApplication(models.Model):
     total_sanctioned_loan = fields.Float(string='Total Sanctioned Loan', compute='_compute_sanctioned_loan_details', store=True, readonly=False)
     repay_installments = fields.Integer(string='Repay Installments', default=1, tracking=True)
     per_installment_amount = fields.Float(string='Per Installment Amount', compute='_compute_sanctioned_loan_details', store=True, readonly=False)
+    hr_approved_date = fields.Datetime(string='HR Approved On', readonly=True, copy=False)
+    hod_approved_date = fields.Datetime(string='HOD Approved On', readonly=True, copy=False)
+    finance_approved_date = fields.Datetime(string='Finance Approved On', readonly=True, copy=False)
+    trustee1_approved_date = fields.Datetime(string='Trustee 1st Approved On', readonly=True, copy=False)
+    trustee2_approved_date = fields.Datetime(string='Trustee 2nd Approved On', readonly=True, copy=False)
+    applicant_approved_date = fields.Datetime(string='Applicant Approved On', readonly=True, copy=False)
 
     @api.depends('employee_id', 'loan_amount','loan_required', 'repay_installments')
     def _compute_sanctioned_loan_details(self):
@@ -78,7 +84,7 @@ class PFLoanApplication(models.Model):
                 d_amt = 0.0
 
                 # loan_records = applicant.loan_ids.filtered(lambda l: l.state != 'cancel') if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
-                loan_records = applicant.loan_ids.filtered_domain([('state', '!=', 'cancel'), ('total_amount_due_principal', '!=', 0)]) if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
+                loan_records = applicant.loan_ids.filtered_domain([('state', '!=', 'cancel'),('loan_type','in',[2,4]),('total_amount_due_principal', '!=', 0)]) if hasattr(applicant, 'loan_ids') and applicant.loan_ids else []
                 if not loan_records and "hr.loan" in self.env:
                     loan_records = self.env["hr.loan"].sudo().search([
                         ('employee_id', '=', applicant.id),
@@ -101,7 +107,8 @@ class PFLoanApplication(models.Model):
                             <i class="fa fa-info-circle"></i> HR Review Notice: Previous Active Loan Balance ({applicant.name})
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 13px; color: #334155;">
-                            <span><strong>Total Loan:</strong> Rs. {t_amt:,.2f}action_{p_amt:,.2f}</span>
+                            <span><strong>Total Loan:</strong> Rs. {t_amt:,.2f}</span>
+                            <span style="color: #15803d;"><strong>Received From Employee:</strong> Rs. {p_amt:,.2f}</span>
                             <span style="color: #0369a1;"><strong>Balance on Loan:</strong> Rs. {d_amt:,.2f}</span>
                         </div>
                     </div>
@@ -332,6 +339,7 @@ class PFLoanApplication(models.Model):
                 requester_dept = rec.employee_id.department_id if rec.employee_id else False
                 hod_emp = rec.hod_approver_id
                 hod_dept = hod_emp.department_id if hod_emp else False
+                rec.hr_approved_date = fields.Datetime.now()
 
                 # if not requester_dept or not hod_dept or requester_dept != hod_dept:
                 #     req_dept_name = requester_dept.name if requester_dept else _("No Department")
@@ -351,6 +359,7 @@ class PFLoanApplication(models.Model):
                 if rec.hod_approver_id and rec.env.user.employee_id != rec.hod_approver_id:
                     raise UserError(_("Only the designated HOD (%s) can approve this application at this step.") % rec.hod_approver_id.name)
                 rec.state = 'waiting_finance'
+                rec.hod_approved_date = fields.Datetime.now()
                 rec._send_approver_email()
 
     def action_approve_finance(self):
@@ -359,6 +368,7 @@ class PFLoanApplication(models.Model):
                 if rec.finance_approver_id and rec.env.user.employee_id != rec.finance_approver_id:
                     raise UserError(_("Only the designated Finance Officer (%s) can approve this application at this step.") % rec.finance_approver_id.name)
                 rec.state = 'waiting_trustee'
+                rec.finance_approved_date = fields.Datetime.now()
                 rec._send_approver_email()
 
     def action_open_voucher_wizard(self):
@@ -382,6 +392,7 @@ class PFLoanApplication(models.Model):
                     raise UserError(_("Only the designated Trustees can approve this application at this step."))
                 rec.trustee_approver_id = rec.env.user.employee_id
                 rec.state = 'waiting_trustee_second'
+                rec.trustee1_approved_date = fields.Datetime.now()
                 rec._send_approver_email()
 
     def action_approve_trustee2(self):
@@ -395,6 +406,7 @@ class PFLoanApplication(models.Model):
                     raise UserError(_("You have already approved as trustee"))
                 rec.second_trustee_approver_id = rec.env.user.employee_id
                 rec.state = 'approved'
+                rec.trustee2_approved_date = fields.Datetime.now()
                 rec._send_final_approval_email()
 
     def _send_final_approval_email(self):

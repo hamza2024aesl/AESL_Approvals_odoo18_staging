@@ -330,6 +330,25 @@ class AppraisalPortal(CustomerPortal):
 
 class ApprovalPortal(CustomerPortal):
 
+    def _get_employee_values(self, selected_employee=None):
+        employee = request.env.user.employee_id
+        is_assistant = employee.is_manager_assistant
+        selected = selected_employee or employee
+        return {
+            'is_assistant': is_assistant,
+            'employees': request.env['hr.employee'].sudo().search([]) if is_assistant else employee,
+            'selected_employee_id': selected.id,
+        }
+
+    def _get_target_employee(self, post):
+        """Assistant ho to select kiya hua employee, warna hamesha apna."""
+        user_employee = request.env.user.employee_id
+        if user_employee.is_manager_assistant and post.get('employee_id'):
+            emp = request.env['hr.employee'].sudo().browse(int(post['employee_id']))
+            if emp.exists():
+                return emp
+        return user_employee
+
     @http.route(["/my/travel", "/my/travel/page/<int:page>"], type="http", auth="user", website=True)
     def portal_my_travel_requests(self, page=1, group_by=None, **kw):
         user = request.env.user
@@ -411,13 +430,14 @@ class ApprovalPortal(CustomerPortal):
             "currencies": request.env['res.currency'].sudo().search([('active', '=', True)]),
             "default_currency_id": request.env.company.currency_id.id,
         }
+        vals.update(self._get_employee_values())  # NEW
         return request.render("prodo_user_portal.travel_request_form_portal", vals)
 
     @http.route("/my/travel/save", type="http", auth="user", website=True, methods=["POST"])
     def portal_travel_request_save(self, **post):
         user = request.env.user
-        employee = user.employee_id
-
+        # employee = user.employee_id
+        employee = self._get_target_employee(post)  # CHANGED
         try:
             # Prepare values, converting datetime-local format (T) to Odoo format
             raw_start = post.get('date_start')
@@ -474,7 +494,11 @@ class ApprovalPortal(CustomerPortal):
     def portal_travel_request_update(self, **post):
         request_id = int(post.get('request_id'))
         travel_req = request.env['approval.request'].sudo().browse(request_id)
-        if not travel_req.exists():
+        # if not travel_req.exists():
+        #     return request.redirect("/my/travel")
+        if (not travel_req.exists()
+                or travel_req.request_owner_id.id != request.env.user.id
+                or travel_req.request_status not in ('new', 'refused')):
             return request.redirect("/my/travel")
 
         try:
@@ -492,6 +516,10 @@ class ApprovalPortal(CustomerPortal):
                 'tickets_required': post.get('tickets_required'),
                 # admin_remarks yahan nahi — sirf Finance&Admin apni route se save karta hai
             }
+            # travel_req.write(vals)
+            if request.env.user.employee_id.is_manager_assistant and post.get('employee_id'):
+                vals['employee_id'] = self._get_target_employee(post).id
+
             travel_req.write(vals)
 
             # Update schedule lines (Clear and Re-create for simplicity)
@@ -572,6 +600,7 @@ class ApprovalPortal(CustomerPortal):
             "is_finance_admin": is_finance_admin,
             "categories": categories,
         }
+        vals.update(self._get_employee_values(request_rec.employee_id))  # NEW
         return request.render("prodo_user_portal.travel_request_detail_template", vals)
 
     @http.route("/my/travel/approve/<int:request_id>", type="http", auth="user", website=True)
@@ -1848,7 +1877,7 @@ class PFLoanPortal(CustomerPortal):
 
         max_ded_allowed = round((net_pay or 0.0) / 3.0, 2)
         # is_interest_free = (not bool(employee.exclude_pf_interest)) if employee and hasattr(employee, 'exclude_pf_interest') else True
-        is_interest_free = False if employee.exclude_pf_interest else True
+        is_interest_free = True if employee.exclude_pf_interest else False
 
         appt_date = (getattr(employee, "appointment_date", False) or getattr(employee, "joining_date",
                                                                              False)) if employee else False
@@ -2014,7 +2043,7 @@ class PFLoanPortal(CustomerPortal):
                             loan.write({'repay_installments': int(inst),'hr_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_hr()
                     elif loan.state == 'waiting_hod' and loan.hod_approver_id == emp:
-                        loan.write({'hod_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
+                        # loan.write({'hod_date':fields.Datetime.now().strftime('%Y-%m-%d %H:%M')})
                         loan.action_approve_hod()
                     elif loan.state == 'waiting_finance' and loan.finance_approver_id == emp:
                         gp_code = kw.get('gp_audit_trail_code') or request.params.get('gp_audit_trail_code')
@@ -2034,7 +2063,6 @@ class PFLoanPortal(CustomerPortal):
                                 'gp_paid_to_rcvd_from': kw.get('gp_paid_to_rcvd_from') or request.params.get(
                                     'gp_paid_to_rcvd_from'),
                                 'gp_description': kw.get('gp_description') or request.params.get('gp_description'),
-                                'finance_Date': fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
                             })
                         loan.action_approve_finance()
                     elif loan.state == 'waiting_trustee' and (
