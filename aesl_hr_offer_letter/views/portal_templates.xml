@@ -4,6 +4,7 @@
     <!-- 1. Offer Accepted View -->
     <template id="portal_offer_accepted" name="Offer Accepted Confirmation">
         <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
             <div id="wrap" class="oe_structure oe_empty py-5">
                 <div class="container">
                     <div class="row justify-content-center">
@@ -67,6 +68,7 @@
     <!-- 2. Offer Reject Form View -->
     <template id="portal_offer_reject_form" name="Decline Offer Form">
         <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
             <div id="wrap" class="oe_structure oe_empty py-5">
                 <div class="container">
                     <div class="row justify-content-center">
@@ -119,6 +121,7 @@
     <!-- 3. Offer Rejected Completed View -->
     <template id="portal_offer_rejected_done" name="Offer Declined Confirmation">
         <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
             <div id="wrap" class="oe_structure oe_empty py-5">
                 <div class="container">
                     <div class="row justify-content-center">
@@ -146,6 +149,7 @@
     <!-- 4. Offer Summary / Fallback -->
     <template id="portal_offer_summary" name="Offer Letter View">
         <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
             <div id="wrap" class="oe_structure oe_empty py-5">
                 <div class="container">
                     <div class="row justify-content-center">
@@ -184,6 +188,7 @@
     <!-- 5. Not Found Template -->
     <template id="portal_offer_not_found" name="Offer Not Found">
         <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
             <div id="wrap" class="container py-5 text-center">
                 <div class="alert alert-warning py-4">
                     <h4>Invalid or Expired Link</h4>

@@ -56,13 +56,14 @@ class AssetAllocationPortal(CustomerPortal):
             offset=pager_data['offset']
         )
 
-        values = {
+        values = self._prepare_portal_layout_values()
+        values.update({
             'allocations': allocations,
             'page_name': 'asset_allocations',
             'pager': pager_data,
             'filterby': filterby or 'all',
             'default_url': '/my/asset_allocations',
-        }
+        })
         return request.render('aesl_hr_asset_allocation.portal_my_asset_allocations', values)
 
     @http.route(['/my/asset_allocation/<int:allocation_id>'], type='http', auth='user', website=True)
@@ -85,7 +86,8 @@ class AssetAllocationPortal(CustomerPortal):
             allocation.employee_id.create_date.strftime('%Y-%m-%d') if allocation.employee_id.create_date else '-'
         )
 
-        values = {
+        values = self._prepare_portal_layout_values()
+        values.update({
             'allocation': allocation,
             'employee': allocation.employee_id,
             'joining_date': str(joining_date) if joining_date else '-',
@@ -94,7 +96,7 @@ class AssetAllocationPortal(CustomerPortal):
             'is_assigned': is_assigned,
             'saved': kw.get('saved'),
             'approved': kw.get('approved'),
-        }
+        })
         return request.render('aesl_hr_asset_allocation.portal_asset_allocation_detail', values)
 
     @http.route(['/my/asset_allocation/<int:allocation_id>/submit'], type='http', auth='user', methods=['POST'], website=True, csrf=True)
