@@ -35,6 +35,7 @@ Key Features:
         'hr_recruitment',
         'hr_contract',
         'portal',
+        'documents',
     ],
     'data': [
         'security/security.xml',

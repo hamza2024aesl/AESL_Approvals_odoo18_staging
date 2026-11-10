@@ -303,7 +303,7 @@ class EmployeeResignation(models.Model):
             rec.message_post(
                 body=_("Resignation accepted by Manager %s. Status updated to 'Clearance In Progress'. Notice period active until %s. Clearances dispatched to Admin, IT, and HSE heads.")
                 % (self.env.user.name, rec.expected_exit_date or rec.exit_date),
-                subtype_xmlid="mail.mt_comment"
+                subtype_xmlid="mail.mt_note"
             )
 
     def _initiate_departmental_clearances(self):
@@ -482,175 +482,6 @@ class EmployeeResignation(models.Model):
                 subtype_xmlid="mail.mt_comment"
             )
 
-    def _initiate_departmental_clearances(self):
-        """Creates or links Admin, IT, and HSE clearance checklists upon resignation acceptance."""
-        Clearance = self.env['employee.resignation.clearance'].sudo()
-        Template = self.env['hr.asset.item.template'].sudo()
-
-        for rec in self:
-            emp = rec.emp_name
-            company = rec.company_id or self.env.company
-
-            dept_configs = [
-                ('admin', company.asset_admin_head_id),
-                ('it', company.asset_it_head_id),
-                ('hse', company.asset_hse_head_id),
-            ]
-
-            for dept_type, head in dept_configs:
-                clearance = Clearance.search([
-                    ('resignation_id', '=', rec.id),
-                    ('department_type', '=', dept_type),
-                ], limit=1)
-
-                if not clearance:
-                    clearance = Clearance.create({
-                        'resignation_id': rec.id,
-                        'department_type': dept_type,
-                        'department_head_id': head.id if head else False,
-                        'state': 'pending',
-                    })
-                else:
-                    clearance.write({
-                        'department_head_id': head.id if head else False,
-                        'state': 'pending',
-                    })
-
-                if not clearance.line_ids:
-                    alloc = self.env['hr.asset.allocation'].sudo().search([
-                        ('employee_id', '=', emp.id),
-                        ('department_type', '=', dept_type),
-                    ], limit=1)
-
-                    lines_vals = []
-                    if alloc and alloc.line_ids:
-                        for l in alloc.line_ids:
-                            lines_vals.append((0, 0, {
-                                'sequence': l.sequence,
-                                'asset_allocation_line_id': l.id,
-                                'name': l.name,
-                                'asset_details': l.asset_details or '',
-                                'is_allocated': l.is_allocated,
-                                'remarks': l.remarks or '',
-                            }))
-                    else:
-                        templates = Template.search([
-                            ('department_type', '=', dept_type),
-                            ('active', '=', True),
-                        ], order='sequence, id')
-                        for tmpl in templates:
-                            lines_vals.append((0, 0, {
-                                'sequence': tmpl.sequence,
-                                'name': tmpl.name,
-                                'asset_details': tmpl.placeholder_hint or '',
-                                'is_allocated': True,
-                                'remarks': '',
-                            }))
-
-                    if lines_vals:
-                        clearance.write({'line_ids': lines_vals})
-
-                # Notify department head
-                rec._notify_department_head_clearance(clearance)
-
-    def _notify_department_head_clearance(self, clearance):
-        template = self.env.ref('aesl_hr_resignation.mail_template_resignation_clearance_head', raise_if_not_found=False)
-        if template and clearance.department_head_id:
-            try:
-                template.sudo().send_mail(clearance.id, force_send=True)
-            except Exception:
-                pass
-
-    def action_check_clearance_completion(self):
-        """Verifies if Admin, IT, and HSE have all approved clearance. If so, advances to Exit Interview."""
-        for rec in self:
-            clearances = rec.clearance_ids
-            # Must have at least 3 clearances and all of them approved
-            if len(clearances) >= 3 and all(c.state == 'approved' for c in clearances):
-                rec.state = 'exit_interview_pending'
-
-                # Remove returned assets from HR employee asset allocations (Requirement 1.5)
-                rec._process_asset_removal()
-
-                rec.message_post(
-                    body=Markup(
-                        "<b>🎉 Departmental Clearance Completed!</b><br/>"
-                        "Admin, IT, and HSE departments have all approved the asset clearance.<br/>"
-                        "Next Stage: <b>Exit Interview Pending</b> (to be conducted by HR)."
-                    ),
-                    subtype_xmlid="mail.mt_comment"
-                )
-
-    def _process_asset_removal(self):
-        """Once clearance is complete, returned assets (is_allocated == False) are unallocated in HR asset records."""
-        for rec in self:
-            for cl in rec.clearance_ids:
-                for line in cl.line_ids:
-                    if not line.is_allocated and line.asset_allocation_line_id:
-                        line.asset_allocation_line_id.write({
-                            'is_allocated': False,
-                            'remarks': f"Returned during resignation clearance on {fields.Date.today()}"
-                        })
-
-    def action_done_exit_interview(self):
-        """HR marks the Exit Interview as Completed."""
-        for rec in self:
-            if not self.env.user.has_group('hr.group_hr_user'):
-                raise UserError(_("Only HR personnel can complete the Exit Interview."))
-            if rec.state != 'exit_interview_pending':
-                raise UserError(_("Exit Interview can only be completed when stage is 'Exit Interview Pending'."))
-
-            rec.write({
-                'state': 'exit_interview_done',
-                'exit_interview_conducted_by': self.env.user.id,
-                'exit_interview_date': rec.exit_interview_date or fields.Date.today(),
-            })
-            rec.message_post(
-                body=Markup("<b>Exit Interview Completed</b> by HR %s.") % (self.env.user.name),
-                subtype_xmlid="mail.mt_comment"
-            )
-
-    def action_archive_employee_and_user(self):
-        """HR archives the Employee record and Portal User account in Odoo."""
-        for rec in self:
-            if not self.env.user.has_group('hr.group_hr_user'):
-                raise UserError(_("Only HR personnel can archive the employee."))
-            if rec.state != 'exit_interview_done':
-                raise UserError(_("Archive is only available after Exit Interview is completed."))
-
-            emp = rec.emp_name
-            user = emp.user_id if emp else False
-
-            # 1. Archive User (Permanently blocks portal & system login)
-            if user:
-                user.sudo().write({'active': False})
-
-            # 2. Archive Employee record
-            if emp:
-                emp.sudo().write({'active': False})
-
-            rec.write({
-                'state': 'archived',
-                'is_employee_archived': True,
-                'archived_date': fields.Datetime.now(),
-                'archived_by_id': self.env.user.id,
-            })
-
-            rec.message_post(
-                body=Markup(
-                    "<b>🔒 Offboarding Complete: Employee & User Archived</b><br/>"
-                    "Employee: %s (Archived)<br/>"
-                    "Portal User: %s (Deactivated - Login Disabled)<br/>"
-                    "Actioned by: %s on %s"
-                ) % (
-                    emp.name if emp else '-',
-                    user.login if user else 'None',
-                    self.env.user.name,
-                    fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                ),
-                subtype_xmlid="mail.mt_comment"
-            )
-
     def action_manager_reject(self, remarks):
         """Manager rejects resignation. Rejection remarks are mandatory."""
         for rec in self:
@@ -748,10 +579,61 @@ class EmployeeResignation(models.Model):
     # ----------------------------------------------------
 
     def _send_acceptance_cat_memo(self):
+        """Generates the official Resignation Acceptance Memorandum PDF, attaches it to the resignation record and the email, and dispatches to the employee."""
         template = self.env.ref('aesl_hr_resignation.mail_template_resignation_accepted_cat_memo', raise_if_not_found=False)
-        if template:
-            for rec in self:
-                template.sudo().send_mail(rec.id, force_send=True)
+        if not template:
+            return
+
+        for rec in self:
+            attachments = []
+            report = self.env.ref('aesl_hr_resignation.action_report_resignation_acceptance', raise_if_not_found=False)
+            if report:
+                try:
+                    pdf_content, _report_type = self.env['ir.actions.report']._render_qweb_pdf(report.id, [rec.id])
+                    safe_name = (rec.emp_name.name or 'Employee').replace(' ', '_').replace('/', '_')
+                    safe_ref = (rec.name or 'MEMO').replace('/', '_').replace(' ', '_')
+                    filename = f"Acceptance_Memorandum_{safe_name}_{safe_ref}.pdf"
+
+                    attachment = self.env['ir.attachment'].sudo().create({
+                        'name': filename,
+                        'type': 'binary',
+                        'raw': pdf_content,
+                        'res_model': 'employee.resignation',
+                        'res_id': rec.id,
+                        'mimetype': 'application/pdf',
+                    })
+                    attachments.append(attachment.id)
+                except Exception as e:
+                    rec.message_post(body=f"Notice: Could not render Acceptance PDF: {e}", subtype_xmlid="mail.mt_note")
+
+            # Determine recipient partner and email robustly
+            emp = rec.emp_name
+            partner = (
+                emp.work_contact_id
+                or (emp.user_id.partner_id if emp.user_id else False)
+                or (rec.employee_user_id.partner_id if rec.employee_user_id else False)
+                or (emp.user_partner_id if hasattr(emp, 'user_partner_id') else False)
+            )
+            if not partner and emp:
+                partner = self.env['res.partner'].search([('name', '=', emp.name)], limit=1)
+
+            recipient_email = (
+                emp.work_email
+                or (partner.email if partner else False)
+                or (emp.user_id.email if emp.user_id else False)
+                or (emp.private_email if hasattr(emp, 'private_email') else False)
+            )
+
+            email_values = {}
+            if recipient_email:
+                email_values['email_to'] = recipient_email
+            if partner:
+                email_values['recipient_ids'] = [(4, partner.id)]
+                email_values['partner_ids'] = [(4, partner.id)]
+            if attachments:
+                email_values['attachment_ids'] = [(4, att_id) for att_id in attachments]
+
+            template.sudo().send_mail(rec.id, email_values=email_values, force_send=True)
 
     def _notify_manager_on_submission(self):
         template = self.env.ref('aesl_hr_resignation.mail_template_resignation_submitted_manager', raise_if_not_found=False)

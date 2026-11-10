@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
+    <data noupdate="0">
 
         <!-- 1. OFFICIAL ACCEPTANCE MEMORANDUM EMAIL (Image 1 - Allied CAT Format) -->
         <record id="mail_template_resignation_accepted_cat_memo" model="mail.template">
@@ -8,7 +8,8 @@
             <field name="model_id" ref="ivis_employee_details.model_employee_resignation"/>
             <field name="subject">RESIGNATION FROM SERVICE - {{ object.emp_name.name }}</field>
             <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
-            <field name="email_to">{{ object.emp_name.work_email or object.emp_name.user_id.email }}</field>
+            <field name="email_to">{{ object.emp_name.work_email or (object.emp_name.work_contact_id.email if object.emp_name.work_contact_id else '') or (object.emp_name.user_id.email if object.emp_name.user_id else '') or '' }}</field>
+            <field name="partner_to">{{ (object.emp_name.work_contact_id.id or (object.emp_name.user_id.partner_id.id if object.emp_name.user_id else False) or (object.employee_user_id.partner_id.id if object.employee_user_id else False) or '') }}</field>
             <field name="email_cc">{{ object.immediate_boss.work_email or object.immediate_boss.user_id.email }}</field>
             <field name="body_html" type="html">
 <div style="background-color: #f4f6f9; padding: 25px 15px; font-family: Arial, Helvetica, sans-serif;">
@@ -96,6 +97,9 @@
             </p>
             <p style="margin-top: 20px;">
                 You are requested to kindly coordinate with the Accounts Department for the final settlement of your dues.
+            </p>
+            <p style="margin-top: 20px; padding: 12px 16px; background: #eef4fc; border-left: 3px solid #004085; font-size: 13px; color: #1e3a5f;">
+                📎 <strong>Official Document Attached:</strong> Your formal <strong>Resignation Acceptance Memorandum</strong> (PDF) is attached to this email for your personal record and clearance processing.
             </p>
             <t t-if="object.manager_remarks">
                 <p style="margin-top: 15px; font-style: italic; color: #555555; background: #fafafa; padding: 10px 14px; border-left: 3px solid #ffcc00;">

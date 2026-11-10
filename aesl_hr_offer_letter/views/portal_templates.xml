@@ -198,4 +198,620 @@
         </t>
     </template>
 
+    <!-- ==================================================== -->
+    <!-- 6. PORTAL HOME: ALERT BANNER & DIRECTOR MENU CARD    -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_home_offer_letter" name="Portal Home: Director Onboarding Approvals" inherit_id="portal.portal_my_home" priority="36">
+        <!-- Top alert if director has pending candidate approvals -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-if="pending_director_offers_count and pending_director_offers_count &gt; 0">
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4 border-warning" role="alert" style="border-left: 5px solid #ffc107;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-user-check fa-2x text-warning me-3"/>
+                            <div>
+                                <h5 class="alert-heading mb-1 fw-bold">⚠️ Candidate Onboarding Approval Pending</h5>
+                                <p class="mb-0 text-muted">
+                                    You have <strong><t t-esc="pending_director_offers_count"/></strong> candidate onboarding request(s) awaiting your director review and approval.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="/my/director-offers?filter_status=pending" class="btn btn-warning text-dark btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                            <i class="fa fa-check-square-o me-1"/> Review Candidate Requests
+                        </a>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Director Approvals Card in Portal Docs -->
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-if="is_director_approver">
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="title">Director Approvals</t>
+                    <t t-set="text">Review candidate profiles, compensation &amp; approve employee onboarding</t>
+                    <t t-set="url" t-value="'/my/director-offers'"/>
+                    <t t-set="placeholder_count" t-value="'director_offers_count'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 7. PORTAL BREADCRUMBS                                -->
+    <!-- ==================================================== -->
+
+    <template id="portal_breadcrumbs_offer_letter" name="Portal Breadcrumbs: Director Approvals" inherit_id="portal.portal_breadcrumbs" priority="36">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name in ['director_offers', 'director_offer_detail']" class="breadcrumb-item">
+                <a t-if="page_name != 'director_offers'" href="/my/director-offers">Director Approvals</a>
+                <t t-else="">Director Approvals</t>
+            </li>
+            <li t-if="page_name == 'director_offer_detail'" class="breadcrumb-item active">
+                <t t-out="offer.candidate_name"/> (<t t-out="offer.name"/>)
+            </li>
+        </xpath>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 8. DIRECTOR PORTAL LIST VIEW (/my/director-offers)    -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_director_offers_list" name="Director Approvals List">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-3">
+                <div>
+                    <h3 class="fw-bold mb-0 text-dark">Candidate Onboarding Approvals</h3>
+                    <p class="text-muted small mb-0">Review candidate profile and compensation details before official employee creation</p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a t-attf-href="/my/director-offers?filter_status=all" t-attf-class="btn btn-sm #{'btn-primary' if filter_status == 'all' else 'btn-outline-primary'}">
+                        All
+                    </a>
+                    <a t-attf-href="/my/director-offers?filter_status=pending" t-attf-class="btn btn-sm #{'btn-warning text-dark' if filter_status == 'pending' else 'btn-outline-warning'}">
+                        Pending Your Approval
+                    </a>
+                    <a t-attf-href="/my/director-offers?filter_status=approved" t-attf-class="btn btn-sm #{'btn-success' if filter_status == 'approved' else 'btn-outline-success'}">
+                        Approved by You
+                    </a>
+                </div>
+            </div>
+
+            <t t-if="not offers">
+                <div class="alert alert-info shadow-sm mt-3 border-0">
+                    <h5 class="fw-bold mb-1"><i class="fa fa-info-circle me-1"/> No Records Found</h5>
+                    <p class="mb-0">There are currently no candidate onboarding requests assigned to you under this filter.</p>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ref</th>
+                                    <th>Candidate Name</th>
+                                    <th>Designation</th>
+                                    <th>Department</th>
+                                    <th>Gross Salary</th>
+                                    <th>Joining Date</th>
+                                    <th>Your Status</th>
+                                    <th>Request State</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="offers" t-as="o">
+                                    <t t-set="user_approved" t-value="user.id in o.approved_director_ids.ids"/>
+                                    <tr>
+                                        <td>
+                                            <a t-attf-href="/my/director-offers/#{o.id}" class="fw-bold text-decoration-none">
+                                                <t t-esc="o.name"/>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <strong class="text-dark"><t t-esc="o.candidate_name"/></strong>
+                                            <div t-if="o.cnic" class="text-muted small">CNIC: <t t-esc="o.cnic"/></div>
+                                        </td>
+                                        <td><t t-esc="o.job_id.name"/></td>
+                                        <td><t t-esc="o.department_id.name"/></td>
+                                        <td>
+                                            <strong class="text-primary">
+                                                <t t-esc="o.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(o.gross_salary)"/>
+                                            </strong>
+                                        </td>
+                                        <td><t t-esc="o.joining_date"/></td>
+                                        <td>
+                                            <t t-if="user_approved">
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                    <i class="fa fa-check me-1"/> Approved
+                                                </span>
+                                            </t>
+                                            <t t-elif="o.state == 'pending_director'">
+                                                <span class="badge bg-warning text-dark px-2 py-1">
+                                                    <i class="fa fa-clock-o me-1"/> Pending
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge bg-secondary px-2 py-1">-</span>
+                                            </t>
+                                        </td>
+                                        <td>
+                                            <t t-if="o.state == 'pending_director'">
+                                                <span class="badge bg-warning text-dark">Pending Director Approval</span>
+                                            </t>
+                                            <t t-elif="o.state == 'approved_director'">
+                                                <span class="badge bg-success">Approved by Director</span>
+                                            </t>
+                                            <t t-elif="o.state == 'done'">
+                                                <span class="badge bg-primary">Employee Created</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge bg-secondary"><t t-esc="o.state.capitalize()"/></span>
+                                            </t>
+                                        </td>
+                                        <td class="text-end">
+                                            <a t-attf-href="/my/director-offers/#{o.id}" class="btn btn-outline-primary btn-sm px-3">
+                                                <i class="fa fa-eye me-1"/> Review
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div t-if="pager['page_count'] &gt; 1" class="d-flex justify-content-center">
+                    <t t-call="portal.pager"/>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 9. RESTRICTED DIRECTOR VIEW (/my/director-offers/ID) -->
+    <!-- ==================================================== -->
+
+    <template id="portal_director_offer_detail" name="Director Candidate Review">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <!-- Success Alert Banner if approved just now -->
+            <div t-if="success_msg" class="alert alert-success alert-dismissible fade show shadow-sm mt-3 border-0" role="alert">
+                <i class="fa fa-check-circle me-2"/>
+                <strong>Candidate Onboarding Approved!</strong> Your approval has been recorded successfully. The HR department has been notified.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Page Header Card -->
+            <div class="card shadow-sm border-0 mt-3 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom">
+                        <div>
+                            <span class="badge bg-light text-muted border mb-1">
+                                <t t-esc="offer.name"/>
+                            </span>
+                            <h2 class="fw-bold mb-0 text-dark"><t t-esc="offer.candidate_name"/></h2>
+                            <p class="text-muted mb-0">
+                                <strong><t t-esc="offer.job_id.name"/></strong> &#8226; <t t-esc="offer.department_id.name"/> &#8226; <t t-esc="offer.posting_location or 'Head Office'"/>
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <t t-if="offer.state == 'pending_director'">
+                                <span class="badge bg-warning text-dark px-3 py-2 fs-6">
+                                    <i class="fa fa-hourglass-half me-1"/> Pending Director Approval
+                                </span>
+                            </t>
+                            <t t-elif="offer.state == 'approved_director'">
+                                <span class="badge bg-success px-3 py-2 fs-6">
+                                    <i class="fa fa-check-circle me-1"/> Approved by Director
+                                </span>
+                            </t>
+                            <t t-elif="offer.state == 'done'">
+                                <span class="badge bg-primary px-3 py-2 fs-6">
+                                    <i class="fa fa-user-plus me-1"/> Employee Created
+                                </span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge bg-secondary px-3 py-2 fs-6">
+                                    <t t-esc="offer.state.upper()"/>
+                                </span>
+                            </t>
+                            <div class="text-muted small mt-1">
+                                Progress: <strong><t t-esc="offer.director_approval_status"/></strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Approval Action Card (When Pending Approval) -->
+                    <div t-if="can_approve" class="p-3 my-3 bg-light-subtle rounded-3 border border-success d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold text-success mb-1">
+                                <i class="fa fa-check-square-o me-2"/>Director Review &amp; Approval Required
+                            </h5>
+                            <p class="text-muted mb-0 small">
+                                Please review the Candidate Profile and Salary &amp; Compensation package below. Click "Approve" to authorize HR to create the employee record.
+                            </p>
+                        </div>
+                        <form t-attf-action="/my/director-offers/#{offer.id}/approve" method="POST">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
+                                <i class="fa fa-check-circle me-1"/> Approve Candidate Onboarding
+                            </button>
+                        </form>
+                    </div>
+
+                    <div t-elif="has_approved" class="alert alert-success mt-3 mb-0 py-2 d-flex align-items-center">
+                        <i class="fa fa-check-circle fa-lg me-2"/>
+                        <div>
+                            <strong>You have approved this candidate onboarding request.</strong>
+                            <span class="text-muted ms-2 small">
+                                (<t t-esc="offer.director_approval_status"/>)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: CANDIDATE PROFILE -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                    <i class="fa fa-user text-primary me-2 fs-5"/>
+                    <h5 class="fw-bold mb-0 text-dark">Candidate Profile</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- Column 1: Personal Identification -->
+                        <div class="col-md-6 border-end-md">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3">Personal Identification</h6>
+                            <table class="table table-borderless table-sm mb-0">
+                                <tr>
+                                    <td class="text-muted" style="width: 45%;">Candidate Name:</td>
+                                    <td><strong class="text-dark"><t t-esc="offer.candidate_name"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Father's Name:</td>
+                                    <td><t t-esc="offer.father_name or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">CNIC No.:</td>
+                                    <td><strong><t t-esc="offer.cnic or '-'"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Date of Birth:</td>
+                                    <td><t t-esc="offer.date_of_birth or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Gender:</td>
+                                    <td><t t-esc="offer.gender and offer.gender.capitalize() or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Religion:</td>
+                                    <td><t t-esc="offer.religion or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Place of Birth:</td>
+                                    <td><t t-esc="offer.place_of_birth or '-'"/></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Column 2: Contact & Family -->
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3">Contact &amp; Family Background</h6>
+                            <table class="table table-borderless table-sm mb-0">
+                                <tr>
+                                    <td class="text-muted" style="width: 45%;">Email Address:</td>
+                                    <td><a t-attf-href="mailto:#{offer.email}"><t t-esc="offer.email"/></a></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Phone / Mobile No.:</td>
+                                    <td><t t-esc="offer.phone or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Marital Status:</td>
+                                    <td><t t-esc="offer.marital_status and offer.marital_status.capitalize() or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">No. of Dependents:</td>
+                                    <td><t t-esc="offer.no_of_dependents or 0"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Candidate Availability Date:</td>
+                                    <td><t t-esc="offer.earliest_joining_date or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Last Drawn Salary:</td>
+                                    <td>
+                                        <t t-if="offer.last_salary">
+                                            <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.last_salary)"/>
+                                        </t>
+                                        <t t-else="">-</t>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Full Width: Address & Position -->
+                        <div class="col-12 pt-3 border-top">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-2">Residential Address</h6>
+                            <p class="text-dark bg-light p-2 rounded mb-3">
+                                <t t-esc="offer.present_address or 'No address provided'"/>
+                            </p>
+
+                            <h6 class="text-uppercase text-muted fw-bold small mb-2">Position &amp; Deployment</h6>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <small class="text-muted d-block">Designation</small>
+                                    <strong><t t-esc="offer.job_id.name"/></strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted d-block">Department</small>
+                                    <strong><t t-esc="offer.department_id.name"/></strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted d-block">Place of Posting</small>
+                                    <strong><t t-esc="offer.posting_location or 'Head Office'"/></strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted d-block">Official Joining Date</small>
+                                    <strong class="text-primary"><t t-esc="offer.joining_date"/></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: SALARY & COMPENSATION -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                    <i class="fa fa-money text-success me-2 fs-5"/>
+                    <h5 class="fw-bold mb-0 text-dark">Salary &amp; Compensation</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Total Package Highlight Box -->
+                    <div class="d-flex justify-content-between align-items-center flex-wrap p-3 mb-4 bg-light rounded-3 border">
+                        <div>
+                            <span class="text-muted small text-uppercase fw-bold">Total Agreed Monthly Package:</span>
+                            <h2 class="mb-0 text-success fw-bold">
+                                <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.gross_salary)"/>
+                            </h2>
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary p-2">
+                                Probation Period: <strong><t t-esc="offer.probation_period or '3 Months'"/></strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Table -->
+                    <h6 class="text-uppercase text-muted fw-bold small mb-3">AESL Salary Structure Breakdown (Monthly)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Standard AESL Ratio</th>
+                                    <th class="text-end">Monthly Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Basic Pay</strong></td>
+                                    <td class="text-muted">~ 60.6% of Gross</td>
+                                    <td class="text-end fw-bold">
+                                        <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.basic_salary)"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>House Rent Allowance</strong></td>
+                                    <td class="text-muted">~ 27.2% of Gross</td>
+                                    <td class="text-end fw-bold">
+                                        <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.house_rent)"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Conveyance Allowance</strong></td>
+                                    <td class="text-muted">~ 6.0% of Gross</td>
+                                    <td class="text-end fw-bold">
+                                        <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.conveyance_allowance)"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Utilities Allowance</strong></td>
+                                    <td class="text-muted">~ 6.0% of Gross</td>
+                                    <td class="text-end fw-bold">
+                                        <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.utilities_allowance)"/>
+                                    </td>
+                                </tr>
+                                <tr t-if="offer.other_allowance and offer.other_allowance &gt; 0">
+                                    <td><strong>Other Allowance</strong></td>
+                                    <td class="text-muted">Special / Ad-hoc</td>
+                                    <td class="text-end fw-bold">
+                                        <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.other_allowance)"/>
+                                    </td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td colspan="2"><strong class="fs-6">Total Gross Monthly Salary</strong></td>
+                                    <td class="text-end">
+                                        <strong class="fs-5 text-success">
+                                            <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.gross_salary)"/>
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Floating Action Bar if Pending -->
+            <div t-if="can_approve" class="card shadow-sm border-0 mb-5 bg-white">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">Confirm Director Authorization</h6>
+                        <p class="text-muted small mb-0">By clicking approve, you authorize the official recruitment of this candidate.</p>
+                    </div>
+                    <form t-attf-action="/my/director-offers/#{offer.id}/approve" method="POST">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <button type="submit" class="btn btn-success btn-lg px-5 fw-bold shadow">
+                            <i class="fa fa-check-circle me-1"/> Approve Candidate Onboarding
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 10. CANDIDATE ONBOARDING DOCUMENTS UPLOAD PORTAL     -->
+    <!-- ==================================================== -->
+
+    <template id="portal_candidate_documents_upload" name="Candidate Onboarding Documents Submission">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
+            <div id="wrap" class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-lg-9">
+                        
+                        <!-- Success Alert -->
+                        <div t-if="success_msg" class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
+                            <h4 class="alert-heading fw-bold"><i class="fa fa-check-circle me-2"/>Documents Uploaded Successfully!</h4>
+                            <p class="mb-0">Thank you, <strong><t t-esc="offer.candidate_name"/></strong>. Your onboarding documents have been submitted to our Human Resources Department and linked to your employee file.</p>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
+                        <div class="card shadow border-0 rounded-3">
+                            <div class="card-header bg-primary text-white p-4 rounded-top-3">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <h3 class="fw-bold mb-1">Onboarding Formalities: Document Submission</h3>
+                                        <p class="mb-0 text-white-50"><t t-esc="offer.job_id.name"/> &#8226; <t t-esc="offer.company_id.name"/></p>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-white text-primary px-3 py-2 fs-6 fw-bold">Ref: <t t-esc="offer.name"/></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-4 p-md-5">
+                                <p class="lead mb-3">
+                                    Dear <strong><t t-esc="offer.candidate_name"/></strong>,
+                                </p>
+                                <p class="text-muted mb-4">
+                                    Congratulations on accepting our offer of employment! Please upload the <strong>six (6) mandatory documents</strong> below to finalize your personnel file and employee registration. 
+                                    Alternatively, you may also simply reply to your Document Request email with these files attached.
+                                </p>
+
+                                <form t-attf-action="/offer/documents/#{token}/submit" method="POST" enctype="multipart/form-data">
+                                    <div class="row g-4">
+                                        <!-- 1. Picture (1) -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    1. Picture (Passport Size) <span class="text-danger">*</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Recent color photograph with white or light blue background (for profile &amp; ID card).</p>
+                                                <input type="file" name="doc_picture" class="form-control" accept="image/*"/>
+                                                <div t-if="offer.has_doc_picture" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_picture_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 2. CNIC (1) -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    2. CNIC Copy <span class="text-danger">*</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Clear scanned copy of National Identity Card (both front and back).</p>
+                                                <input type="file" name="doc_cnic" class="form-control" accept=".pdf,image/*"/>
+                                                <div t-if="offer.has_doc_cnic" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_cnic_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 3. Resignation Acceptance Letter -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    3. Resignation Acceptance Letter <span class="text-danger">*</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Acceptance letter / clearance from existing or previous company.</p>
+                                                <input type="file" name="doc_resignation" class="form-control" accept=".pdf,image/*,.doc,.docx"/>
+                                                <div t-if="offer.has_doc_resignation" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_resignation_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 4. Educational Documents -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    4. Educational Documents <span class="text-danger">*</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Degrees, mark sheets, and transcripts (combine into one PDF or archive).</p>
+                                                <input type="file" name="doc_education" class="form-control" accept=".pdf,image/*,.zip"/>
+                                                <div t-if="offer.has_doc_education" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_education_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 5. Certification Documents -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    5. Certification Documents <span class="text-muted small">(If applicable)</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Professional certifications (PEC, Cisco, Microsoft, PMP, AWS, etc.).</p>
+                                                <input type="file" name="doc_certification" class="form-control" accept=".pdf,image/*,.zip"/>
+                                                <div t-if="offer.has_doc_certification" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_certification_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 6. Professional Documents -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light h-100">
+                                                <label class="form-label fw-bold text-dark mb-1">
+                                                    6. Professional Documents <span class="text-danger">*</span>
+                                                </label>
+                                                <p class="text-muted small mb-2">Experience letters, previous appointment letters, and recent payslips.</p>
+                                                <input type="file" name="doc_professional" class="form-control" accept=".pdf,image/*,.zip"/>
+                                                <div t-if="offer.has_doc_professional" class="mt-2 text-success small fw-bold">
+                                                    <i class="fa fa-check-circle me-1"/> Current: <t t-esc="offer.doc_professional_filename or 'Uploaded'"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-5 pt-3 border-top flex-wrap gap-3">
+                                        <a t-attf-href="/offer/respond/#{token}?action=accept" class="btn btn-outline-secondary">
+                                            <i class="fa fa-arrow-left me-1"/> Back to Offer Summary
+                                        </a>
+                                        <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow">
+                                            <i class="fa fa-cloud-upload me-2"/> Submit Onboarding Documents
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="card-footer bg-light text-center py-3 text-muted small">
+                                Allied Engineering &amp; Services (Pvt.) Ltd. &#8226; Human Resources Department
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
 </odoo>

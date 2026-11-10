@@ -43,6 +43,7 @@ Key Features:
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
         'data/mail_template_data.xml',
+        'report/report_resignation_acceptance.xml',
         'views/employee_resignation_views.xml',
         'views/portal_resignation_templates.xml',
         'views/resignation_clearance_portal_templates.xml',

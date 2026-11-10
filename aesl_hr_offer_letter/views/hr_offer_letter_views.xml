@@ -12,11 +12,18 @@
                     <button name="action_send_offer" string="Send Offer Letter" type="object" class="btn-primary" 
                             invisible="state not in ['draft', 'rejected']"/>
                     
+                    <button name="action_submit_for_director_approval" string="Submit for Director Approval" type="object" class="btn-primary"
+                            invisible="state != 'accepted' or not intimate_director_ids"/>
+
                     <button name="action_create_employee" string="Create Employee" type="object" class="btn-success" 
-                            invisible="state != 'accepted' or employee_id != False"/>
+                            invisible="state != 'approved_director' or employee_id != False"/>
                     
                     <button name="action_revise_offer" string="Revise Offer" type="object" class="btn-warning" 
-                            invisible="state not in ['rejected', 'sent']"/>
+                            invisible="state not in ['rejected', 'sent', 'pending_director', 'accepted']"/>
+                    
+                    <button name="action_send_document_request" string="Request Documents" type="object" class="btn-outline-primary"
+                            invisible="state in ['draft', 'cancel']"
+                            help="Sends or re-sends the onboarding document request email to the candidate."/>
                     
                     <button name="action_print_offer_letter" string="Print PDF Offer" type="object" class="btn-secondary"/>
                     
@@ -24,13 +31,15 @@
                     <button name="action_reset_to_draft" string="Reset to Draft" type="object" invisible="state in ['draft', 'done']"/>
 
                     <!-- Statusbar -->
-                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,accepted,done"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,pending_director,approved_director,done"/>
                 </header>
                 <sheet>
                     <!-- Ribbons for visual clarity -->
-                    <widget name="web_ribbon" title="Accepted" bg_color="text-bg-success" invisible="state != 'accepted'"/>
+                    <widget name="web_ribbon" title="Accepted" bg_color="text-bg-info" invisible="state != 'accepted'"/>
+                    <widget name="web_ribbon" title="Pending Director Approval" bg_color="text-bg-warning" invisible="state != 'pending_director'"/>
+                    <widget name="web_ribbon" title="Approved by Director" bg_color="text-bg-success" invisible="state != 'approved_director'"/>
                     <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger" invisible="state != 'rejected'"/>
-                    <widget name="web_ribbon" title="Onboarded" bg_color="text-bg-info" invisible="state != 'done'"/>
+                    <widget name="web_ribbon" title="Onboarded" bg_color="text-bg-primary" invisible="state != 'done'"/>
 
                     <!-- Stat Buttons -->
                     <div class="oe_button_box" name="button_box">
@@ -65,18 +74,18 @@
                     <group>
                         <group string="Candidate Selection">
                             <field name="applicant_id" placeholder="Select accepted candidate..." 
-                                   readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="candidate_name" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="email" widget="email" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="phone" widget="phone" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="date" readonly="state in ['sent', 'accepted', 'done']"/>
+                                   readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="candidate_name" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="email" widget="email" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="phone" widget="phone" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="date" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                         </group>
                         <group string="Position &amp; Department">
-                            <field name="job_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="department_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="posting_location" placeholder="e.g. Multan, Karachi" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="joining_date" readonly="state in ['sent', 'accepted', 'done']"/>
-                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                            <field name="job_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="department_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="posting_location" placeholder="e.g. Multan, Karachi" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="joining_date" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
@@ -98,22 +107,22 @@
                         <page string="Candidate Profile (Application Form)" name="candidate_profile">
                             <group>
                                 <group string="Personal Identification">
-                                    <field name="father_name" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="cnic" placeholder="e.g. 36302-1285740-1" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="date_of_birth" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="gender" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="religion" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="father_name" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="cnic" placeholder="e.g. 36302-1285740-1" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="date_of_birth" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="gender" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="religion" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                 </group>
                                 <group string="Family &amp; Employment History">
-                                    <field name="marital_status" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="no_of_dependents" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="place_of_birth" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="last_salary" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="earliest_joining_date" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="marital_status" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="no_of_dependents" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="place_of_birth" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="last_salary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="earliest_joining_date" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                 </group>
                             </group>
                             <group string="Address Details">
-                                <field name="present_address" placeholder="Enter present residential address..." readonly="state in ['sent', 'accepted', 'done']"/>
+                                <field name="present_address" placeholder="Enter present residential address..." readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                             </group>
                         </page>
 
@@ -123,25 +132,25 @@
                                 <div>
                                     <span class="text-muted">Total Agreed Package:</span>
                                     <h3 class="mb-0 text-primary">
-                                        <field name="gross_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                        <field name="gross_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                     </h3>
                                 </div>
                                 <button name="action_calculate_aesl_breakdown" string="Auto Calculate Standard Breakdown" 
                                         type="object" class="btn btn-outline-primary btn-sm"
-                                        invisible="state in ['sent', 'accepted', 'done']"
+                                        invisible="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"
                                         help="Calculates standard AESL breakdown (~60.6% Basic, ~27.2% House Rent, ~6.0% Conveyance, ~6.0% Utilities) based on Gross Salary."/>
                             </div>
 
                             <group>
                                 <group string="Salary Components (Monthly)">
-                                    <field name="basic_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="house_rent" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="conveyance_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="utilities_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="other_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="basic_salary" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="house_rent" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="conveyance_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="utilities_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="other_allowance" widget="monetary" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                 </group>
                                 <group string="Employment Terms">
-                                    <field name="probation_period" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="probation_period" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                     <field name="contract_id" readonly="1" invisible="not contract_id"/>
                                 </group>
                             </group>
@@ -150,12 +159,12 @@
                         <!-- Tab 3: Benefits & Medical Terms (Image 2 Section 2) -->
                         <page string="Benefits &amp; Terms" name="benefits_terms">
                             <group string="Medical Facilities">
-                                <field name="medical_outpatient" readonly="state in ['sent', 'accepted', 'done']"/>
-                                <field name="medical_hospitalisation" readonly="state in ['sent', 'accepted', 'done']"/>
+                                <field name="medical_outpatient" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                <field name="medical_hospitalisation" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                             </group>
                             <group string="Additional Terms &amp; Conditions">
                                 <field name="additional_terms" placeholder="Any additional conditions, notice period, or bonuses..." 
-                                       readonly="state in ['sent', 'accepted', 'done']"/>
+                                       readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                             </group>
                         </page>
 
@@ -163,16 +172,28 @@
                         <page string="Signatory &amp; Notifications" name="signatory_notifications">
                             <group>
                                 <group string="Company Signatory &amp; Letter Format">
-                                    <field name="signatory_name" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="signatory_title" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="drafter_initials" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="validity_days" readonly="state in ['sent', 'accepted', 'done']"/>
-                                    <field name="hr_manager_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'done']"/>
+                                    <field name="signatory_name" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="signatory_title" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="drafter_initials" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="validity_days" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="hr_manager_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                                 </group>
                                 <group string="Onboarding Notification Recipients">
                                     <field name="notify_user_ids" widget="many2many_tags" 
                                            options="{'color_field': 'color', 'no_create': True}"
-                                           readonly="state in ['sent', 'accepted', 'done']"/>
+                                           readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="intimate_director_ids" widget="many2many_tags"
+                                           options="{'color_field': 'color', 'no_create': True}"
+                                           readonly="state in ['done', 'cancel']"
+                                           placeholder="Select Directors for approval..."/>
+                                    <field name="approved_director_ids" widget="many2many_tags"
+                                           options="{'color_field': 'color'}"
+                                           readonly="1"
+                                           invisible="not approved_director_ids"/>
+                                    <field name="director_approval_status" readonly="1"
+                                           invisible="not intimate_director_ids"/>
+                                    <field name="director_approval_date" readonly="1"
+                                           invisible="state not in ['approved_director', 'done']"/>
                                 </group>
                             </group>
                             <group string="Portal Security &amp; Candidate Response" invisible="state == 'draft'">
@@ -181,6 +202,73 @@
                                 </group>
                                 <group>
                                     <field name="access_token" readonly="1" groups="base.group_no_one"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Tab 5: Onboarding Documents (Automated Collection) -->
+                        <page string="Onboarding Documents" name="onboarding_documents">
+                            <!-- Summary Bar -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded border">
+                                <div>
+                                    <span class="text-muted small text-uppercase fw-bold">Document Collection Status:</span>
+                                    <h4 class="mb-0 text-primary">
+                                        <field name="docs_status" widget="badge" 
+                                               decoration-success="docs_status == 'complete'" 
+                                               decoration-warning="docs_status == 'partial'" 
+                                               decoration-danger="docs_status == 'pending'"/>
+                                        <span class="ms-2 fs-6 text-muted">
+                                            (<field name="docs_received_count" readonly="1"/> of 6 Received &#8226; <field name="docs_missing_count" readonly="1"/> Missing)
+                                        </span>
+                                    </h4>
+                                    <div class="text-muted small mt-1">
+                                        <span invisible="not docs_request_date">Requested On: <field name="docs_request_date" readonly="1"/> &#8226; </span>
+                                        <span invisible="not docs_received_date">Last Received: <field name="docs_received_date" readonly="1"/></span>
+                                    </div>
+                                </div>
+                                <button name="action_send_document_request" string="Send Document Request Email" 
+                                        type="object" class="btn btn-outline-primary btn-sm"
+                                        icon="fa-envelope"/>
+                            </div>
+
+                            <!-- Document Uploads Grid -->
+                            <group string="1. Identification &amp; Photo">
+                                <group>
+                                    <field name="doc_picture_filename" invisible="1"/>
+                                    <field name="doc_picture" widget="image" class="oe_avatar" filename="doc_picture_filename" 
+                                           options="{'size': [120, 120]}"/>
+                                    <field name="has_doc_picture" readonly="1" widget="boolean_toggle" string="Picture Status"/>
+                                </group>
+                                <group>
+                                    <field name="doc_cnic_filename" invisible="1"/>
+                                    <field name="doc_cnic" widget="binary" filename="doc_cnic_filename"/>
+                                    <field name="has_doc_cnic" readonly="1" widget="boolean_toggle" string="CNIC Status"/>
+                                </group>
+                            </group>
+
+                            <group string="2. Employment Separation &amp; Education">
+                                <group>
+                                    <field name="doc_resignation_filename" invisible="1"/>
+                                    <field name="doc_resignation" widget="binary" filename="doc_resignation_filename"/>
+                                    <field name="has_doc_resignation" readonly="1" widget="boolean_toggle" string="Resignation Status"/>
+                                </group>
+                                <group>
+                                    <field name="doc_education_filename" invisible="1"/>
+                                    <field name="doc_education" widget="binary" filename="doc_education_filename"/>
+                                    <field name="has_doc_education" readonly="1" widget="boolean_toggle" string="Education Status"/>
+                                </group>
+                            </group>
+
+                            <group string="3. Certifications &amp; Professional Experience">
+                                <group>
+                                    <field name="doc_certification_filename" invisible="1"/>
+                                    <field name="doc_certification" widget="binary" filename="doc_certification_filename"/>
+                                    <field name="has_doc_certification" readonly="1" widget="boolean_toggle" string="Certifications Status"/>
+                                </group>
+                                <group>
+                                    <field name="doc_professional_filename" invisible="1"/>
+                                    <field name="doc_professional" widget="binary" filename="doc_professional_filename"/>
+                                    <field name="has_doc_professional" readonly="1" widget="boolean_toggle" string="Professional Docs Status"/>
                                 </group>
                             </group>
                         </page>
@@ -198,7 +286,7 @@
         <field name="name">hr.offer.letter.tree</field>
         <field name="model">hr.offer.letter</field>
         <field name="arch" type="xml">
-            <list string="Offer Letters" decoration-success="state == 'accepted'" decoration-info="state == 'sent'" decoration-danger="state == 'rejected'" decoration-muted="state in ['done', 'cancel']">
+            <list string="Offer Letters" decoration-success="state in ['accepted', 'approved_director']" decoration-warning="state == 'pending_director'" decoration-info="state == 'sent'" decoration-danger="state == 'rejected'" decoration-muted="state in ['done', 'cancel']">
                 <field name="name"/>
                 <field name="date"/>
                 <field name="candidate_name"/>
@@ -209,11 +297,18 @@
                 <field name="currency_id" column_invisible="True"/>
                 <field name="joining_date"/>
                 <field name="state" widget="badge" 
-                       decoration-success="state == 'accepted'" 
+                       decoration-success="state in ['accepted', 'approved_director']" 
                        decoration-info="state == 'sent'" 
+                       decoration-warning="state == 'pending_director'"
                        decoration-danger="state == 'rejected'" 
                        decoration-primary="state == 'done'"
-                       decoration-warning="state == 'draft'"/>
+                       decoration-muted="state == 'draft'"/>
+                <field name="director_approval_status" optional="show"/>
+                <field name="docs_status" widget="badge" 
+                       decoration-success="docs_status == 'complete'" 
+                       decoration-warning="docs_status == 'partial'" 
+                       decoration-danger="docs_status == 'pending'" 
+                       optional="show"/>
                 <field name="employee_id" optional="hide"/>
                 <field name="company_id" groups="base.group_multi_company" optional="hide"/>
             </list>
@@ -238,7 +333,7 @@
                     <t t-name="card">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <strong class="text-primary"><field name="name"/></strong>
-                            <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'sent': 'info', 'accepted': 'success', 'rejected': 'danger', 'done': 'primary'}}"/>
+                            <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'sent': 'info', 'accepted': 'info', 'pending_director': 'warning', 'approved_director': 'success', 'rejected': 'danger', 'done': 'primary'}}"/>
                         </div>
                         <div class="fw-bold fs-5 text-dark"><field name="candidate_name"/></div>
                         <div class="text-muted"><field name="job_id"/> &#8226; <field name="department_id"/></div>
@@ -273,8 +368,14 @@
                 <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
                 <filter string="Offer Sent" name="sent" domain="[('state', '=', 'sent')]"/>
                 <filter string="Accepted" name="accepted" domain="[('state', '=', 'accepted')]"/>
+                <filter string="Pending Director Approval" name="pending_director" domain="[('state', '=', 'pending_director')]"/>
+                <filter string="Approved by Director" name="approved_director" domain="[('state', '=', 'approved_director')]"/>
                 <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
                 <filter string="Employee Created" name="done" domain="[('state', '=', 'done')]"/>
+
+                <separator/>
+                <filter string="All Documents Uploaded" name="docs_complete" domain="[('docs_status', '=', 'complete')]"/>
+                <filter string="Awaiting Documents" name="docs_pending" domain="[('docs_status', 'in', ['pending', 'partial'])]"/>
 
                 <separator/>
                 <group expand="0" string="Group By">
@@ -294,7 +395,7 @@
         <field name="res_model">hr.offer.letter</field>
         <field name="view_mode">list,kanban,form</field>
         <field name="search_view_id" ref="view_hr_offer_letter_search"/>
-        <field name="context">{'search_default_draft': 1, 'search_default_sent': 1, 'search_default_accepted': 1}</field>
+        <field name="context">{'search_default_draft': 1, 'search_default_sent': 1, 'search_default_accepted': 1, 'search_default_pending_director': 1, 'search_default_approved_director': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create a new Employment Offer Letter!

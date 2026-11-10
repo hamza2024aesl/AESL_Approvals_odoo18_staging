@@ -42,7 +42,9 @@ class HrOfferLetter(models.Model):
     state = fields.Selection([
         ('draft', 'Draft'),
         ('sent', 'Offer Sent'),
-        ('accepted', 'Accepted'),
+        ('accepted', 'Candidate Accepted'),
+        ('pending_director', 'Pending Director Approval'),
+        ('approved_director', 'Approved by Director'),
         ('rejected', 'Rejected'),
         ('done', 'Employee Created'),
         ('cancel', 'Cancelled'),
@@ -166,6 +168,88 @@ class HrOfferLetter(models.Model):
         help="These users will automatically receive an email alert as soon as the candidate is onboarded as an Employee."
     )
 
+    # Intimate Directors & Multi-Director Approval Flow
+    intimate_director_ids = fields.Many2many(
+        'res.users',
+        'hr_offer_letter_intimate_director_rel',
+        'offer_id',
+        'user_id',
+        string='Intimate Directors',
+        tracking=True,
+        help="Directors who will receive notification to review candidate profile and compensation in their portal, and provide approval before employee creation."
+    )
+    approved_director_ids = fields.Many2many(
+        'res.users',
+        'hr_offer_letter_approved_director_rel',
+        'offer_id',
+        'user_id',
+        string='Approved Directors',
+        readonly=True,
+        copy=False,
+        tracking=True,
+        help="Directors who have approved this onboarding request."
+    )
+    all_directors_approved = fields.Boolean(
+        string='All Directors Approved',
+        compute='_compute_all_directors_approved',
+        store=True
+    )
+    director_approval_status = fields.Char(
+        string='Director Approval Progress',
+        compute='_compute_director_approval_status',
+        store=True
+    )
+    director_approval_date = fields.Datetime(
+        string='Director Approval Date',
+        readonly=True,
+        copy=False,
+        tracking=True
+    )
+
+    # ---------------------------------------------------------
+    # Auto-Generated Onboarding Documents Collection (6 Types)
+    # ---------------------------------------------------------
+    # 1. Picture (1)
+    doc_picture = fields.Binary(string='Candidate Picture / Photo', attachment=True)
+    doc_picture_filename = fields.Char(string='Picture Filename')
+    has_doc_picture = fields.Boolean(string='Picture Received', compute='_compute_document_statuses', store=True)
+
+    # 2. CNIC (1)
+    doc_cnic = fields.Binary(string='CNIC Copy', attachment=True)
+    doc_cnic_filename = fields.Char(string='CNIC Filename')
+    has_doc_cnic = fields.Boolean(string='CNIC Received', compute='_compute_document_statuses', store=True)
+
+    # 3. Resignation Acceptance Letter
+    doc_resignation = fields.Binary(string='Resignation Acceptance Letter', attachment=True)
+    doc_resignation_filename = fields.Char(string='Resignation Filename')
+    has_doc_resignation = fields.Boolean(string='Resignation Received', compute='_compute_document_statuses', store=True)
+
+    # 4. Educational Documents
+    doc_education = fields.Binary(string='Educational Documents', attachment=True)
+    doc_education_filename = fields.Char(string='Educational Docs Filename')
+    has_doc_education = fields.Boolean(string='Education Received', compute='_compute_document_statuses', store=True)
+
+    # 5. Certification Documents
+    doc_certification = fields.Binary(string='Certification Documents', attachment=True)
+    doc_certification_filename = fields.Char(string='Certifications Filename')
+    has_doc_certification = fields.Boolean(string='Certifications Received', compute='_compute_document_statuses', store=True)
+
+    # 6. Professional Documents
+    doc_professional = fields.Binary(string='Professional Documents', attachment=True)
+    doc_professional_filename = fields.Char(string='Professional Docs Filename')
+    has_doc_professional = fields.Boolean(string='Professional Received', compute='_compute_document_statuses', store=True)
+
+    # Tracking & Summary
+    docs_received_count = fields.Integer(string='Received Docs Count', compute='_compute_document_statuses', store=True)
+    docs_missing_count = fields.Integer(string='Missing Docs Count', compute='_compute_document_statuses', store=True)
+    docs_status = fields.Selection([
+        ('pending', 'Awaiting Documents'),
+        ('partial', 'Partially Received'),
+        ('complete', 'All Documents Uploaded'),
+    ], string='Documents Status', compute='_compute_document_statuses', store=True, default='pending')
+    docs_request_date = fields.Datetime(string='Documents Requested On', readonly=True, copy=False)
+    docs_received_date = fields.Datetime(string='Documents Received On', readonly=True, copy=False)
+
     # ---------------------------------------------------------
     # Computes & Onchanges
     # ---------------------------------------------------------
@@ -179,6 +263,54 @@ class HrOfferLetter(models.Model):
                 (rec.utilities_allowance or 0.0) +
                 (rec.other_allowance or 0.0)
             )
+
+    @api.depends('intimate_director_ids', 'approved_director_ids')
+    def _compute_all_directors_approved(self):
+        for rec in self:
+            if not rec.intimate_director_ids:
+                rec.all_directors_approved = False
+            else:
+                rec.all_directors_approved = all(d in rec.approved_director_ids for d in rec.intimate_director_ids)
+
+    @api.depends('intimate_director_ids', 'approved_director_ids')
+    def _compute_director_approval_status(self):
+        for rec in self:
+            total = len(rec.intimate_director_ids)
+            approved = len(rec.approved_director_ids)
+            if total == 0:
+                rec.director_approval_status = _("No Directors Assigned")
+            elif approved == total:
+                rec.director_approval_status = _("Fully Approved (%s/%s)") % (approved, total)
+            else:
+                rec.director_approval_status = _("Pending (%s/%s Approved)") % (approved, total)
+
+    @api.depends('doc_picture', 'doc_cnic', 'doc_resignation', 'doc_education', 'doc_certification', 'doc_professional')
+    def _compute_document_statuses(self):
+        for rec in self:
+            rec.has_doc_picture = bool(rec.doc_picture)
+            rec.has_doc_cnic = bool(rec.doc_cnic)
+            rec.has_doc_resignation = bool(rec.doc_resignation)
+            rec.has_doc_education = bool(rec.doc_education)
+            rec.has_doc_certification = bool(rec.doc_certification)
+            rec.has_doc_professional = bool(rec.doc_professional)
+
+            count = sum([
+                1 if rec.doc_picture else 0,
+                1 if rec.doc_cnic else 0,
+                1 if rec.doc_resignation else 0,
+                1 if rec.doc_education else 0,
+                1 if rec.doc_certification else 0,
+                1 if rec.doc_professional else 0,
+            ])
+            rec.docs_received_count = count
+            rec.docs_missing_count = 6 - count
+
+            if count == 0:
+                rec.docs_status = 'pending'
+            elif count == 6:
+                rec.docs_status = 'complete'
+            else:
+                rec.docs_status = 'partial'
 
     @api.onchange('applicant_id')
     def _onchange_applicant_id(self):
@@ -249,12 +381,23 @@ class HrOfferLetter(models.Model):
 
     def write(self, vals):
         # Prevent editing restricted fields once sent or accepted, unless revising
-        restricted_states = ['sent', 'accepted', 'done']
+        restricted_states = ['sent', 'accepted', 'pending_director', 'approved_director', 'done']
         if any(rec.state in restricted_states for rec in self):
             allowed_fields = {
                 'state', 'employee_id', 'contract_id', 'access_token',
                 'response_date', 'rejection_reason', 'message_follower_ids',
-                'activity_ids', 'message_ids', 'revision'
+                'activity_ids', 'message_ids', 'revision',
+                'intimate_director_ids', 'approved_director_ids',
+                'director_approval_date', 'director_approval_status',
+                'all_directors_approved',
+                'doc_picture', 'doc_picture_filename', 'has_doc_picture',
+                'doc_cnic', 'doc_cnic_filename', 'has_doc_cnic',
+                'doc_resignation', 'doc_resignation_filename', 'has_doc_resignation',
+                'doc_education', 'doc_education_filename', 'has_doc_education',
+                'doc_certification', 'doc_certification_filename', 'has_doc_certification',
+                'doc_professional', 'doc_professional_filename', 'has_doc_professional',
+                'docs_received_count', 'docs_missing_count', 'docs_status',
+                'docs_request_date', 'docs_received_date'
             }
             updating_restricted = set(vals.keys()) - allowed_fields
             if updating_restricted:
@@ -303,9 +446,251 @@ class HrOfferLetter(models.Model):
         base_url = self._get_clean_base_url()
         return f"{base_url}/offer/respond/{self.access_token}?action=reject"
 
+    def get_director_portal_url(self):
+        self.ensure_one()
+        base_url = self._get_clean_base_url()
+        return f"{base_url}/my/director-offers/{self.id}"
+
+    def get_document_upload_url(self):
+        self.ensure_one()
+        self._ensure_token()
+        base_url = self._get_clean_base_url()
+        return f"{base_url}/offer/documents/{self.access_token}"
+
+    # ---------------------------------------------------------
+    # Auto-Categorization & Documents App Sync
+    # ---------------------------------------------------------
+    def _classify_and_store_attachment(self, attachment):
+        """
+        Auto-categorizes an incoming ir.attachment into one of the 6 onboarding document fields
+        based on filenames and keywords, and creates corresponding entry in Documents module.
+        """
+        self.ensure_one()
+        if not attachment or not attachment.datas:
+            return None
+
+        filename = (attachment.name or '').lower().strip()
+        mimetype = (attachment.mimetype or '').lower().strip()
+
+        # Skip system-generated offer letter attachments
+        if filename.startswith('offer_letter') or 'appointment_letter' in filename:
+            return None
+
+        classified_category = None
+
+        # 1. Picture (1)
+        pic_keywords = ['picture', 'photo', 'image', 'pic', 'avatar', 'dp', 'photograph', 'passport', 'profile_pic', 'headshot']
+        # 2. CNIC (1)
+        cnic_keywords = ['cnic', 'nic', 'id_card', 'identity', 'national_id', 'nadra', 'b_form', 'smart_card']
+        # 3. Resignation Acceptance Letter
+        resign_keywords = ['resignation', 'resign', 'relieving', 'clearance', 'acceptance', 'separation', 'leaving']
+        # 4. Educational Documents
+        edu_keywords = ['degree', 'education', 'transcript', 'academic', 'matric', 'inter', 'bachelor', 'master', 'university', 'college', 'school', 'diploma', 'hec', 'fsc', 'fa', 'dae', 'bs', 'ms', 'phd']
+        # 5. Certification Documents
+        cert_keywords = ['certif', 'pec', 'cisco', 'ccna', 'ccnp', 'microsoft', 'pmp', 'itil', 'aws', 'azure', 'course', 'license', 'training']
+        # 6. Professional Documents
+        prof_keywords = ['professional', 'experience', 'payslip', 'salary_slip', 'employment', 'recommendation', 'service_certificate', 'appraisal', 'appointment']
+
+        # Keyword Matching Priority
+        if any(kw in filename for kw in cnic_keywords):
+            self.sudo().write({'doc_cnic': attachment.datas, 'doc_cnic_filename': attachment.name})
+            classified_category = 'CNIC'
+        elif any(kw in filename for kw in resign_keywords):
+            self.sudo().write({'doc_resignation': attachment.datas, 'doc_resignation_filename': attachment.name})
+            classified_category = 'Resignation Acceptance Letter'
+        elif any(kw in filename for kw in edu_keywords):
+            self.sudo().write({'doc_education': attachment.datas, 'doc_education_filename': attachment.name})
+            classified_category = 'Educational Documents'
+        elif any(kw in filename for kw in cert_keywords):
+            self.sudo().write({'doc_certification': attachment.datas, 'doc_certification_filename': attachment.name})
+            classified_category = 'Certification Documents'
+        elif any(kw in filename for kw in prof_keywords):
+            self.sudo().write({'doc_professional': attachment.datas, 'doc_professional_filename': attachment.name})
+            classified_category = 'Professional Documents'
+        elif any(kw in filename for kw in pic_keywords) or (mimetype.startswith('image/') and not self.doc_picture):
+            self.sudo().write({'doc_picture': attachment.datas, 'doc_picture_filename': attachment.name})
+            classified_category = 'Picture'
+        else:
+            # Fallback based on missing slot if mimetype is image
+            if mimetype.startswith('image/') and not self.doc_picture:
+                self.sudo().write({'doc_picture': attachment.datas, 'doc_picture_filename': attachment.name})
+                classified_category = 'Picture'
+            elif not self.doc_professional:
+                self.sudo().write({'doc_professional': attachment.datas, 'doc_professional_filename': attachment.name})
+                classified_category = 'Professional Documents'
+
+        # Sync to Documents Module (Odoo Documents App)
+        self._sync_attachment_to_documents_app(attachment, classified_category or 'Onboarding Document')
+        return classified_category
+
+    def _sync_attachment_to_documents_app(self, attachment, category_name):
+        """Uploads and categorizes the attachment in Odoo Documents module safely."""
+        if 'documents.document' not in self.env:
+            return
+
+        try:
+            Doc = self.env['documents.document'].sudo()
+            # In Odoo 18, folders are documents with type='folder'
+            folder = Doc.search([('name', '=', 'HR Onboarding'), ('type', '=', 'folder')], limit=1)
+            if not folder:
+                folder = Doc.search([('name', 'ilike', 'Recruitment'), ('type', '=', 'folder')], limit=1)
+            if not folder:
+                folder = Doc.search([('name', 'ilike', 'HR'), ('type', '=', 'folder')], limit=1)
+            if not folder:
+                folder = Doc.create({
+                    'name': 'HR Onboarding',
+                    'type': 'folder',
+                })
+
+            tag_ids = []
+            if 'documents.tag' in self.env:
+                Tag = self.env['documents.tag'].sudo()
+                tag = Tag.search([('name', '=', category_name)], limit=1)
+                if not tag:
+                    tag = Tag.create({'name': category_name})
+                tag_ids = [(4, tag.id)]
+
+            existing_doc = Doc.search([('attachment_id', '=', attachment.id)], limit=1)
+            doc_vals = {
+                'name': f"{self.candidate_name} - {category_name} ({attachment.name})",
+                'attachment_id': attachment.id,
+                'folder_id': folder.id if folder else False,
+                'partner_id': self.applicant_id.partner_id.id if self.applicant_id and self.applicant_id.partner_id else False,
+                'owner_id': self.hr_manager_id.id if self.hr_manager_id else self.env.user.id,
+                'res_model': 'hr.offer.letter',
+                'res_id': self.id,
+                'type': 'binary',
+            }
+            if tag_ids:
+                doc_vals['tag_ids'] = tag_ids
+
+            if existing_doc:
+                existing_doc.write(doc_vals)
+            else:
+                Doc.create(doc_vals)
+        except Exception as e:
+            # Safe failover so email sending or chatter posting is NEVER blocked by document sync
+            import logging
+            logging.getLogger(__name__).warning("Could not sync attachment %s to Documents app: %s", attachment.name, e)
+
+    def _message_post_after_hook(self, message, msg_vals):
+        """Intercepts incoming email replies from candidate and classifies attachments."""
+        res = super()._message_post_after_hook(message, msg_vals)
+        candidate_attachments = message.attachment_ids.filtered(
+            lambda a: not (a.name and (a.name.lower().startswith('offer_letter') or 'appointment_letter' in a.name.lower()))
+        )
+        if candidate_attachments:
+            classified = []
+            for att in candidate_attachments:
+                cat = self._classify_and_store_attachment(att)
+                if cat:
+                    classified.append(f"{att.name} ➔ <strong>{cat}</strong>")
+
+            if classified:
+                self.sudo().write({'docs_received_date': fields.Datetime.now()})
+                self.sudo().message_post(body=Markup(
+                    "<p style='color: #198754;'><strong>📥 Candidate Onboarding Documents Received &amp; Processed:</strong></p>"
+                    "<ul>" + "".join([f"<li>{item}</li>" for item in classified]) + "</ul>"
+                    "<p>Documents checklist status: <strong>%s (%s/6 Received)</strong>. Saved to Documents module.</p>"
+                ) % (dict(self._fields['docs_status'].selection).get(self.docs_status), self.docs_received_count))
+        return res
+
     # ---------------------------------------------------------
     # Actions & Workflows
     # ---------------------------------------------------------
+    def action_submit_for_director_approval(self):
+        """Allows HR to manually submit or resubmit onboarding request for Director Approval."""
+        self.ensure_one()
+        if not self.intimate_director_ids:
+            raise UserError(_("Please select at least one Director in 'Intimate Directors' before requesting approval."))
+        if self.state not in ['draft', 'sent', 'accepted', 'pending_director']:
+            raise UserError(_("You cannot submit for director approval in '%s' status.") % dict(self._fields['state'].selection).get(self.state))
+
+        self.write({
+            'state': 'pending_director',
+            'approved_director_ids': [(5, 0, 0)],
+            'director_approval_date': False,
+        })
+        self._send_director_notification()
+        self.message_post(body=Markup(
+            "<p style='color: #0d6efd;'><strong>Onboarding Request Submitted for Director Approval</strong></p>"
+            "<p>Request submitted by %s. Notification emails sent to intimate directors: <strong>%s</strong>.</p>"
+        ) % (self.env.user.name, ', '.join(self.intimate_director_ids.mapped('name'))))
+
+    def action_director_approve(self, director_user=None):
+        """Processes approval from an intimate director."""
+        self.ensure_one()
+        user = director_user or self.env.user
+        if user not in self.intimate_director_ids:
+            raise UserError(_("User %s is not assigned as an intimating director for this request.") % user.name)
+        if user in self.approved_director_ids:
+            raise UserError(_("Director %s has already approved this request.") % user.name)
+
+        # Record approval
+        self.sudo().write({
+            'approved_director_ids': [(4, user.id)],
+        })
+
+        # Check remaining directors
+        remaining = self.intimate_director_ids - self.approved_director_ids
+        if not remaining:
+            # All directors approved!
+            self.sudo().write({
+                'state': 'approved_director',
+                'director_approval_date': fields.Datetime.now(),
+            })
+            self.sudo().message_post(body=Markup(
+                "<p style='color: green;'><strong>🎉 All Director Approvals Received!</strong></p>"
+                "<p>Final approval recorded from Director <strong>%s</strong> on %s.</p>"
+                "<p>The onboarding request is now <strong>Approved by Director</strong>. HR can now proceed with <strong>Create Employee</strong>.</p>"
+            ) % (user.name, fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            # Send notification to HR
+            self._send_hr_director_approved_notification(user)
+        else:
+            remaining_names = ', '.join(remaining.mapped('name'))
+            self.sudo().message_post(body=Markup(
+                "<p style='color: #0d6efd;'><strong>Director Approval Recorded:</strong></p>"
+                "<p>Director <strong>%s</strong> has approved.</p>"
+                "<p>Awaiting approval from remaining director(s): <strong>%s</strong>.</p>"
+            ) % (user.name, remaining_names))
+
+    def _send_director_notification(self):
+        """Sends director approval request email to all users in intimate_director_ids."""
+        self.ensure_one()
+        directors = self.intimate_director_ids.filtered(lambda u: u.email)
+        if not directors:
+            return
+
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_director_approval_request', raise_if_not_found=False)
+        if mail_template:
+            for director in directors:
+                mail_template.with_context(director_user=director).send_mail(
+                    self.id,
+                    email_values={'email_to': director.email},
+                    force_send=True
+                )
+
+    def _send_hr_director_approved_notification(self, approving_director):
+        """Sends alert email to HR when all directors have approved."""
+        self.ensure_one()
+        recipients = set()
+        if self.hr_manager_id and self.hr_manager_id.email:
+            recipients.add(self.hr_manager_id.email)
+        for u in self.notify_user_ids:
+            if u.email:
+                recipients.add(u.email)
+
+        if not recipients:
+            return
+
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_director_approved_notification', raise_if_not_found=False)
+        if mail_template:
+            for email in recipients:
+                mail_template.with_context(approving_director=approving_director).send_mail(
+                    self.id,
+                    email_values={'email_to': email},
+                    force_send=True
+                )
     def action_send_offer(self):
         """Generates PDF report, attaches it to email, and sends it to candidate with Accept/Reject buttons."""
         self.ensure_one()
@@ -353,21 +738,42 @@ class HrOfferLetter(models.Model):
             attachment_ids=[attachment.id]
         )
 
-    def action_revise_offer(self):
-        """Allows HR to revise the offer if rejected by candidate."""
+    def action_send_document_request(self):
+        """Sends the document request email with the 6 mandatory documents to the candidate."""
         self.ensure_one()
-        if self.state not in ['rejected', 'sent']:
-            raise UserError(_("You can only revise offers that are in 'Rejected' or 'Offer Sent' state."))
+        if not self.email:
+            raise UserError(_("Candidate email is required to send document request."))
+
+        self._ensure_token()
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_candidate_document_request', raise_if_not_found=False)
+        if mail_template:
+            mail_template.send_mail(self.id, email_values={'email_to': self.email}, force_send=True)
+            self.write({'docs_request_date': fields.Datetime.now()})
+            self.message_post(body=Markup(
+                "<p style='color: #0d6efd;'><strong>📧 Onboarding Document Request Email Dispatched:</strong></p>"
+                "<p>Sent to: <strong>%s</strong> (%s)</p>"
+                "<p>6 Mandatory Documents Requested: Picture, CNIC, Resignation Letter, Educational, Certification, Professional.</p>"
+            ) % (self.candidate_name, self.email))
+
+    def action_revise_offer(self):
+        """Allows HR to revise the offer if rejected by candidate or awaiting changes."""
+        self.ensure_one()
+        if self.state not in ['rejected', 'sent', 'pending_director', 'approved_director', 'accepted']:
+            raise UserError(_("You can only revise offers that are in 'Rejected', 'Offer Sent', or 'Director Approval' state."))
 
         self.revision += 1
         self.state = 'draft'
-        self.message_post(body=_("Offer letter has been reopened for Revision #%s by %s.") % (self.revision, self.env.user.name))
+        self.approved_director_ids = [(5, 0, 0)]
+        self.director_approval_date = False
+        self.message_post(body=_("Offer letter has been reopened for Revision #%s by %s. Director approvals have been reset.") % (self.revision, self.env.user.name))
 
     def action_create_employee(self):
-        """Automatically creates hr.employee and hr.contract from accepted offer details."""
+        """Automatically creates hr.employee and hr.contract from approved offer details."""
         self.ensure_one()
-        if self.state != 'accepted':
-            raise UserError(_("Employee can only be created once the candidate has accepted the offer."))
+        if self.state != 'approved_director':
+            raise UserError(_("Employee can only be created once the onboarding request is approved by Director(s)."))
+        if self.intimate_director_ids and not self.all_directors_approved:
+            raise UserError(_("All intimate directors must approve before an employee record can be created."))
         if self.employee_id:
             raise UserError(_("Employee has already been created for this offer (%s).") % self.employee_id.name)
 
@@ -388,7 +794,28 @@ class HrOfferLetter(models.Model):
             'department_id': self.department_id.id,
             'company_id': self.company_id.id,
         }
+        # Auto-set Picture as profile image if received
+        if self.doc_picture:
+            employee_vals['image_1920'] = self.doc_picture
+
         employee = self.env['hr.employee'].create(employee_vals)
+
+        # Attach received onboarding documents to the created Employee record
+        for doc_field, doc_fname in [
+            (self.doc_picture, self.doc_picture_filename or 'Profile_Picture.jpg'),
+            (self.doc_cnic, self.doc_cnic_filename or 'CNIC.pdf'),
+            (self.doc_resignation, self.doc_resignation_filename or 'Resignation_Letter.pdf'),
+            (self.doc_education, self.doc_education_filename or 'Educational_Docs.pdf'),
+            (self.doc_certification, self.doc_certification_filename or 'Certifications.pdf'),
+            (self.doc_professional, self.doc_professional_filename or 'Professional_Docs.pdf'),
+        ]:
+            if doc_field:
+                self.env['ir.attachment'].sudo().create({
+                    'name': doc_fname,
+                    'datas': doc_field,
+                    'res_model': 'hr.employee',
+                    'res_id': employee.id,
+                })
 
         # 2. Create hr.contract
         contract_vals = {
