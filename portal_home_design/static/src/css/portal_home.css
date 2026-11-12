@@ -1,0 +1,35 @@
+.ivis_groups { margin-top: 1rem; }
+.ivis_group { margin-top: 1.6rem; }
+.ivis_group > h2 {
+    font-size: .72rem; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: #6b7280; margin: 0 0 .65rem;
+}
+.ivis_blue   { --t: #2563eb; --tb: #e6eefc; }
+.ivis_green  { --t: #15803d; --tb: #e3f4ea; }
+.ivis_orange { --t: #c2410c; --tb: #fdebdd; }
+.ivis_purple { --t: #6d28d9; --tb: #eee8fc; }
+
+.ivis_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: .75rem;
+}
+/* the tile is the card Odoo already rendered; neutralise its column sizing */
+.ivis_grid > .ivis_tile {
+    width: auto !important; max-width: none !important; flex: none !important;
+    margin: 0 !important; padding: .8rem .9rem !important;
+    background: #fff; border: 1px solid #e3e7ee; border-radius: 14px;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.ivis_grid > .ivis_tile:hover {
+    transform: translateY(-2px); border-color: var(--t);
+    box-shadow: 0 8px 22px rgba(20, 30, 50, .08);
+}
+.ivis_tile img {
+    width: 44px; height: 44px; object-fit: contain; padding: 6px;
+    border-radius: 12px; background: var(--tb);
+}
+.ivis_tile .badge { background: var(--tb) !important; color: var(--t) !important; }
+
+/* stray spinner at the bottom of the page */
+#loading-screen.hidden { display: none !important; }
