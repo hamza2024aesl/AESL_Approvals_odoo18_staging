@@ -50,6 +50,11 @@
         </xpath>
     </template>
 
+    <!-- Hide Standard Odoo Base Documents Entry on Portal Home -->
+    <template id="portal_my_home_documents_hide" name="Hide Base Documents from Portal Home" inherit_id="documents.portal_my_home_documents" priority="99">
+        <xpath expr="//t[@t-call='portal.portal_docs_entry']" position="replace"/>
+    </template>
+
     <!-- 2. Portal Breadcrumbs -->
     <template id="portal_my_home_menu_doc_request" name="Portal layout : Document Request menu entries" inherit_id="portal.portal_breadcrumbs" priority="25">
         <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
@@ -159,10 +164,10 @@
                                 <!-- Instructions -->
                                 <div class="bg-light p-3 rounded mb-4 border">
                                     <h6 class="font-weight-bold text-dark mb-2">Instructions from HR:</h6>
-                                    <p class="mb-1 text-secondary">
-                                        <t t-if="doc_req.instructions" t-esc="doc_req.instructions"/>
+                                    <div class="mb-1 text-secondary">
+                                        <t t-if="doc_req.instructions" t-out="doc_req.instructions"/>
                                         <t t-else="">Please upload the requested document file and provide your digital signature below.</t>
-                                    </p>
+                                    </div>
                                     <t t-if="doc_req.deadline">
                                         <span class="badge bg-danger mt-2">
                                             Deadline: <t t-esc="doc_req.deadline"/>
@@ -234,7 +239,9 @@
                                             <div class="col-md-6 mb-3">
                                                 <h6 class="font-weight-bold">Digital Signature:</h6>
                                                 <t t-if="doc_req.signature">
-                                                    <img t-attf-src="data:image/png;base64,{{doc_req.signature}}" class="border rounded p-1 bg-white" style="max-height: 120px;"/>
+                                                    <div class="border rounded p-2 bg-white text-center" style="max-width: 320px; width: 100%; box-sizing: border-box; overflow: hidden;">
+                                                        <img t-attf-src="data:image/png;base64,{{doc_req.signature}}" class="img-fluid d-block mx-auto" style="max-height: 90px; max-width: 100%; object-fit: contain;"/>
+                                                    </div>
                                                     <div class="small text-muted mt-1">
                                                         Signed by <strong><t t-esc="doc_req.signed_by"/></strong> on <t t-esc="doc_req.signed_on"/>
                                                     </div>

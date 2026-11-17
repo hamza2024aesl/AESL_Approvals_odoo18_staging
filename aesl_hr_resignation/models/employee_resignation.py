@@ -578,6 +578,43 @@ class EmployeeResignation(models.Model):
     # NOTIFICATION HELPERS
     # ----------------------------------------------------
 
+    def _get_resignation_cc_emails(self):
+        """Helper to compute CC emails: Immediate Boss + HR Responsible from employee contract."""
+        self.ensure_one()
+        cc_emails = []
+
+        # 1. Immediate Boss email
+        boss = self.immediate_boss
+        boss_email = (boss.work_email if boss else False) or (boss.user_id.email if boss and boss.user_id else False)
+        if boss_email and str(boss_email).strip():
+            cc_emails.append(str(boss_email).strip())
+
+        # 2. HR Responsible email (from employee contract, using sudo to bypass ACL)
+        emp = self.emp_name
+        if emp:
+            Contract = self.env['hr.contract'].sudo()
+            contract = Contract.search([
+                ('employee_id', '=', emp.id),
+                ('state', '=', 'open')
+            ], limit=1)
+            if not contract:
+                contract = Contract.search([
+                    ('employee_id', '=', emp.id),
+                    ('state', '!=', 'cancel')
+                ], order='date_start desc, id desc', limit=1)
+            if not contract:
+                contract = Contract.search([
+                    ('employee_id', '=', emp.id)
+                ], order='id desc', limit=1)
+
+            if contract and contract.hr_responsible_id:
+                hr_user = contract.hr_responsible_id
+                hr_email = (hr_user.email or hr_user.partner_id.email or hr_user.login or '').strip()
+                if hr_email and hr_email not in cc_emails:
+                    cc_emails.append(hr_email)
+
+        return ', '.join(cc_emails)
+
     def _send_acceptance_cat_memo(self):
         """Generates the official Resignation Acceptance Memorandum PDF, attaches it to the resignation record and the email, and dispatches to the employee."""
         template = self.env.ref('aesl_hr_resignation.mail_template_resignation_accepted_cat_memo', raise_if_not_found=False)
@@ -633,6 +670,11 @@ class EmployeeResignation(models.Model):
             if attachments:
                 email_values['attachment_ids'] = [(4, att_id) for att_id in attachments]
 
+            # Set CC with both Immediate Boss and HR Responsible
+            cc_emails = rec._get_resignation_cc_emails()
+            if cc_emails:
+                email_values['email_cc'] = cc_emails
+
             template.sudo().send_mail(rec.id, email_values=email_values, force_send=True)
 
     def _notify_manager_on_submission(self):
@@ -659,7 +701,11 @@ class EmployeeResignation(models.Model):
         template = self.env.ref('aesl_hr_resignation.mail_template_resignation_revoke_accepted_employee', raise_if_not_found=False)
         if template:
             for rec in self:
-                template.sudo().send_mail(rec.id, force_send=True)
+                email_values = {}
+                cc_emails = rec._get_resignation_cc_emails()
+                if cc_emails:
+                    email_values['email_cc'] = cc_emails
+                template.sudo().send_mail(rec.id, email_values=email_values, force_send=True)
 
     def _notify_revoke_rejected(self):
         template = self.env.ref('aesl_hr_resignation.mail_template_resignation_revoke_rejected_employee', raise_if_not_found=False)

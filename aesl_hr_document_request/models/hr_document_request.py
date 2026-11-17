@@ -22,7 +22,7 @@ class HrDocumentRequest(models.Model):
     partner_id = fields.Many2one('res.partner', string='Partner', compute='_compute_partner_id', store=True)
     user_id = fields.Many2one('res.users', string='Related User', compute='_compute_partner_id', store=True)
     
-    instructions = fields.Text(string='Instructions / Description')
+    instructions = fields.Html(string='Instructions / Description', sanitize=False)
     deadline = fields.Date(string='Deadline')
     
     folder_id = fields.Many2one(
