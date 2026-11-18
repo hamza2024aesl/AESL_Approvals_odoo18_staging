@@ -23,6 +23,7 @@ class HrApplicant(models.Model):
 
     def action_view_offer_letters(self):
         self.ensure_one()
+        dept_hod = self.department_id and self.env['hr.offer.letter']._get_department_hod_user(self.department_id)
         action = self.env['ir.actions.act_window']._for_xml_id('aesl_hr_offer_letter.action_hr_offer_letter')
         action['domain'] = [('applicant_id', '=', self.id)]
         action['context'] = {
@@ -32,6 +33,7 @@ class HrApplicant(models.Model):
             'default_phone': self.partner_phone,
             'default_job_id': self.job_id.id,
             'default_department_id': self.department_id.id,
+            'default_hod_user_id': dept_hod.id if dept_hod else False,
             'default_gross_salary': self.salary_proposed or self.salary_expected or 0.0,
             'default_joining_date': self.availability,
         }

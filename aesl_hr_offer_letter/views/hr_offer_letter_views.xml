@@ -9,20 +9,26 @@
             <form string="Employment Offer Letter">
                 <header>
                     <!-- Action Buttons -->
-                    <button name="action_send_offer" string="Send Offer Letter" type="object" class="btn-primary" 
-                            invisible="state not in ['draft', 'rejected']"/>
-                    
-                    <button name="action_submit_for_director_approval" string="Submit for Director Approval" type="object" class="btn-primary"
-                            invisible="state != 'accepted' or not intimate_director_ids"/>
+                    <button name="action_submit_for_approval" string="Submit for Approval" type="object" class="btn-primary" 
+                            invisible="state != 'draft'"/>
 
+                    <button name="action_hod_approve" string="HOD Approve" type="object" class="btn-success"
+                            invisible="state != 'pending_hod'"/>
+
+                    <button name="action_director_approve" string="Director Approve" type="object" class="btn-success"
+                            invisible="state != 'pending_director'"/>
+
+                    <button name="action_send_offer" string="Re-send Offer Letter" type="object" class="btn-outline-primary" 
+                            invisible="state not in ['approved', 'sent']"/>
+                    
                     <button name="action_create_employee" string="Create Employee" type="object" class="btn-success" 
-                            invisible="state != 'approved_director' or employee_id != False"/>
+                            invisible="state != 'accepted' or employee_id != False"/>
                     
                     <button name="action_revise_offer" string="Revise Offer" type="object" class="btn-warning" 
-                            invisible="state not in ['rejected', 'sent', 'pending_director', 'accepted']"/>
+                            invisible="state not in ['rejected', 'pending_hod', 'pending_director', 'sent']"/>
                     
                     <button name="action_send_document_request" string="Request Documents" type="object" class="btn-outline-primary"
-                            invisible="state in ['draft', 'cancel']"
+                            invisible="state in ['draft', 'pending_hod', 'pending_director', 'cancel']"
                             help="Sends or re-sends the onboarding document request email to the candidate."/>
                     
                     <button name="action_print_offer_letter" string="Print PDF Offer" type="object" class="btn-secondary"/>
@@ -31,15 +37,17 @@
                     <button name="action_reset_to_draft" string="Reset to Draft" type="object" invisible="state in ['draft', 'done']"/>
 
                     <!-- Statusbar -->
-                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,pending_director,approved_director,done"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending_hod,pending_director,sent,accepted,done"/>
                 </header>
                 <sheet>
                     <!-- Ribbons for visual clarity -->
-                    <widget name="web_ribbon" title="Accepted" bg_color="text-bg-info" invisible="state != 'accepted'"/>
+                    <widget name="web_ribbon" title="Pending HOD Approval" bg_color="text-bg-warning" invisible="state != 'pending_hod'"/>
                     <widget name="web_ribbon" title="Pending Director Approval" bg_color="text-bg-warning" invisible="state != 'pending_director'"/>
-                    <widget name="web_ribbon" title="Approved by Director" bg_color="text-bg-success" invisible="state != 'approved_director'"/>
-                    <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger" invisible="state != 'rejected'"/>
-                    <widget name="web_ribbon" title="Onboarded" bg_color="text-bg-primary" invisible="state != 'done'"/>
+                    <widget name="web_ribbon" title="Approved / Generated" bg_color="text-bg-success" invisible="state != 'approved'"/>
+                    <widget name="web_ribbon" title="Offer Sent" bg_color="text-bg-info" invisible="state != 'sent'"/>
+                    <widget name="web_ribbon" title="Offer Accepted" bg_color="text-bg-success" invisible="state != 'accepted'"/>
+                    <widget name="web_ribbon" title="Offer Rejected" bg_color="text-bg-danger" invisible="state != 'rejected'"/>
+                    <widget name="web_ribbon" title="Employee Created" bg_color="text-bg-primary" invisible="state != 'done'"/>
 
                     <!-- Stat Buttons -->
                     <div class="oe_button_box" name="button_box">
@@ -81,11 +89,12 @@
                             <field name="date" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
                         </group>
                         <group string="Position &amp; Department">
-                            <field name="job_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                            <field name="department_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                            <field name="posting_location" placeholder="e.g. Multan, Karachi" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                            <field name="joining_date" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                            <field name="job_id" options="{'no_create': True}" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                            <field name="department_id" options="{'no_create': True}" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                            <field name="hod_user_id" options="{'no_create': True}" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                            <field name="posting_location" placeholder="e.g. Multan, Karachi" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                            <field name="joining_date" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                     </group>
@@ -169,23 +178,33 @@
                         </page>
 
                         <!-- Tab 4: Signatory & Automation -->
-                        <page string="Signatory &amp; Notifications" name="signatory_notifications">
+                        <page string="Signatory &amp; Approvals" name="signatory_notifications">
                             <group>
                                 <group string="Company Signatory &amp; Letter Format">
-                                    <field name="signatory_name" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                                    <field name="signatory_title" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                                    <field name="drafter_initials" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                                    <field name="validity_days" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
-                                    <field name="hr_manager_id" options="{'no_create': True}" readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                    <field name="signatory_name" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                                    <field name="signatory_title" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                                    <field name="drafter_initials" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                                    <field name="validity_days" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
+                                    <field name="hr_manager_id" options="{'no_create': True}" readonly="state in ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']"/>
                                 </group>
                                 <group string="Onboarding Notification Recipients">
                                     <field name="notify_user_ids" widget="many2many_tags" 
                                            options="{'color_field': 'color', 'no_create': True}"
-                                           readonly="state in ['sent', 'accepted', 'pending_director', 'approved_director', 'done']"/>
+                                           readonly="state in ['done', 'cancel']"/>
+                                </group>
+                            </group>
+                            <group string="Two-Level Approval Hierarchy &amp; History">
+                                <group string="Level 1: HOD Approval (Hiring Department)">
+                                    <field name="hod_user_id" options="{'no_create': True}" 
+                                           readonly="state in ['pending_director', 'approved', 'sent', 'accepted', 'done']"/>
+                                    <field name="hod_approval_date" readonly="1" invisible="not hod_approval_date"/>
+                                    <field name="hod_remarks" readonly="state != 'pending_hod'"/>
+                                </group>
+                                <group string="Level 2: Director Approval">
                                     <field name="intimate_director_ids" widget="many2many_tags"
                                            options="{'color_field': 'color', 'no_create': True}"
                                            readonly="state in ['done', 'cancel']"
-                                           placeholder="Select Directors for approval..."/>
+                                           placeholder="Select Director(s)..."/>
                                     <field name="approved_director_ids" widget="many2many_tags"
                                            options="{'color_field': 'color'}"
                                            readonly="1"
@@ -193,7 +212,8 @@
                                     <field name="director_approval_status" readonly="1"
                                            invisible="not intimate_director_ids"/>
                                     <field name="director_approval_date" readonly="1"
-                                           invisible="state not in ['approved_director', 'done']"/>
+                                           invisible="not director_approval_date"/>
+                                    <field name="director_remarks" readonly="state != 'pending_director'"/>
                                 </group>
                             </group>
                             <group string="Portal Security &amp; Candidate Response" invisible="state == 'draft'">
@@ -286,20 +306,26 @@
         <field name="name">hr.offer.letter.tree</field>
         <field name="model">hr.offer.letter</field>
         <field name="arch" type="xml">
-            <list string="Offer Letters" decoration-success="state in ['accepted', 'approved_director']" decoration-warning="state == 'pending_director'" decoration-info="state == 'sent'" decoration-danger="state == 'rejected'" decoration-muted="state in ['done', 'cancel']">
+            <list string="Offer Letters" 
+                  decoration-success="state in ['accepted', 'approved', 'approved_director']" 
+                  decoration-warning="state in ['pending_hod', 'pending_director']" 
+                  decoration-info="state == 'sent'" 
+                  decoration-danger="state == 'rejected'" 
+                  decoration-muted="state in ['done', 'cancel', 'draft']">
                 <field name="name"/>
                 <field name="date"/>
                 <field name="candidate_name"/>
                 <field name="job_id"/>
                 <field name="department_id"/>
+                <field name="hod_user_id" optional="show"/>
                 <field name="posting_location" optional="show"/>
                 <field name="gross_salary" widget="monetary"/>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="joining_date"/>
                 <field name="state" widget="badge" 
-                       decoration-success="state in ['accepted', 'approved_director']" 
+                       decoration-success="state in ['accepted', 'approved', 'approved_director']" 
                        decoration-info="state == 'sent'" 
-                       decoration-warning="state == 'pending_director'"
+                       decoration-warning="state in ['pending_hod', 'pending_director']"
                        decoration-danger="state == 'rejected'" 
                        decoration-primary="state == 'done'"
                        decoration-muted="state == 'draft'"/>
@@ -333,7 +359,7 @@
                     <t t-name="card">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <strong class="text-primary"><field name="name"/></strong>
-                            <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'sent': 'info', 'accepted': 'info', 'pending_director': 'warning', 'approved_director': 'success', 'rejected': 'danger', 'done': 'primary'}}"/>
+                            <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'pending_hod': 'warning', 'pending_director': 'warning', 'approved': 'success', 'sent': 'info', 'accepted': 'success', 'approved_director': 'success', 'rejected': 'danger', 'done': 'primary'}}"/>
                         </div>
                         <div class="fw-bold fs-5 text-dark"><field name="candidate_name"/></div>
                         <div class="text-muted"><field name="job_id"/> &#8226; <field name="department_id"/></div>
@@ -364,13 +390,14 @@
                 <field name="email"/>
                 <field name="job_id"/>
                 <field name="department_id"/>
+                <field name="hod_user_id"/>
 
                 <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
-                <filter string="Offer Sent" name="sent" domain="[('state', '=', 'sent')]"/>
-                <filter string="Accepted" name="accepted" domain="[('state', '=', 'accepted')]"/>
+                <filter string="Pending HOD Approval" name="pending_hod" domain="[('state', '=', 'pending_hod')]"/>
                 <filter string="Pending Director Approval" name="pending_director" domain="[('state', '=', 'pending_director')]"/>
-                <filter string="Approved by Director" name="approved_director" domain="[('state', '=', 'approved_director')]"/>
-                <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+                <filter string="Offer Sent" name="sent" domain="[('state', '=', 'sent')]"/>
+                <filter string="Offer Accepted" name="accepted" domain="[('state', '=', 'accepted')]"/>
+                <filter string="Offer Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
                 <filter string="Employee Created" name="done" domain="[('state', '=', 'done')]"/>
 
                 <separator/>
@@ -381,6 +408,7 @@
                 <group expand="0" string="Group By">
                     <filter string="Status" name="group_by_state" context="{'group_by': 'state'}"/>
                     <filter string="Department" name="group_by_department" context="{'group_by': 'department_id'}"/>
+                    <filter string="HOD" name="group_by_hod" context="{'group_by': 'hod_user_id'}"/>
                     <filter string="Designation" name="group_by_job" context="{'group_by': 'job_id'}"/>
                     <filter string="Offer Date" name="group_by_date" context="{'group_by': 'date:month'}"/>
                     <filter string="Company" name="group_by_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
@@ -395,7 +423,7 @@
         <field name="res_model">hr.offer.letter</field>
         <field name="view_mode">list,kanban,form</field>
         <field name="search_view_id" ref="view_hr_offer_letter_search"/>
-        <field name="context">{'search_default_draft': 1, 'search_default_sent': 1, 'search_default_accepted': 1, 'search_default_pending_director': 1, 'search_default_approved_director': 1}</field>
+        <field name="context">{'search_default_draft': 1, 'search_default_pending_hod': 1, 'search_default_pending_director': 1, 'search_default_sent': 1, 'search_default_accepted': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create a new Employment Offer Letter!

@@ -199,21 +199,40 @@
     </template>
 
     <!-- ==================================================== -->
-    <!-- 6. PORTAL HOME: ALERT BANNER & DIRECTOR MENU CARD    -->
+    <!-- 6. PORTAL HOME: ALERT BANNERS & MENU CARDS           -->
     <!-- ==================================================== -->
 
-    <template id="portal_my_home_offer_letter" name="Portal Home: Director Onboarding Approvals" inherit_id="portal.portal_my_home" priority="36">
-        <!-- Top alert if director has pending candidate approvals -->
+    <template id="portal_my_home_offer_letter" name="Portal Home: Offer Letter Approvals" inherit_id="portal.portal_my_home" priority="36">
+        <!-- Top alert if HOD has pending candidate approvals -->
         <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
+            <t t-if="pending_hod_offers_count and pending_hod_offers_count &gt; 0">
+                <div class="alert alert-info alert-dismissible fade show shadow-sm mb-3 border-info" role="alert" style="border-left: 5px solid #0dcaf0;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-id-card-o fa-2x text-info me-3"/>
+                            <div>
+                                <h5 class="alert-heading mb-1 fw-bold">⚠️ Level 1: HOD Approval Pending</h5>
+                                <p class="mb-0 text-muted">
+                                    You have <strong><t t-esc="pending_hod_offers_count"/></strong> offer letter request(s) for your department awaiting your review and approval.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="/my/hod-offers?filter_status=pending" class="btn btn-info text-dark btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                            <i class="fa fa-check-square-o me-1"/> Review Department Requests
+                        </a>
+                    </div>
+                </div>
+            </t>
+            <!-- Top alert if Director has pending candidate approvals -->
             <t t-if="pending_director_offers_count and pending_director_offers_count &gt; 0">
                 <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4 border-warning" role="alert" style="border-left: 5px solid #ffc107;">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div class="d-flex align-items-center">
                             <i class="fa fa-user-check fa-2x text-warning me-3"/>
                             <div>
-                                <h5 class="alert-heading mb-1 fw-bold">⚠️ Candidate Onboarding Approval Pending</h5>
+                                <h5 class="alert-heading mb-1 fw-bold">⚠️ Level 2: Director Approval Pending</h5>
                                 <p class="mb-0 text-muted">
-                                    You have <strong><t t-esc="pending_director_offers_count"/></strong> candidate onboarding request(s) awaiting your director review and approval.
+                                    You have <strong><t t-esc="pending_director_offers_count"/></strong> candidate offer request(s) (approved by HOD) awaiting your authorization.
                                 </p>
                             </div>
                         </div>
@@ -225,14 +244,23 @@
             </t>
         </xpath>
 
-        <!-- Director Approvals Card in Portal Docs -->
+        <!-- Menu Cards in Portal Docs -->
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-if="is_hod_approver">
+                <t t-call="portal.portal_docs_entry">
+                    <t t-set="title">HOD Approvals</t>
+                    <t t-set="text">Review and approve department candidate offer letters (Level 1)</t>
+                    <t t-set="url" t-value="'/my/hod-offers'"/>
+                    <t t-set="placeholder_count" t-value="'pending_hod_offers_count'"/>
+                    <t t-set="config_card" t-value="True"/>
+                </t>
+            </t>
             <t t-if="is_director_approver">
                 <t t-call="portal.portal_docs_entry">
                     <t t-set="title">Director Approvals</t>
-                    <t t-set="text">Review candidate profiles, compensation &amp; approve employee onboarding</t>
+                    <t t-set="text">Review candidate profiles, compensation &amp; authorize offer dispatch (Level 2)</t>
                     <t t-set="url" t-value="'/my/director-offers'"/>
-                    <t t-set="placeholder_count" t-value="'director_offers_count'"/>
+                    <t t-set="placeholder_count" t-value="'pending_director_offers_count'"/>
                     <t t-set="config_card" t-value="True"/>
                 </t>
             </t>
@@ -243,8 +271,16 @@
     <!-- 7. PORTAL BREADCRUMBS                                -->
     <!-- ==================================================== -->
 
-    <template id="portal_breadcrumbs_offer_letter" name="Portal Breadcrumbs: Director Approvals" inherit_id="portal.portal_breadcrumbs" priority="36">
+    <template id="portal_breadcrumbs_offer_letter" name="Portal Breadcrumbs: Offer Letter Approvals" inherit_id="portal.portal_breadcrumbs" priority="36">
         <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name in ['hod_offers', 'hod_offer_detail']" class="breadcrumb-item">
+                <a t-if="page_name != 'hod_offers'" href="/my/hod-offers">HOD Approvals</a>
+                <t t-else="">HOD Approvals</t>
+            </li>
+            <li t-if="page_name == 'hod_offer_detail'" class="breadcrumb-item active">
+                <t t-out="offer.candidate_name"/> (<t t-out="offer.name"/>)
+            </li>
+
             <li t-if="page_name in ['director_offers', 'director_offer_detail']" class="breadcrumb-item">
                 <a t-if="page_name != 'director_offers'" href="/my/director-offers">Director Approvals</a>
                 <t t-else="">Director Approvals</t>
@@ -256,7 +292,333 @@
     </template>
 
     <!-- ==================================================== -->
-    <!-- 8. DIRECTOR PORTAL LIST VIEW (/my/director-offers)    -->
+    <!-- 8. HOD PORTAL LIST VIEW (/my/hod-offers)             -->
+    <!-- ==================================================== -->
+
+    <template id="portal_my_hod_offers_list" name="HOD Approvals List">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 mb-3">
+                <div>
+                    <h3 class="fw-bold mb-0 text-dark">HOD Candidate Approvals (Level 1)</h3>
+                    <p class="text-muted small mb-0">Review candidate profile and proposed compensation for your department before routing to Director</p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a t-attf-href="/my/hod-offers?filter_status=all" t-attf-class="btn btn-sm #{'btn-primary' if filter_status == 'all' else 'btn-outline-primary'}">
+                        All
+                    </a>
+                    <a t-attf-href="/my/hod-offers?filter_status=pending" t-attf-class="btn btn-sm #{'btn-primary' if filter_status == 'pending' else 'btn-outline-primary'}">
+                        Pending My Approval
+                    </a>
+                    <a t-attf-href="/my/hod-offers?filter_status=approved" t-attf-class="btn btn-sm #{'btn-primary' if filter_status == 'approved' else 'btn-outline-primary'}">
+                        Approved
+                    </a>
+                </div>
+            </div>
+
+            <t t-if="not offers">
+                <div class="alert alert-info py-4 text-center">
+                    <i class="fa fa-info-circle fa-2x mb-2 d-block"/>
+                    <h5>No candidate offer letters found</h5>
+                    <p class="text-muted mb-0">There are currently no candidate offer letters assigned for your department review.</p>
+                </div>
+            </t>
+
+            <div t-if="offers" class="card shadow-sm border-0 mb-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Offer Ref</th>
+                                <th>Candidate Name</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>Gross Salary</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="offers" t-as="o">
+                                <t t-set="is_pending_hod" t-value="o.state == 'pending_hod'"/>
+                                <tr t-att-class="'table-warning-subtle fw-semibold' if is_pending_hod else ''">
+                                    <td>
+                                        <a t-attf-href="/my/hod-offers/#{o.id}" class="fw-bold text-decoration-none">
+                                            <t t-esc="o.name"/>
+                                        </a>
+                                    </td>
+                                    <td><strong class="text-dark"><t t-esc="o.candidate_name"/></strong></td>
+                                    <td><t t-esc="o.job_id.name"/></td>
+                                    <td><t t-esc="o.department_id.name"/></td>
+                                    <td>
+                                        <strong class="text-success">
+                                            <t t-esc="o.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(o.gross_salary)"/>
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <t t-if="o.state == 'pending_hod'">
+                                            <span class="badge bg-warning text-dark px-2 py-1">Pending HOD Review</span>
+                                        </t>
+                                        <t t-elif="o.state == 'pending_director'">
+                                            <span class="badge bg-info text-dark px-2 py-1">With Director</span>
+                                        </t>
+                                        <t t-elif="o.state in ['approved', 'sent']">
+                                            <span class="badge bg-primary px-2 py-1">Offer Sent</span>
+                                        </t>
+                                        <t t-elif="o.state == 'accepted'">
+                                            <span class="badge bg-success px-2 py-1">Accepted</span>
+                                        </t>
+                                        <t t-elif="o.state == 'rejected'">
+                                            <span class="badge bg-danger px-2 py-1">Rejected</span>
+                                        </t>
+                                        <t t-elif="o.state == 'done'">
+                                            <span class="badge bg-success px-2 py-1">Onboarded</span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="badge bg-secondary px-2 py-1"><t t-esc="o.state"/></span>
+                                        </t>
+                                    </td>
+                                    <td class="text-end">
+                                        <a t-attf-href="/my/hod-offers/#{o.id}" 
+                                           t-attf-class="btn btn-sm #{'btn-success fw-bold' if is_pending_hod else 'btn-outline-secondary'}">
+                                            <t t-if="is_pending_hod">
+                                                <i class="fa fa-pencil me-1"/> Review &amp; Approve
+                                            </t>
+                                            <t t-else="">
+                                                <i class="fa fa-eye me-1"/> View
+                                            </t>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div t-if="pager['page_count'] &gt; 1" class="d-flex justify-content-center">
+                <t t-call="portal.pager"/>
+            </div>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 9. HOD DETAIL & APPROVAL VIEW (/my/hod-offers/<id>)   -->
+    <!-- ==================================================== -->
+
+    <template id="portal_hod_offer_detail" name="HOD Candidate Review">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <!-- Success Alert -->
+            <div t-if="success_msg" class="alert alert-success alert-dismissible fade show shadow-sm mt-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-check-circle fa-2x text-success me-3"/>
+                    <div>
+                        <h5 class="alert-heading mb-1 fw-bold">🎉 Level 1 Approval Completed Successfully!</h5>
+                        <p class="mb-0">
+                            Your approval and remarks have been recorded. The request has moved to <strong>Pending Director Approval</strong> and the Director has been notified.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"/>
+            </div>
+
+            <!-- Top Header Card -->
+            <div class="card shadow-sm border-0 mt-3 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <span class="badge bg-primary px-3 py-1 mb-2">HOD REVIEW &amp; APPROVAL (LEVEL 1)</span>
+                            <h2 class="fw-bold mb-1 text-dark">
+                                <t t-esc="offer.candidate_name"/>
+                            </h2>
+                            <p class="text-muted mb-0">
+                                <strong><t t-esc="offer.job_id.name"/></strong> &#8226; <t t-esc="offer.department_id.name"/>
+                                &#8226; Offer Ref: <strong><t t-esc="offer.name"/></strong>
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <t t-if="offer.state == 'pending_hod'">
+                                <span class="badge bg-warning text-dark px-3 py-2 fs-6">
+                                    <i class="fa fa-clock-o me-1"/> Awaiting HOD Approval
+                                </span>
+                            </t>
+                            <t t-elif="offer.state == 'pending_director'">
+                                <span class="badge bg-info text-dark px-3 py-2 fs-6">
+                                    <i class="fa fa-arrow-right me-1"/> Pending Director Approval
+                                </span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge bg-success px-3 py-2 fs-6">
+                                    <t t-esc="dict(offer._fields['state'].selection).get(offer.state, offer.state)"/>
+                                </span>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- Approval Form Card (When Pending Approval) -->
+                    <div t-if="can_approve" class="p-4 my-3 bg-light rounded-3 border border-primary">
+                        <h5 class="fw-bold text-primary mb-2">
+                            <i class="fa fa-check-square-o me-2"/>Head of Department (HOD) Approval
+                        </h5>
+                        <p class="text-muted small mb-3">
+                            Please review the candidate's profile and proposed remuneration below. Enter your remarks and click "Approve" to forward this offer letter to the Director.
+                        </p>
+                        <form t-attf-action="/my/hod-offers/#{offer.id}/approve" method="POST">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <div class="mb-3">
+                                <label for="hod_remarks" class="form-label fw-bold text-dark">
+                                    HOD Remarks / Recommendation <span class="text-danger">*</span>:
+                                </label>
+                                <textarea class="form-control" id="hod_remarks" name="hod_remarks" rows="3" 
+                                          placeholder="Enter your remarks, endorsement, or specific comments for the Director..." required="required"><t t-esc="offer.hod_remarks or ''"/></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
+                                    <i class="fa fa-check-circle me-1"/> Approve &amp; Forward to Director
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div t-elif="has_approved" class="alert alert-success mt-3 mb-0 py-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-check-circle fa-2x text-success me-3"/>
+                            <div>
+                                <h6 class="mb-1 fw-bold">You have approved this request on <t t-esc="offer.hod_approval_date"/>.</h6>
+                                <p class="mb-0 text-muted">
+                                    <strong>Your Remarks:</strong> <em><t t-esc="offer.hod_remarks or 'None'"/></em>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: CANDIDATE PROFILE -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                    <i class="fa fa-user text-primary me-2 fs-5"/>
+                    <h5 class="fw-bold mb-0 text-dark">Candidate Profile</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6 border-end-md">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3">Personal Identification</h6>
+                            <table class="table table-borderless table-sm mb-0">
+                                <tr>
+                                    <td class="text-muted" style="width: 45%;">Candidate Name:</td>
+                                    <td><strong class="text-dark"><t t-esc="offer.candidate_name"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Father's Name:</td>
+                                    <td><t t-esc="offer.father_name or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">CNIC No.:</td>
+                                    <td><t t-esc="offer.cnic or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Gender / Religion:</td>
+                                    <td><t t-esc="offer.gender.capitalize() if offer.gender else '-'"/> &#8226; <t t-esc="offer.religion or '-'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Marital Status:</td>
+                                    <td><t t-esc="offer.marital_status.capitalize() if offer.marital_status else '-'"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3">Contact &amp; Placement</h6>
+                            <table class="table table-borderless table-sm mb-0">
+                                <tr>
+                                    <td class="text-muted" style="width: 45%;">Designation:</td>
+                                    <td><strong class="text-dark"><t t-esc="offer.job_id.name"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Department:</td>
+                                    <td><strong class="text-dark"><t t-esc="offer.department_id.name"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Place of Posting:</td>
+                                    <td><t t-esc="offer.posting_location or 'Head Office'"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Joining Date:</td>
+                                    <td><strong class="text-primary"><t t-esc="offer.joining_date"/></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Probation Period:</td>
+                                    <td><t t-esc="offer.probation_period or '3 Months'"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: PROPOSED REMUNERATION -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                    <i class="fa fa-money text-success me-2 fs-5"/>
+                    <h5 class="fw-bold mb-0 text-dark">Proposed Salary &amp; Compensation Package</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45%;">Component</th>
+                                    <th>AESL Standard Ratio</th>
+                                    <th class="text-end">Monthly Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Basic Pay</strong></td>
+                                    <td class="text-muted">~ 60.6% of Gross</td>
+                                    <td class="text-end"><t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.basic_salary)"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>House Rent Allowance</strong></td>
+                                    <td class="text-muted">~ 27.3% of Gross</td>
+                                    <td class="text-end"><t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.house_rent)"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Conveyance Allowance</strong></td>
+                                    <td class="text-muted">~ 6.1% of Gross</td>
+                                    <td class="text-end"><t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.conveyance_allowance)"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Utilities Allowance</strong></td>
+                                    <td class="text-muted">~ 6.1% of Gross</td>
+                                    <td class="text-end"><t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.utilities_allowance)"/></td>
+                                </tr>
+                                <tr t-if="offer.other_allowance">
+                                    <td><strong>Other Allowance</strong></td>
+                                    <td class="text-muted">-</td>
+                                    <td class="text-end"><t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.other_allowance)"/></td>
+                                </tr>
+                                <tr class="table-success fw-bold">
+                                    <td colspan="2"><strong class="fs-6">Total Gross Monthly Salary</strong></td>
+                                    <td class="text-end">
+                                        <strong class="fs-5 text-success">
+                                            <t t-esc="offer.currency_id.symbol or 'Rs.'"/> <t t-esc="'{:,.2f}'.format(offer.gross_salary)"/>
+                                        </strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- ==================================================== -->
+    <!-- 10. DIRECTOR PORTAL LIST VIEW (/my/director-offers)  -->
     <!-- ==================================================== -->
 
     <template id="portal_my_director_offers_list" name="Director Approvals List">
@@ -406,9 +768,14 @@
                                     <i class="fa fa-hourglass-half me-1"/> Pending Director Approval
                                 </span>
                             </t>
-                            <t t-elif="offer.state == 'approved_director'">
+                            <t t-elif="offer.state in ['approved', 'sent']">
                                 <span class="badge bg-success px-3 py-2 fs-6">
-                                    <i class="fa fa-check-circle me-1"/> Approved by Director
+                                    <i class="fa fa-check-circle me-1"/> Approved &amp; Offer Sent
+                                </span>
+                            </t>
+                            <t t-elif="offer.state == 'accepted'">
+                                <span class="badge bg-success px-3 py-2 fs-6">
+                                    <i class="fa fa-check-circle me-1"/> Offer Accepted
                                 </span>
                             </t>
                             <t t-elif="offer.state == 'done'">
@@ -418,7 +785,7 @@
                             </t>
                             <t t-else="">
                                 <span class="badge bg-secondary px-3 py-2 fs-6">
-                                    <t t-esc="offer.state.upper()"/>
+                                    <t t-esc="dict(offer._fields['state'].selection).get(offer.state, offer.state)"/>
                                 </span>
                             </t>
                             <div class="text-muted small mt-1">
@@ -427,31 +794,52 @@
                         </div>
                     </div>
 
-                    <!-- Approval Action Card (When Pending Approval) -->
-                    <div t-if="can_approve" class="p-3 my-3 bg-light-subtle rounded-3 border border-success d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <!-- Level 1 HOD Status Card -->
+                    <div class="alert alert-info py-3 my-3 d-flex align-items-center">
+                        <i class="fa fa-check-circle fa-2x text-info me-3"/>
                         <div>
-                            <h5 class="fw-bold text-success mb-1">
-                                <i class="fa fa-check-square-o me-2"/>Director Review &amp; Approval Required
-                            </h5>
-                            <p class="text-muted mb-0 small">
-                                Please review the Candidate Profile and Salary &amp; Compensation package below. Click "Approve" to authorize HR to create the employee record.
+                            <h6 class="mb-1 fw-bold text-dark">
+                                Level 1 (HOD Approval): Completed by <t t-esc="offer.hod_user_id.name or 'Department Head'"/> on <t t-esc="offer.hod_approval_date"/>
+                            </h6>
+                            <p class="mb-0 text-muted">
+                                <strong>HOD Remarks:</strong> <em><t t-esc="offer.hod_remarks or 'Approved without additional remarks.'"/></em>
                             </p>
                         </div>
+                    </div>
+
+                    <!-- Approval Action Card (When Pending Approval) -->
+                    <div t-if="can_approve" class="p-4 my-3 bg-light rounded-3 border border-success">
+                        <h5 class="fw-bold text-success mb-2">
+                            <i class="fa fa-check-square-o me-2"/>Director Review &amp; Approval (Level 2)
+                        </h5>
+                        <p class="text-muted mb-3 small">
+                            Please review the Candidate Profile and Salary &amp; Compensation package below. Enter your remarks and click "Approve &amp; Generate Offer Letter" to automatically dispatch the offer letter to the candidate.
+                        </p>
                         <form t-attf-action="/my/director-offers/#{offer.id}/approve" method="POST">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
-                                <i class="fa fa-check-circle me-1"/> Approve Candidate Onboarding
-                            </button>
+                            <div class="mb-3">
+                                <label for="director_remarks" class="form-label fw-bold text-dark">
+                                    Director Remarks / Authorization Notes <span class="text-danger">*</span>:
+                                </label>
+                                <textarea class="form-control" id="director_remarks" name="director_remarks" rows="2" 
+                                          placeholder="Enter remarks or approval notes..." required="required"><t t-esc="offer.director_remarks or ''"/></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
+                                    <i class="fa fa-check-circle me-1"/> Approve &amp; Generate Offer Letter
+                                </button>
+                            </div>
                         </form>
                     </div>
 
-                    <div t-elif="has_approved" class="alert alert-success mt-3 mb-0 py-2 d-flex align-items-center">
-                        <i class="fa fa-check-circle fa-lg me-2"/>
+                    <div t-elif="has_approved" class="alert alert-success mt-3 mb-0 py-3 d-flex align-items-center">
+                        <i class="fa fa-check-circle fa-2x text-success me-3"/>
                         <div>
-                            <strong>You have approved this candidate onboarding request.</strong>
-                            <span class="text-muted ms-2 small">
-                                (<t t-esc="offer.director_approval_status"/>)
-                            </span>
+                            <h6 class="mb-1 fw-bold">You have approved this offer letter.</h6>
+                            <p class="mb-0 text-muted">
+                                <strong>Your Remarks:</strong> <em><t t-esc="offer.director_remarks or 'Approved without remarks.'"/></em>
+                                <span class="text-muted ms-2 small">(<t t-esc="offer.director_approval_status"/>)</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -652,16 +1040,20 @@
 
             <!-- Bottom Floating Action Bar if Pending -->
             <div t-if="can_approve" class="card shadow-sm border-0 mb-5 bg-white">
-                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h6 class="fw-bold mb-1 text-dark">Confirm Director Authorization</h6>
-                        <p class="text-muted small mb-0">By clicking approve, you authorize the official recruitment of this candidate.</p>
-                    </div>
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-1 text-dark">Confirm Director Authorization (Level 2)</h6>
+                    <p class="text-muted small mb-3">By clicking approve, the offer letter PDF will be automatically created and dispatched to the candidate.</p>
                     <form t-attf-action="/my/director-offers/#{offer.id}/approve" method="POST">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                        <button type="submit" class="btn btn-success btn-lg px-5 fw-bold shadow">
-                            <i class="fa fa-check-circle me-1"/> Approve Candidate Onboarding
-                        </button>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark small">Remarks <span class="text-danger">*</span>:</label>
+                            <input type="text" name="director_remarks" class="form-control" placeholder="Enter remarks..." required="required"/>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow">
+                                <i class="fa fa-check-circle me-1"/> Approve &amp; Generate Offer Letter
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>

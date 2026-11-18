@@ -41,11 +41,13 @@ class HrOfferLetter(models.Model):
     )
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('sent', 'Offer Sent'),
-        ('accepted', 'Candidate Accepted'),
+        ('pending_hod', 'Pending HOD Approval'),
         ('pending_director', 'Pending Director Approval'),
+        ('approved', 'Approved / Offer Letter Generated'),
+        ('sent', 'Offer Sent'),
+        ('accepted', 'Offer Accepted'),
         ('approved_director', 'Approved by Director'),
-        ('rejected', 'Rejected'),
+        ('rejected', 'Offer Rejected'),
         ('done', 'Employee Created'),
         ('cancel', 'Cancelled'),
     ], string='Status', default='draft', tracking=True, copy=False)
@@ -113,6 +115,20 @@ class HrOfferLetter(models.Model):
     # Employment Details (Image 2)
     job_id = fields.Many2one('hr.job', string='Designation', required=True, tracking=True)
     department_id = fields.Many2one('hr.department', string='Department', required=True, tracking=True)
+    
+    # Level 1: HOD Approval (Hiring Department)
+    hod_user_id = fields.Many2one(
+        'res.users',
+        string='Head of Department (HOD)',
+        compute='_compute_hod_user_id',
+        store=True,
+        readonly=False,
+        tracking=True,
+        help="HOD of the hiring department responsible for 1st level approval."
+    )
+    hod_remarks = fields.Text(string='HOD Remarks', tracking=True)
+    hod_approval_date = fields.Datetime(string='HOD Approval Date', readonly=True, copy=False, tracking=True)
+
     joining_date = fields.Date(string='Joining Date', required=True, tracking=True)
     probation_period = fields.Char(string='Probation Period', default='3 Months')
     posting_location = fields.Char(string='Place of Posting', default='Head Office', help="e.g. Multan, Karachi, Lahore")
@@ -205,6 +221,7 @@ class HrOfferLetter(models.Model):
         copy=False,
         tracking=True
     )
+    director_remarks = fields.Text(string='Director Remarks', tracking=True)
 
     # ---------------------------------------------------------
     # Auto-Generated Onboarding Documents Collection (6 Types)
@@ -253,6 +270,59 @@ class HrOfferLetter(models.Model):
     # ---------------------------------------------------------
     # Computes & Onchanges
     # ---------------------------------------------------------
+    @api.model
+    def _get_department_hod_user(self, department):
+        """Resolves HOD user from department manager (direct user, partner link, email, or parent dept)."""
+        if not department:
+            return False
+        manager = department.manager_id
+        if manager:
+            # 1. Direct user_id on manager employee
+            if manager.user_id:
+                return manager.user_id
+            # 2. Match by manager's work contact / partner
+            partner = getattr(manager, 'work_contact_id', False) or getattr(manager, 'user_partner_id', False) or getattr(manager, 'address_home_id', False)
+            if partner:
+                user = self.env['res.users'].sudo().search([('partner_id', '=', partner.id)], limit=1)
+                if user:
+                    return user
+            # 3. Match by manager's work_email or private_email
+            email = manager.work_email or manager.private_email
+            if email:
+                user = self.env['res.users'].sudo().search([('email', '=ilike', email.strip())], limit=1)
+                if user:
+                    return user
+        # 4. Fallback to parent department manager if child department has no manager
+        if department.parent_id and department.parent_id != department:
+            return self._get_department_hod_user(department.parent_id)
+        return False
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        dept_id = res.get('department_id') or self.env.context.get('default_department_id')
+        if dept_id and 'hod_user_id' in fields_list and not res.get('hod_user_id'):
+            dept = self.env['hr.department'].browse(dept_id)
+            hod = self._get_department_hod_user(dept)
+            if hod:
+                res['hod_user_id'] = hod.id
+        return res
+
+    @api.depends('department_id', 'department_id.manager_id', 'department_id.manager_id.user_id')
+    def _compute_hod_user_id(self):
+        for rec in self:
+            hod = rec._get_department_hod_user(rec.department_id)
+            if hod:
+                rec.hod_user_id = hod
+            elif not rec.hod_user_id:
+                rec.hod_user_id = False
+
+    @api.onchange('department_id')
+    def _onchange_department_id(self):
+        if self.department_id:
+            hod = self._get_department_hod_user(self.department_id)
+            if hod:
+                self.hod_user_id = hod
     @api.depends('basic_salary', 'house_rent', 'conveyance_allowance', 'utilities_allowance', 'other_allowance')
     def _compute_gross_salary(self):
         for rec in self:
@@ -328,6 +398,9 @@ class HrOfferLetter(models.Model):
             self.job_id = applicant.job_id
         if applicant.department_id:
             self.department_id = applicant.department_id
+            hod = self._get_department_hod_user(applicant.department_id)
+            if hod:
+                self.hod_user_id = hod
         if applicant.availability:
             self.earliest_joining_date = applicant.availability
             if not self.joining_date:
@@ -380,14 +453,15 @@ class HrOfferLetter(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        # Prevent editing restricted fields once sent or accepted, unless revising
-        restricted_states = ['sent', 'accepted', 'pending_director', 'approved_director', 'done']
+        # Prevent editing restricted fields once submitted for approval or sent/accepted, unless revising
+        restricted_states = ['pending_hod', 'pending_director', 'approved', 'sent', 'accepted', 'approved_director', 'done']
         if any(rec.state in restricted_states for rec in self):
             allowed_fields = {
                 'state', 'employee_id', 'contract_id', 'access_token',
                 'response_date', 'rejection_reason', 'message_follower_ids',
                 'activity_ids', 'message_ids', 'revision',
-                'intimate_director_ids', 'approved_director_ids',
+                'hod_user_id', 'hod_remarks', 'hod_approval_date',
+                'intimate_director_ids', 'approved_director_ids', 'director_remarks',
                 'director_approval_date', 'director_approval_status',
                 'all_directors_approved',
                 'doc_picture', 'doc_picture_filename', 'has_doc_picture',
@@ -445,6 +519,11 @@ class HrOfferLetter(models.Model):
         self._ensure_token()
         base_url = self._get_clean_base_url()
         return f"{base_url}/offer/respond/{self.access_token}?action=reject"
+
+    def get_hod_portal_url(self):
+        self.ensure_one()
+        base_url = self._get_clean_base_url()
+        return f"{base_url}/my/hod-offers/{self.id}"
 
     def get_director_portal_url(self):
         self.ensure_one()
@@ -598,61 +677,183 @@ class HrOfferLetter(models.Model):
     # ---------------------------------------------------------
     # Actions & Workflows
     # ---------------------------------------------------------
-    def action_submit_for_director_approval(self):
-        """Allows HR to manually submit or resubmit onboarding request for Director Approval."""
+    def action_submit_for_approval(self):
+        """HR submits offer letter for 2-Level Approval (routes to HOD first)."""
         self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_("You can only submit offers in 'Draft' state for approval."))
+        if not self.email:
+            raise UserError(_("Candidate email is required before submitting."))
+        if not self.gross_salary:
+            raise UserError(_("Please define the salary package before submitting for approval."))
+        if not self.department_id:
+            raise UserError(_("Please select a Department before submitting for approval."))
+        if not self.hod_user_id:
+            raise UserError(_("Please assign a Head of Department (HOD) for 1st level approval."))
         if not self.intimate_director_ids:
-            raise UserError(_("Please select at least one Director in 'Intimate Directors' before requesting approval."))
-        if self.state not in ['draft', 'sent', 'accepted', 'pending_director']:
-            raise UserError(_("You cannot submit for director approval in '%s' status.") % dict(self._fields['state'].selection).get(self.state))
+            raise UserError(_("Please select at least one Director in 'Intimate Directors' for 2nd level approval."))
 
         self.write({
-            'state': 'pending_director',
+            'state': 'pending_hod',
+            'hod_approval_date': False,
+            'hod_remarks': False,
             'approved_director_ids': [(5, 0, 0)],
             'director_approval_date': False,
+            'director_remarks': False,
         })
-        self._send_director_notification()
+        self._send_hod_notification()
         self.message_post(body=Markup(
-            "<p style='color: #0d6efd;'><strong>Onboarding Request Submitted for Director Approval</strong></p>"
-            "<p>Request submitted by %s. Notification emails sent to intimate directors: <strong>%s</strong>.</p>"
-        ) % (self.env.user.name, ', '.join(self.intimate_director_ids.mapped('name'))))
+            "<p style='color: #0d6efd;'><strong>📤 Offer Letter Submitted for HOD Approval:</strong></p>"
+            "<p>Request submitted by %s. Notification email sent to HOD: <strong>%s</strong> (%s).</p>"
+            "<p>Status updated to <strong>Pending HOD Approval</strong>.</p>"
+        ) % (self.env.user.name, self.hod_user_id.name, self.hod_user_id.email or 'No email defined'))
 
-    def action_director_approve(self, director_user=None):
-        """Processes approval from an intimate director."""
+    def action_submit_for_director_approval(self):
+        """Backward compatibility / alias: routes submission to standard 2-level flow."""
+        return self.action_submit_for_approval()
+
+    def action_hod_approve(self, remarks=None):
+        """1st Level Approval: HOD reviews, enters remarks and approves."""
         self.ensure_one()
+        if self.state != 'pending_hod':
+            raise UserError(_("This request is not awaiting HOD Approval (current status: %s).") % dict(self._fields['state'].selection).get(self.state))
+
+        user = self.env.user
+        is_hod = (self.hod_user_id and user.id == self.hod_user_id.id)
+        is_hr_manager = user.has_group('hr.group_hr_manager') or user._is_admin()
+        if not (is_hod or is_hr_manager):
+            raise UserError(_("Only the assigned HOD (%s) or an HR Manager can approve at this stage.") % (self.hod_user_id.name or 'Department Head'))
+
+        vals = {
+            'state': 'pending_director',
+            'hod_approval_date': fields.Datetime.now(),
+        }
+        if remarks:
+            vals['hod_remarks'] = remarks
+        self.sudo().write(vals)
+
+        # 1. Email to Director (approval request)
+        self._send_director_notification()
+        # 2. Email to HR (for information)
+        self._send_hr_hod_approved_notification(approving_hod=user)
+
+        self.sudo().message_post(body=Markup(
+            "<p style='color: green;'><strong>✔ Level 1 Approval (HOD) Completed:</strong></p>"
+            "<p>Approved by HOD: <strong>%s</strong> on %s.</p>"
+            "<p><strong>Remarks:</strong> %s</p>"
+            "<p>Status updated to <strong>Pending Director Approval</strong>. Notification dispatched to Director(s): <strong>%s</strong>.</p>"
+        ) % (
+            user.name,
+            fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            remarks or 'Approved without remarks.',
+            ', '.join(self.intimate_director_ids.mapped('name'))
+        ))
+
+    def action_director_approve(self, remarks=None, director_user=None):
+        """2nd Level Approval: Director reviews, enters remarks and approves.
+        Hierarchical check: Cannot approve before HOD.
+        On final approval: automatically generates offer letter and emails candidate.
+        """
+        self.ensure_one()
+        if self.state != 'pending_director':
+            raise UserError(_("The Director cannot act before the HOD approves. Current status: %s.") % dict(self._fields['state'].selection).get(self.state))
+
         user = director_user or self.env.user
-        if user not in self.intimate_director_ids:
+        is_admin_or_hr = user.has_group('hr.group_hr_manager') or user._is_admin()
+        if user not in self.intimate_director_ids and not is_admin_or_hr:
             raise UserError(_("User %s is not assigned as an intimating director for this request.") % user.name)
-        if user in self.approved_director_ids:
+
+        if user in self.approved_director_ids and not is_admin_or_hr:
             raise UserError(_("Director %s has already approved this request.") % user.name)
 
-        # Record approval
-        self.sudo().write({
-            'approved_director_ids': [(4, user.id)],
-        })
+        vals = {}
+        if remarks:
+            vals['director_remarks'] = remarks
 
-        # Check remaining directors
+        if is_admin_or_hr:
+            # Admin/HR approval fulfills all intimate directors so request is never stuck
+            vals['approved_director_ids'] = [(6, 0, (self.intimate_director_ids | user).ids)]
+        else:
+            vals['approved_director_ids'] = [(4, user.id)]
+
+        self.sudo().write(vals)
+
         remaining = self.intimate_director_ids - self.approved_director_ids
-        if not remaining:
-            # All directors approved!
+        if not remaining or is_admin_or_hr:
             self.sudo().write({
-                'state': 'approved_director',
+                'state': 'approved',
                 'director_approval_date': fields.Datetime.now(),
             })
             self.sudo().message_post(body=Markup(
-                "<p style='color: green;'><strong>🎉 All Director Approvals Received!</strong></p>"
-                "<p>Final approval recorded from Director <strong>%s</strong> on %s.</p>"
-                "<p>The onboarding request is now <strong>Approved by Director</strong>. HR can now proceed with <strong>Create Employee</strong>.</p>"
-            ) % (user.name, fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-            # Send notification to HR
+                "<p style='color: green;'><strong>🎉 Level 2 Approval (Director) Completed!</strong></p>"
+                "<p>Approved by Director: <strong>%s</strong> on %s.</p>"
+                "<p><strong>Director Remarks:</strong> %s</p>"
+                "<p>Both approvals completed. Status: <strong>Approved / Offer Letter Generated</strong>.</p>"
+            ) % (
+                user.name,
+                fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                remarks or 'Approved without remarks.'
+            ))
+
+            # Email to HR
             self._send_hr_director_approved_notification(user)
+
+            # Auto-generate offer letter and send email to candidate!
+            self.action_send_offer()
         else:
             remaining_names = ', '.join(remaining.mapped('name'))
             self.sudo().message_post(body=Markup(
                 "<p style='color: #0d6efd;'><strong>Director Approval Recorded:</strong></p>"
-                "<p>Director <strong>%s</strong> has approved.</p>"
+                "<p>Director <strong>%s</strong> has approved. Remarks: %s</p>"
                 "<p>Awaiting approval from remaining director(s): <strong>%s</strong>.</p>"
-            ) % (user.name, remaining_names))
+            ) % (user.name, remarks or '-', remaining_names))
+
+    def _send_hod_notification(self):
+        """Sends HOD approval request email with link to portal."""
+        self.ensure_one()
+        if not self.hod_user_id or not self.hod_user_id.email:
+            return
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_hod_approval_request', raise_if_not_found=False)
+        if mail_template:
+            mail_template.send_mail(self.id, email_values={'email_to': self.hod_user_id.email}, force_send=True)
+
+    def _send_hr_hod_approved_notification(self, approving_hod):
+        """Sends information email to HR when HOD approves."""
+        self.ensure_one()
+        recipients = set()
+        if self.hr_manager_id and self.hr_manager_id.email:
+            recipients.add(self.hr_manager_id.email.strip())
+        for u in self.notify_user_ids:
+            if u.email:
+                recipients.add(u.email.strip())
+        if not recipients:
+            return
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_hod_approved_hr_notification', raise_if_not_found=False)
+        if mail_template:
+            mail_template.with_context(approving_hod=approving_hod).send_mail(
+                self.id,
+                email_values={'email_to': ', '.join(sorted(recipients))},
+                force_send=True
+            )
+
+    def _send_hr_candidate_response_notification(self, accepted=True, reason=None):
+        """Sends alert email to HR when candidate accepts or rejects."""
+        self.ensure_one()
+        recipients = set()
+        if self.hr_manager_id and self.hr_manager_id.email:
+            recipients.add(self.hr_manager_id.email.strip())
+        for u in self.notify_user_ids:
+            if u.email:
+                recipients.add(u.email.strip())
+        if not recipients:
+            return
+        mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_candidate_response_notification', raise_if_not_found=False)
+        if mail_template:
+            mail_template.with_context(is_accepted=accepted, rejection_reason=reason).send_mail(
+                self.id,
+                email_values={'email_to': ', '.join(sorted(recipients))},
+                force_send=True
+            )
 
     def _send_director_notification(self):
         """Sends director approval request email to all users in intimate_director_ids."""
@@ -666,7 +867,7 @@ class HrOfferLetter(models.Model):
             for director in directors:
                 mail_template.with_context(director_user=director).send_mail(
                     self.id,
-                    email_values={'email_to': director.email},
+                    email_values={'email_to': director.email.strip()},
                     force_send=True
                 )
 
@@ -675,22 +876,21 @@ class HrOfferLetter(models.Model):
         self.ensure_one()
         recipients = set()
         if self.hr_manager_id and self.hr_manager_id.email:
-            recipients.add(self.hr_manager_id.email)
+            recipients.add(self.hr_manager_id.email.strip())
         for u in self.notify_user_ids:
             if u.email:
-                recipients.add(u.email)
+                recipients.add(u.email.strip())
 
         if not recipients:
             return
 
         mail_template = self.env.ref('aesl_hr_offer_letter.mail_template_director_approved_notification', raise_if_not_found=False)
         if mail_template:
-            for email in recipients:
-                mail_template.with_context(approving_director=approving_director).send_mail(
-                    self.id,
-                    email_values={'email_to': email},
-                    force_send=True
-                )
+            mail_template.with_context(approving_director=approving_director).send_mail(
+                self.id,
+                email_values={'email_to': ', '.join(sorted(recipients))},
+                force_send=True
+            )
     def action_send_offer(self):
         """Generates PDF report, attaches it to email, and sends it to candidate with Accept/Reject buttons."""
         self.ensure_one()
@@ -758,22 +958,23 @@ class HrOfferLetter(models.Model):
     def action_revise_offer(self):
         """Allows HR to revise the offer if rejected by candidate or awaiting changes."""
         self.ensure_one()
-        if self.state not in ['rejected', 'sent', 'pending_director', 'approved_director', 'accepted']:
-            raise UserError(_("You can only revise offers that are in 'Rejected', 'Offer Sent', or 'Director Approval' state."))
+        if self.state not in ['rejected', 'pending_hod', 'pending_director', 'sent', 'accepted', 'approved_director']:
+            raise UserError(_("You can only revise offers that are in 'Rejected', 'Pending Approval', or 'Offer Sent' state."))
 
         self.revision += 1
         self.state = 'draft'
+        self.hod_approval_date = False
+        self.hod_remarks = False
         self.approved_director_ids = [(5, 0, 0)]
         self.director_approval_date = False
-        self.message_post(body=_("Offer letter has been reopened for Revision #%s by %s. Director approvals have been reset.") % (self.revision, self.env.user.name))
+        self.director_remarks = False
+        self.message_post(body=_("Offer letter has been reopened for Revision #%s by %s. Approvals have been reset.") % (self.revision, self.env.user.name))
 
     def action_create_employee(self):
-        """Automatically creates hr.employee and hr.contract from approved offer details."""
+        """Automatically creates hr.employee and hr.contract from accepted offer details."""
         self.ensure_one()
-        if self.state != 'approved_director':
-            raise UserError(_("Employee can only be created once the onboarding request is approved by Director(s)."))
-        if self.intimate_director_ids and not self.all_directors_approved:
-            raise UserError(_("All intimate directors must approve before an employee record can be created."))
+        if self.state not in ['accepted', 'approved_director']:
+            raise UserError(_("Employee can only be created once the candidate has accepted the offer."))
         if self.employee_id:
             raise UserError(_("Employee has already been created for this offer (%s).") % self.employee_id.name)
 
@@ -887,4 +1088,11 @@ class HrOfferLetter(models.Model):
         self.write({'state': 'cancel'})
 
     def action_reset_to_draft(self):
-        self.write({'state': 'draft'})
+        self.write({
+            'state': 'draft',
+            'hod_approval_date': False,
+            'hod_remarks': False,
+            'approved_director_ids': [(5, 0, 0)],
+            'director_approval_date': False,
+            'director_remarks': False,
+        })
