@@ -26,7 +26,7 @@
             </t>
         </xpath>
 
-        <!-- Menu card in portal home -->
+        <!-- Menu card in portal home
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
             <t t-call="portal.portal_docs_entry">
                 <t t-set="title">Asset Allocation</t>
@@ -35,7 +35,19 @@
                 <t t-set="placeholder_count" t-value="'asset_allocation_count'"/>
                 <t t-set="config_card" t-value="True"/>
             </t>
+        </xpath> -->
+
+         <xpath expr="//div[@id='portal_custom_category']" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/assets.png'"/>
+                <t t-set="title">Asset Allocation</t>
+                <t t-set="text">Review, assign, and approve onboarding checklists</t>
+                <t t-set="url" t-value="'/my/asset_allocations'"/>
+                <t t-set="placeholder_count" t-value="'asset_allocation_count'"/>
+                <t t-set="config_card" t-value="True"/>
+            </t>
         </xpath>
+
     </template>
 
     <!-- ==================================================== -->

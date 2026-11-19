@@ -40,7 +40,7 @@
 
         <xpath expr="//div[@id='portal_custom_category']" position="inside">
             <t t-call="portal.portal_docs_entry">
-                <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/icons8-performance-64.png'"/>
+                <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/surveys.png'"/>
                 <t t-set="title">Surveys</t>
                 <t t-set="text">Fill &amp; View Employee Surveys</t>
                 <t t-set="url" t-value="'/my/surveys'"/>

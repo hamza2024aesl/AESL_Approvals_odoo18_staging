@@ -37,6 +37,7 @@ Key Features:
         'portal',
         'ivis_employee_details',
         'aesl_hr_asset_allocation',
+'ivis_user_portal',
     ],
     'data': [
         'security/security.xml',

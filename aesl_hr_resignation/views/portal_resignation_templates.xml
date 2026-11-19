@@ -28,7 +28,7 @@
             </t>
         </xpath>
 
-        <!-- Resignation Entry Card in Portal Docs -->
+        <!-- Resignation Entry Card in Portal Docs
         <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
             <t t-call="portal.portal_docs_entry">
                 <t t-set="title">Resignation</t>
@@ -37,7 +37,19 @@
                 <t t-set="placeholder_count" t-value="'resignation_count'"/>
                 <t t-set="config_card" t-value="True"/>
             </t>
+        </xpath>-->
+
+        <xpath expr="//div[@id='portal_custom_category']" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="icon" t-value="'/prodo_user_portal/static/description/icons/resignation.png'"/>
+                <t t-set="title">Resignation</t>
+                <t t-set="text">Submit resignation, track notice period &amp; revoke requests</t>
+                <t t-set="url" t-value="'/my/resignations'"/>
+                <t t-set="placeholder_count" t-value="'resignation_count'"/>
+                <t t-set="config_card" t-value="True"/>
+            </t>
         </xpath>
+
     </template>
 
     <!-- ==================================================== -->

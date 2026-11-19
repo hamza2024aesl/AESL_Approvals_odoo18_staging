@@ -21,7 +21,8 @@ AESL HR Employee Document Request & Digital Signature
         'portal',
         'mail',
         'web',
-        'prodo_user_portal',
+        'ivis_user_portal',
+'prodo_user_portal',
     ],
     'data': [
         'security/security.xml',

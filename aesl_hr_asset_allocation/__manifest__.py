@@ -27,6 +27,7 @@ Key Features:
         'hr',
         'mail',
         'portal',
+'ivis_user_portal',
     ],
     'data': [
         'security/security.xml',
